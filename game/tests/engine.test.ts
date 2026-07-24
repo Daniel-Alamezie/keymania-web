@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyDamage, bladeTier, comboMultiplier, keepsCombo, scoreWord, speedMultiplier, toWords, wordIndexAt, wpmFor,
-} from './engine';
-import { COMBO_WINDOW_MS, MAX_COMBO_MULTIPLIER, MAX_SPEED_MULTIPLIER, MIN_SPEED_MULTIPLIER } from './constants';
+} from '../engine';
+import { COMBO_WINDOW_MS, MAX_COMBO_MULTIPLIER, MAX_SPEED_MULTIPLIER, MIN_SPEED_MULTIPLIER } from '../constants';
 
 describe('wpmFor', () => {
   it('treats five characters as one word', () => {

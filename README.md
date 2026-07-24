@@ -68,11 +68,27 @@ tools/        pixel-art sprite generator (Python)
 the server-side referee — the server must be the authority on damage rather
 than trusting a client.
 
+## Multiplayer
+
+Duel a human over a WebSocket to the [`keymania`](https://github.com/Daniel-Alamezie/keymania)
+backend. Host a **public** room (listed in the lobby for anyone to join) or a
+**private** one (join by sharing a 5-character code).
+
+The server is the referee. Your client only ever claims *"I finished this word
+in this long"* — it never says how much damage it dealt. The server checks the
+word really is the one you owed from the shared script, clamps implausible
+timings and owns both health totals. Locally your blade launches immediately as
+a prediction, then health reconciles to whatever the server says.
+
+Copy `.env.example` to `.env.local` and point `NEXT_PUBLIC_WS_URL` at a
+deployment. Without it the game still plays single-player against the bot.
+
 ## Running it
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+cp .env.example .env.local   # optional: enables multiplayer
+npm run dev                  # http://localhost:3000
 ```
 
 ```bash

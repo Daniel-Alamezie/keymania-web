@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accuracy, duelReducer, initialState, type DuelState } from './duelReducer';
+import { accuracy, duelReducer, initialState, type DuelState } from '../duelReducer';
 
 /** A duel already in progress on a known sentence. */
 function playing(sentence = 'the cat sat '): DuelState {

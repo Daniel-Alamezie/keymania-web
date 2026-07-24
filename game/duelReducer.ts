@@ -17,6 +17,13 @@ export interface DuelState {
   difficulty: Difficulty;
   countdown: number;
 
+  /** Multiplayer duels are driven by the server rather than a local bot. */
+  multiplayer: boolean;
+  /** The shared word script sent by the server; null in solo play. */
+  script: string[] | null;
+  scriptIndex: number;
+  opponentName: string;
+
   /** Always carries a trailing space so every word is committed with SPACE. */
   sentence: string;
   cursor: number;
@@ -40,10 +47,15 @@ export interface DuelState {
 
 export type DuelAction =
   | { type: 'start'; difficulty: Difficulty }
+  | { type: 'startMulti'; script: string[]; opponentName: string }
   | { type: 'countdown' }
   | { type: 'typed'; char: string; now: number }
   | { type: 'botWord'; characters: number; elapsedMs: number; progress: number; fumbled: boolean }
   | { type: 'land'; target: Side; damage: number }
+  /** Authoritative health from the server — never computed locally in multiplayer. */
+  | { type: 'setHealths'; playerHealth: number; opponentHealth: number }
+  | { type: 'setOpponentProgress'; progress: number }
+  | { type: 'finish'; winner: Side }
   | { type: 'reset' };
 
 /** Sentences always end in a space so the final word is committed like any other. */
@@ -58,6 +70,10 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     phase: 'idle',
     difficulty,
     countdown: COUNTDOWN_FROM,
+    multiplayer: false,
+    script: null,
+    scriptIndex: 0,
+    opponentName: '',
     // Fixed, not random — this state is server-rendered too (see OPENING_SENTENCE).
     sentence: `${OPENING_SENTENCE} `,
     cursor: 0,
@@ -81,6 +97,19 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   switch (action.type) {
     case 'start':
       return { ...initialState(action.difficulty), phase: 'countdown', sentence: freshSentence() };
+
+    case 'startMulti':
+      return {
+        ...initialState(state.difficulty),
+        phase: 'countdown',
+        multiplayer: true,
+        script: action.script,
+        scriptIndex: 0,
+        opponentName: action.opponentName,
+        // Both players type the same words in the same order — the server sent
+        // this script, and it also validates every submission against it.
+        sentence: `${action.script[0]} `,
+      };
 
     case 'countdown': {
       if (state.phase !== 'countdown') return state;
@@ -131,9 +160,19 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       const sentenceDone = advanced >= state.sentence.length;
       const wpm = wpmFor(characters, Math.max(1, action.now - state.wordStartedAt));
 
+      // Multiplayer walks the server's script in order so both sides stay in
+      // step; solo play just picks another sentence at random.
+      const nextIndex = sentenceDone ? state.scriptIndex + 1 : state.scriptIndex;
+      const nextSentence = !sentenceDone
+        ? state.sentence
+        : state.script
+          ? `${state.script[nextIndex % state.script.length]} `
+          : freshSentence(state.sentence);
+
       return {
         ...state,
-        sentence: sentenceDone ? freshSentence(state.sentence) : state.sentence,
+        sentence: nextSentence,
+        scriptIndex: nextIndex,
         cursor: sentenceDone ? 0 : advanced,
         playerCombo: result.combo,
         wordStartedAt: action.now,
@@ -189,6 +228,21 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
       return { ...state, playerHealth, opponentHealth, phase: winner ? 'over' : state.phase, winner };
     }
+
+    case 'setHealths': {
+      if (state.phase === 'over') return state;
+      return {
+        ...state,
+        playerHealth: action.playerHealth,
+        opponentHealth: action.opponentHealth,
+      };
+    }
+
+    case 'setOpponentProgress':
+      return { ...state, opponentProgress: action.progress };
+
+    case 'finish':
+      return { ...state, phase: 'over', winner: action.winner };
 
     case 'reset':
       return initialState(state.difficulty);

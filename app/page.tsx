@@ -1,5 +1,5 @@
-import Duel from '@/components/Duel';
+import Game from '@/components/Game';
 
 export default function Home() {
-  return <Duel />;
+  return <Game />;
 }

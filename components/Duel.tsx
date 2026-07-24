@@ -6,12 +6,29 @@ import { accuracy, currentTier, duelReducer, initialState, overallWpm } from '@/
 import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
-import type { Difficulty, Side } from '@/game/types';
+import type { MessageHandler } from '@/game/useDuelSocket';
+import type { BladeTier, Difficulty, Side } from '@/game/types';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
 import SentenceView from './SentenceView';
 import ComboMeter from './ComboMeter';
 import styles from './Duel.module.css';
+
+export interface MultiplayerConfig {
+  script: string[];
+  opponentName: string;
+  mySlot: number;
+  /** Subscribe to server messages; returns an unsubscribe function. */
+  subscribe: (handler: MessageHandler) => () => void;
+  onWord: (word: string, elapsedMs: number) => void;
+}
+
+interface DuelProps {
+  difficulty: Difficulty;
+  /** Present for a human duel; absent means play the local bot. */
+  multiplayer?: MultiplayerConfig;
+  onExit: () => void;
+}
 
 interface Impact {
   side: Side;
@@ -22,19 +39,19 @@ interface Impact {
 /** Combo at which the screen starts visibly reacting to the streak. */
 const HEAT_COMBO = 4;
 
-export default function Duel() {
-  const [state, dispatch] = useReducer(duelReducer, undefined, () => initialState());
+export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
+  const [state, dispatch] = useReducer(duelReducer, undefined, () => initialState(difficulty));
   const effects = useRef<EffectsHandle>(null);
+  const screenRef = useRef<HTMLElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledHit = useRef(0);
   const [impact, setImpact] = useState<Impact | null>(null);
   const [muted, setMuted] = useState(false);
   const [liveWpm, setLiveWpm] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const screenRef = useRef<HTMLElement>(null);
+  const isMulti = Boolean(multiplayer);
 
-  // Keeps the key handler reading current state without rebinding every
-  // keystroke. Updated in an effect rather than during render, which must stay pure.
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
@@ -42,13 +59,81 @@ export default function Duel() {
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  /**
-   * Screen shake, driven imperatively and scaled to the blow.
-   *
-   * Deriving this during render from Date.now() would be both impure and
-   * unreliable — the shake would only appear if a render happened to land
-   * inside its window.
-   */
+  const track = (timer: ReturnType<typeof setTimeout>) => {
+    timers.current.push(timer);
+  };
+
+  /** A human duel begins the moment the server hands over the script. */
+  useEffect(() => {
+    if (!multiplayer) return;
+    audio.setEnabled(!muted);
+    dispatch({
+      type: 'startMulti',
+      script: multiplayer.script,
+      opponentName: multiplayer.opponentName,
+    });
+    // Only re-arm when a genuinely new match arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multiplayer?.script]);
+
+  /** Keyboard is the controller. SPACE commits a word and throws the blade. */
+  useEffect(() => {
+    if (state.phase !== 'playing') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key === 'Spacebar' ? ' ' : e.key;
+      if (key.length !== 1) return;
+      e.preventDefault();
+
+      const snapshot = stateRef.current;
+      const expected = snapshot.sentence[snapshot.cursor];
+      const correct = key.toLowerCase() === expected;
+
+      if (!correct) audio.miss();
+      else if (expected !== ' ') audio.key(snapshot.playerCombo);
+      else if (multiplayer) {
+        // Committing a word: report it before the reducer moves the cursor on.
+        const wordStart = snapshot.sentence.lastIndexOf(' ', snapshot.cursor - 1) + 1;
+        const word = snapshot.sentence.slice(wordStart, snapshot.cursor);
+        multiplayer.onWord(word, Math.max(1, Date.now() - snapshot.wordStartedAt));
+      }
+
+      dispatch({ type: 'typed', char: key.toLowerCase(), now: Date.now() });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state.phase, multiplayer]);
+
+  /** Countdown ticks into the duel. */
+  useEffect(() => {
+    if (state.phase !== 'countdown') return;
+    const timer = setTimeout(() => dispatch({ type: 'countdown' }), 750);
+    return () => clearTimeout(timer);
+  }, [state.phase, state.countdown]);
+
+  /** The bot only exists in solo play. */
+  useEffect(() => {
+    if (isMulti || state.phase !== 'playing') return;
+    const bot = startBot(state.difficulty, (event) => dispatch({ type: 'botWord', ...event }));
+    return () => bot.stop();
+  }, [isMulti, state.phase, state.difficulty]);
+
+  useEffect(() => {
+    if (state.phase !== 'playing') return;
+    const id = setInterval(() => setLiveWpm(overallWpm(stateRef.current.stats, Date.now())), 700);
+    return () => clearInterval(id);
+  }, [state.phase]);
+
+  useEffect(() => {
+    if (state.tierUpTick > 0) audio.tierUp();
+  }, [state.tierUpTick]);
+
+  useEffect(() => {
+    if (state.winner === 'player') audio.victory();
+    if (state.winner === 'opponent') audio.defeat();
+  }, [state.winner]);
+
+  /** Screen shake, scaled to the blow and driven imperatively. */
   useEffect(() => {
     if (!impact) return;
     const heavy = impact.damage >= 3.5;
@@ -65,62 +150,16 @@ export default function Duel() {
     );
   }, [impact]);
 
-  /** Keyboard is the controller. SPACE is a real key here: it commits a word. */
-  useEffect(() => {
-    if (state.phase !== 'playing') return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key === 'Spacebar' ? ' ' : e.key;
-      if (key.length !== 1) return;
-      e.preventDefault();
-
-      const snapshot = stateRef.current;
-      const expected = snapshot.sentence[snapshot.cursor];
-      const correct = key.toLowerCase() === expected;
-      if (correct && expected !== ' ') audio.key(snapshot.playerCombo);
-      if (!correct) audio.miss();
-
-      dispatch({ type: 'typed', char: key.toLowerCase(), now: Date.now() });
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [state.phase]);
-
-  /** Countdown ticks into the duel. */
-  useEffect(() => {
-    if (state.phase !== 'countdown') return;
-    const timer = setTimeout(() => dispatch({ type: 'countdown' }), 750);
-    return () => clearTimeout(timer);
-  }, [state.phase, state.countdown]);
-
-  /** The bot only lives while a duel is running. */
-  useEffect(() => {
-    if (state.phase !== 'playing') return;
-    const bot = startBot(state.difficulty, (event) => dispatch({ type: 'botWord', ...event }));
-    return () => bot.stop();
-  }, [state.phase, state.difficulty]);
-
-  /** Live speed readout, refreshed once a second rather than per keystroke. */
-  useEffect(() => {
-    if (state.phase !== 'playing') return;
-    const id = setInterval(() => setLiveWpm(overallWpm(stateRef.current.stats, Date.now())), 700);
-    return () => clearInterval(id);
-  }, [state.phase]);
-
-  /** Forging a bigger blade earns a fanfare. */
-  useEffect(() => {
-    if (state.tierUpTick > 0) audio.tierUp();
-  }, [state.tierUpTick]);
-
-  useEffect(() => {
-    if (state.winner === 'player') audio.victory();
-    if (state.winner === 'opponent') audio.defeat();
-  }, [state.winner]);
+  /** Land a blade: burst, sound and damage popup. */
+  const land = useCallback((target: Side, damage: number, tier: BladeTier) => {
+    effects.current?.burst(target, tier);
+    audio.impact(tier);
+    setImpact({ side: target, damage, tick: Date.now() });
+  }, []);
 
   /**
-   * A committed word launches a blade; damage only applies when it *arrives*.
-   * Each hit id is handled once, so a blade already in flight still lands even
-   * if the next word is committed before it gets there.
+   * Locally scored words. In solo play this also applies the damage; in a human
+   * duel the launch is only a prediction — health comes from the server.
    */
   useEffect(() => {
     const hit = state.lastHit;
@@ -130,21 +169,60 @@ export default function Duel() {
     const target: Side = hit.side === 'player' ? 'opponent' : 'player';
     effects.current?.launch(hit.side, hit.tier);
     if (hit.side === 'player') audio.throwBlade(hit.tier);
+    if (isMulti) return;
 
-    const timer = setTimeout(() => {
-      effects.current?.burst(target, hit.tier);
-      audio.impact(hit.tier);
+    track(setTimeout(() => {
+      land(target, hit.damage, hit.tier);
       dispatch({ type: 'land', target, damage: hit.damage });
-      setImpact({ side: target, damage: hit.damage, tick: Date.now() });
-    }, PROJECTILE_FLIGHT_MS);
+    }, PROJECTILE_FLIGHT_MS));
+  }, [state.lastHit, isMulti, land]);
 
-    timers.current.push(timer);
-  }, [state.lastHit]);
+  /**
+   * Server messages are the authority in a human duel. Subscribing means state
+   * only ever changes from inside the socket's callback, never from an effect
+   * body reacting to a value.
+   */
+  useEffect(() => {
+    if (!multiplayer) return;
+    const { mySlot } = multiplayer;
 
-  const start = useCallback((difficulty: Difficulty) => {
-    audio.setEnabled(!muted);
-    dispatch({ type: 'start', difficulty });
-  }, [muted]);
+    return multiplayer.subscribe((message) => {
+      if (message.type === 'hit') {
+        const mine = message.fromSlot === mySlot;
+        const tier = message.tier as BladeTier;
+        // Our own blade is already in flight from the local prediction.
+        if (!mine) effects.current?.launch('opponent', tier);
+        dispatch({
+          type: 'setOpponentProgress',
+          progress: (message.progress[1 - mySlot] % 8) / 8,
+        });
+
+        track(setTimeout(() => {
+          if (!mine) land('player', message.damage, tier);
+          dispatch({
+            type: 'setHealths',
+            playerHealth: message.healths[mySlot],
+            opponentHealth: message.healths[1 - mySlot],
+          });
+        }, PROJECTILE_FLIGHT_MS));
+      }
+
+      if (message.type === 'gameOver') {
+        track(setTimeout(
+          () => dispatch({
+            type: 'finish',
+            winner: message.winnerSlot === mySlot ? 'player' : 'opponent',
+          }),
+          PROJECTILE_FLIGHT_MS + 120,
+        ));
+      }
+
+      if (message.type === 'opponentLeft') {
+        setNotice('Your opponent left the duel.');
+        dispatch({ type: 'finish', winner: 'player' });
+      }
+    });
+  }, [multiplayer, land]);
 
   const toggleMute = () => {
     setMuted((m) => {
@@ -153,7 +231,9 @@ export default function Duel() {
     });
   };
 
-  const profile = BOT_PROFILES[state.difficulty];
+  const opponentLabel = isMulti
+    ? (multiplayer!.opponentName || 'RIVAL').toUpperCase()
+    : BOT_PROFILES[state.difficulty].label.toUpperCase();
   const playerLow = state.playerHealth <= 25 && state.phase === 'playing';
 
   return (
@@ -167,7 +247,6 @@ export default function Duel() {
         {muted ? '🔇' : '🔊'}
       </button>
 
-      {/* ---- HUD: you on the left, opponent on the right, always ---- */}
       <header className={styles.hud}>
         <HealthBar
           name="YOU"
@@ -178,15 +257,14 @@ export default function Duel() {
         />
         <span className={`${styles.vs} pixel-font`}>VS</span>
         <HealthBar
-          name={profile.label.toUpperCase()}
+          name={opponentLabel}
           value={state.opponentHealth}
           team="red"
           align="right"
-          caption={`${Math.round(state.opponentProgress * 100)}% through`}
+          caption={isMulti ? 'human' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`}
         />
       </header>
 
-      {/* ---- Arena: side-view duel, blades fly between the fighters ---- */}
       <section className={styles.arena}>
         <div className={styles.lane} data-lane="player">
           <Fighter
@@ -215,14 +293,25 @@ export default function Duel() {
         )}
       </section>
 
-      {/* ---- Your deck: what you type, and what it is forging ---- */}
       <section className={styles.deck}>
         <SentenceView sentence={state.sentence} cursor={state.cursor} missTick={state.missTick} />
         <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />
       </section>
 
-      {/* ---- Overlays ---- */}
-      {state.phase === 'idle' && <StartOverlay onStart={start} />}
+      {state.phase === 'idle' && !isMulti && (
+        <div className={styles.overlay}>
+          <div className={styles.panel}>
+            <h1 className={`${styles.title} pixel-font`}>READY?</h1>
+            <button
+              className={`${styles.button} pixel-font`}
+              onClick={() => { audio.setEnabled(!muted); dispatch({ type: 'start', difficulty }); }}
+            >
+              Fight {BOT_PROFILES[difficulty].label}
+            </button>
+            <button className={`${styles.button} ${styles.ghost} pixel-font`} onClick={onExit}>Back</button>
+          </div>
+        </div>
+      )}
 
       {state.phase === 'countdown' && (
         <div className={styles.overlay}>
@@ -238,6 +327,7 @@ export default function Duel() {
             <h2 className={`${styles.result} pixel-font`} data-win={state.winner === 'player' || undefined}>
               {state.winner === 'player' ? 'VICTORY' : 'DEFEATED'}
             </h2>
+            {notice && <p className={styles.blurb}>{notice}</p>}
 
             <dl className={styles.stats}>
               <Stat label="Best combo" value={`x${state.stats.maxCombo}`} />
@@ -247,14 +337,16 @@ export default function Duel() {
             </dl>
 
             <div className={styles.choices}>
-              <button className={`${styles.button} pixel-font`} onClick={() => start(state.difficulty)}>
-                Rematch
-              </button>
-              <button
-                className={`${styles.button} ${styles.ghost} pixel-font`}
-                onClick={() => dispatch({ type: 'reset' })}
-              >
-                Change opponent
+              {!isMulti && (
+                <button
+                  className={`${styles.button} pixel-font`}
+                  onClick={() => dispatch({ type: 'start', difficulty })}
+                >
+                  Rematch
+                </button>
+              )}
+              <button className={`${styles.button} ${styles.ghost} pixel-font`} onClick={onExit}>
+                Back to menu
               </button>
             </div>
           </div>
@@ -269,29 +361,6 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className={styles.stat}>
       <dt className={styles.statLabel}>{label}</dt>
       <dd className={`${styles.statValue} pixel-font`}>{value}</dd>
-    </div>
-  );
-}
-
-function StartOverlay({ onStart }: { onStart: (d: Difficulty) => void }) {
-  return (
-    <div className={styles.overlay}>
-      <div className={styles.panel}>
-        <h1 className={`${styles.title} pixel-font`}>KEYMANIA</h1>
-        <p className={styles.blurb}>
-          Type each word, then hit <kbd className={styles.kbd}>SPACE</kbd> to forge a blade and
-          hurl it at your opponent. Chain words fast to forge something bigger — a typo shatters
-          your streak.
-        </p>
-        <div className={styles.choices}>
-          {(Object.keys(BOT_PROFILES) as Difficulty[]).map((key) => (
-            <button key={key} className={`${styles.button} pixel-font`} onClick={() => onStart(key)}>
-              {BOT_PROFILES[key].label}
-              <small className={styles.wpm}>{BOT_PROFILES[key].wpm} wpm</small>
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
