@@ -7,6 +7,8 @@ import type { RoomSummary } from '@/game/protocol';
 import type { Difficulty } from '@/game/types';
 import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
+import ArenaScene from './ArenaScene';
+import Fighter from './Fighter';
 import styles from './Game.module.css';
 
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
@@ -101,6 +103,7 @@ export default function Game() {
   if (screen === 'lobby') {
     return (
       <main className={styles.screen}>
+        <Backdrop />
         <Lobby
           status={status}
           configured={configured}
@@ -119,33 +122,50 @@ export default function Game() {
 
   return (
     <main className={styles.screen}>
-      <div className={styles.panel}>
+      <Backdrop />
+      <div className={`panel ${styles.menu}`}>
         <h1 className={`${styles.title} pixel-font`}>KEYMANIA</h1>
+        <p className={styles.tagline}>type fast · strike hard</p>
+
         <p className={styles.blurb}>
-          Type each word, then hit <kbd className={styles.kbd}>SPACE</kbd> to forge a blade and hurl
-          it at your opponent. Chain words fast to forge something bigger — a typo shatters your streak.
+          Type each word, then hit <kbd className="kbd">SPACE</kbd> to forge a blade and hurl it at
+          your opponent. Chain words fast to forge something bigger — a typo shatters your streak.
         </p>
 
-        <span className={styles.label}>Practise against a bot</span>
+        <span className="eyebrow">Practise against a bot</span>
         <div className={styles.row}>
           {(Object.keys(BOT_PROFILES) as Difficulty[]).map((key) => (
             <button
               key={key}
-              className={`${styles.button} pixel-font`}
+              className={`btn ${styles.grow}`}
               onClick={() => { setDifficulty(key); setScreen('solo'); }}
             >
               {BOT_PROFILES[key].label}
-              <small className={styles.sub}>{BOT_PROFILES[key].wpm} wpm</small>
+              <small className="btn-sub">{BOT_PROFILES[key].wpm} wpm</small>
             </button>
           ))}
         </div>
 
-        <span className={styles.label}>Or duel a human</span>
-        <button className={`${styles.button} ${styles.primary} pixel-font`} onClick={openLobby}>
+        <span className="eyebrow">Or duel a human</span>
+        <button className={`btn btn-primary ${styles.wide}`} onClick={openLobby}>
           Multiplayer
-          <small className={styles.sub}>host or join a room</small>
+          <small className="btn-sub">host or join a room</small>
         </button>
       </div>
     </main>
+  );
+}
+
+/** The menu and lobby sit inside the same arena the duel happens in. */
+function Backdrop() {
+  return (
+    <ArenaScene dim className={styles.backdrop}>
+      <div className={styles.standLeft}>
+        <Fighter team="blue" facing="right" hitTick={0} />
+      </div>
+      <div className={styles.standRight}>
+        <Fighter team="red" facing="left" hitTick={0} />
+      </div>
+    </ArenaScene>
   );
 }

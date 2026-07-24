@@ -1,0 +1,100 @@
+.scene {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+/* Tiles are 48px sprites repeated — pixelated so they stay crisp when scaled. */
+.wall {
+  position: absolute;
+  inset: 0 0 26% 0;
+  background-image: url('/sprites/tile-wall.png');
+  background-size: 48px 48px;
+  background-repeat: repeat;
+  image-rendering: pixelated;
+}
+
+/* Light pooling down from above, so the top of the wall reads as lit. */
+.wall::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(120, 90, 200, 0.22), transparent 55%);
+}
+
+.floor {
+  position: absolute;
+  inset: 74% 0 0 0;
+  background-image: url('/sprites/tile-floor.png');
+  background-size: 48px 48px;
+  background-repeat: repeat;
+  image-rendering: pixelated;
+  border-top: 3px solid var(--edge-soft);
+}
+
+.floor::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 214, 110, 0.10), transparent 60%);
+}
+
+/* Darkened corners keep the eye on the centre of the fight. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.75);
+}
+
+.scene[data-dim]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(13, 10, 28, 0.72);
+}
+
+/* ---- Torches ---- */
+.torch {
+  position: absolute;
+  top: 12%;
+  width: 44px;
+  height: 80px;
+}
+.torch[data-side='left'] { left: 7%; }
+.torch[data-side='right'] { right: 7%; transform: scaleX(-1); }
+
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 44px;
+  height: 80px;
+  opacity: 0;
+  animation: flicker 0.42s steps(1) infinite;
+}
+.frame:nth-child(1) { animation-delay: 0s; }
+.frame:nth-child(2) { animation-delay: 0.14s; }
+.frame:nth-child(3) { animation-delay: 0.28s; }
+
+@keyframes flicker {
+  0%, 33% { opacity: 1; }
+  34%, 100% { opacity: 0; }
+}
+
+/* Warm pool of light around each flame, breathing slightly out of sync. */
+.glow {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 190px;
+  height: 190px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 170, 60, 0.30), transparent 68%);
+  animation: breathe 2.3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% { opacity: 0.62; transform: translateX(-50%) scale(1.12); }
+}

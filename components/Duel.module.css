@@ -9,9 +9,7 @@
   gap: 12px;
 }
 
-/* Screen shake is applied imperatively in Duel.tsx, scaled to the damage. */
-
-/* The screen itself gets hotter as the streak builds. */
+/* The screen gets hotter as the streak builds. */
 .screen::before {
   content: '';
   position: fixed;
@@ -20,11 +18,11 @@
   z-index: 5;
   opacity: 0;
   transition: opacity 320ms ease;
-  box-shadow: inset 0 0 120px rgba(255, 214, 110, 0.35);
+  box-shadow: inset 0 0 130px rgba(255, 214, 110, 0.38);
 }
 .screen[data-heat]::before { opacity: 1; }
 
-/* Near death, the edges bleed red and pulse. */
+/* Near death the edges bleed red and pulse. */
 .screen::after {
   content: '';
   position: fixed;
@@ -33,11 +31,11 @@
   z-index: 5;
   opacity: 0;
   transition: opacity 400ms ease;
-  box-shadow: inset 0 0 150px rgba(239, 68, 68, 0.6);
+  box-shadow: inset 0 0 160px rgba(239, 68, 68, 0.62);
 }
 .screen[data-danger]::after { opacity: 1; animation: pulse 900ms ease-in-out infinite; }
 
-@keyframes pulse { 50% { opacity: 0.45; } }
+@keyframes pulse { 50% { opacity: 0.4; } }
 
 .mute {
   position: absolute;
@@ -48,43 +46,24 @@
   border: none;
   font-size: 17px;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 .mute:hover { opacity: 1; }
 
 /* ---------- HUD ---------- */
-.hud {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
+.hud { display: flex; align-items: center; gap: 16px; }
 
 .vs {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--faint);
   flex: 0 0 auto;
 }
 
 /* ---------- Arena ---------- */
 .arena {
   position: relative;
-  border: 2px solid var(--edge);
-  background:
-    radial-gradient(ellipse at 50% 100%, rgba(56, 189, 248, 0.10), transparent 65%),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
-    linear-gradient(180deg, #1d1640, #14102c);
-  overflow: hidden;
-  min-height: 200px;
-}
-
-/* Floor line so the fighters feel planted rather than floating. */
-.arena::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  bottom: 24%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--edge) 12%, var(--edge) 88%, transparent);
+  border: 3px solid var(--edge);
+  min-height: 210px;
 }
 
 .canvas {
@@ -98,7 +77,7 @@
 
 .lane {
   position: absolute;
-  bottom: 20%;
+  bottom: 19%;
   z-index: 2;
   transform: translateX(-50%);
 }
@@ -106,13 +85,23 @@
 .lane[data-lane='player'] { left: 17%; }
 .lane[data-lane='opponent'] { left: 83%; }
 
+/* Single-frame white flash on contact — the hit-stop cue. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .damage {
   position: absolute;
-  top: 24%;
-  z-index: 4;
+  top: 22%;
+  z-index: 7;
   font-size: 20px;
   color: var(--gold);
-  text-shadow: 0 2px 0 #000, 0 0 12px rgba(255, 214, 110, 0.6);
+  text-shadow: 0 2px 0 #000, 0 0 14px rgba(255, 214, 110, 0.7);
   animation: floatUp 950ms ease-out forwards;
   pointer-events: none;
 }
@@ -122,7 +111,7 @@
 @keyframes floatUp {
   0% { transform: translate(-50%, 12px) scale(0.6); opacity: 0; }
   22% { transform: translate(-50%, -8px) scale(1.35); opacity: 1; }
-  100% { transform: translate(-50%, -52px) scale(1); opacity: 0; }
+  100% { transform: translate(-50%, -54px) scale(1); opacity: 0; }
 }
 
 /* ---------- Typing deck ---------- */
@@ -141,61 +130,35 @@
   place-items: center;
   background: rgba(10, 7, 22, 0.88);
   z-index: 10;
+  animation: fadeIn 220ms ease-out;
 }
 
-.panel {
+@keyframes fadeIn { from { opacity: 0; } }
+
+.dialog {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 34px 40px;
-  background: var(--panel);
-  border: 3px solid var(--edge);
-  box-shadow: var(--shadow);
   max-width: 600px;
   text-align: center;
+  animation: riseIn 260ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes riseIn {
+  from { transform: translateY(18px) scale(0.96); opacity: 0; }
 }
 
 .title {
   margin: 0;
-  font-size: clamp(26px, 6vw, 46px);
+  font-size: clamp(22px, 5vw, 38px);
   color: var(--gold);
   text-shadow: 0 4px 0 var(--opponent-deep);
 }
 
-.blurb { margin: 0; font-size: 13px; line-height: 1.8; color: var(--muted); }
-
-.kbd {
-  padding: 2px 8px;
-  border: 2px solid var(--edge);
-  border-bottom-width: 3px;
-  border-radius: 4px;
-  background: var(--panel-2);
-  color: var(--player);
-  font-size: 11px;
-}
+.blurb { margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
 
 .choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-
-.button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 20px;
-  font-size: 12px;
-  color: var(--ink);
-  background: var(--panel-2);
-  border: 2px solid var(--edge);
-  border-bottom-width: 4px;
-  cursor: pointer;
-  transition: transform 90ms ease, background 140ms ease;
-}
-.button:hover { background: var(--edge); transform: translateY(-2px); }
-.button:active { transform: translateY(2px); border-bottom-width: 2px; }
-
-.ghost { background: transparent; font-size: 10px; }
-.wpm { color: var(--muted); font-size: 9px; }
 
 .countdown {
   font-size: clamp(48px, 14vw, 120px);
@@ -220,8 +183,8 @@
 /* ---------- Post-duel stats ---------- */
 .stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 12px 22px;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 12px 20px;
   margin: 0;
   width: 100%;
 }
@@ -239,7 +202,12 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--muted);
+  color: var(--faint);
 }
 
 .statValue { margin: 0; font-size: 15px; color: var(--gold); }
+
+@media (max-height: 640px) {
+  .arena { min-height: 150px; }
+  .screen { padding: 10px 14px 12px; gap: 8px; }
+}

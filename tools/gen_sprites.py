@@ -226,6 +226,90 @@ def fighter_palette(team: str, hit: bool) -> dict:
 
 
 # --------------------------------------------------------------------------
+# environment — tileable stone and a flickering torch
+# --------------------------------------------------------------------------
+def stable_noise(x: int, y: int, salt: int) -> float:
+    """Deterministic per-pixel jitter so regenerating never reshuffles texture."""
+    n = (x * 73_856_093) ^ (y * 19_349_663) ^ (salt * 83_492_791)
+    return ((n % 1000) / 1000.0)
+
+
+def make_wall_tile(size: int = 16) -> list[list[tuple]]:
+    """Brick wall that tiles seamlessly: rows offset by half a brick."""
+    canvas = new_canvas(size, size)
+    base = (46, 38, 78)
+    light = (60, 50, 96)
+    dark = (32, 26, 56)
+    mortar = (24, 19, 44)
+    brick_h = size // 2
+
+    for y in range(size):
+        row = y // brick_h
+        offset = (row * brick_h) % size
+        for x in range(size):
+            shade = stable_noise(x, y, 7)
+            colour = light if shade > 0.78 else dark if shade < 0.2 else base
+            # Horizontal mortar between courses, vertical every half tile.
+            if y % brick_h == 0 or (x + offset) % size == 0:
+                colour = mortar
+            put(canvas, x, y, (*colour, 255))
+    return canvas
+
+
+def make_floor_tile(size: int = 16) -> list[list[tuple]]:
+    """Flagstones, slightly lighter at the top edge to read as lit from above."""
+    canvas = new_canvas(size, size)
+    base = (38, 32, 64)
+    light = (52, 44, 84)
+    dark = (26, 21, 46)
+
+    for y in range(size):
+        for x in range(size):
+            shade = stable_noise(x, y, 13)
+            colour = light if shade > 0.82 else dark if shade < 0.18 else base
+            if y == 0 or x == 0:
+                colour = dark
+            elif y == 1:
+                colour = light
+            put(canvas, x, y, (*colour, 255))
+    return canvas
+
+
+def make_torch(frame: int) -> list[list[tuple]]:
+    """A wall torch. Three frames give a convincing flicker when cycled."""
+    w, h = 11, 20
+    canvas = new_canvas(w, h)
+    bracket = (58, 48, 42, 255)
+    bracket_light = (86, 70, 58, 255)
+
+    # Handle and wall bracket.
+    for y in range(11, h):
+        put(canvas, 5, y, bracket)
+        put(canvas, 4, y, bracket_light if y < 15 else bracket)
+    for x in range(3, 8):
+        put(canvas, x, 11, bracket_light)
+
+    # Flame: a teardrop that shifts shape per frame.
+    sway = (-1, 0, 1)[frame % 3]
+    flame = [
+        (255, 246, 190, 255),
+        (255, 196, 84, 255),
+        (240, 128, 44, 255),
+    ]
+    heights = ((0, 4), (1, 7), (2, 10))
+    for band, (inset, top) in enumerate(heights):
+        colour = flame[len(flame) - 1 - band]
+        for y in range(top, 11):
+            half = max(0, 2 - inset + (1 if y > top + 2 else 0))
+            drift = sway if y < top + 3 else 0
+            for dx in range(-half, half + 1):
+                put(canvas, 5 + dx + drift, y, colour)
+
+    outline(canvas, (18, 14, 30, 255))
+    return canvas
+
+
+# --------------------------------------------------------------------------
 # impact burst — three expanding frames
 # --------------------------------------------------------------------------
 def make_impact(frame: int, total: int = 3) -> list[list[tuple]]:
@@ -267,6 +351,13 @@ def main() -> None:
     print("impacts:")
     for f in range(3):
         save(make_impact(f), f"impact-{f + 1}.png")
+
+    print("environment:")
+    # Tiles are saved unscaled; CSS repeats them and scales with pixelated rendering.
+    save(make_wall_tile(), "tile-wall.png", scale=3)
+    save(make_floor_tile(), "tile-floor.png", scale=3)
+    for f in range(3):
+        save(make_torch(f), f"torch-{f + 1}.png")
 
     os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
     with open(MANIFEST, "w", encoding="utf-8") as fh:

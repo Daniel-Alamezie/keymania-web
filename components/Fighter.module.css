@@ -6,36 +6,52 @@
 }
 .stage[data-facing='left'] { transform: scaleX(-1); }
 
+/* Three nested layers so idle bob, throw lunge and hit flinch can each run
+   independently without fighting over one transform. */
 .body {
-  animation: idle 1.6s steps(2) infinite, flinch 320ms ease-out;
+  animation: idle 1.6s steps(2) infinite;
   transform-origin: bottom center;
 }
 
-/* Gentle two-step bob keeps the sprite alive without distracting the eye. */
 @keyframes idle {
   50% { transform: translateY(-3px); }
 }
 
-/* Retriggered per hit: knocked back and flashed white. */
+.lunge { animation: lunge 300ms cubic-bezier(0.2, 1.4, 0.4, 1); }
+
+/* Wind back, then drive forward — the weight behind a thrown blade. */
+@keyframes lunge {
+  0% { transform: translateX(0) scaleX(1); }
+  25% { transform: translateX(-7px) scaleX(0.94); }
+  55% { transform: translateX(12px) scaleX(1.06); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+.flinch { animation: flinch 340ms ease-out; }
+
 @keyframes flinch {
   0% { transform: translateX(0); filter: none; }
-  20% { transform: translateX(-9px); filter: brightness(3) saturate(0); }
-  60% { transform: translateX(4px); filter: brightness(1.4); }
+  15% { transform: translateX(-11px); filter: brightness(3.2) saturate(0); }
+  45% { transform: translateX(5px); filter: brightness(1.5); }
   100% { transform: translateX(0); filter: none; }
 }
 
-.stage[data-defeated] .body {
+.stage[data-defeated] .body,
+.stage[data-defeated] .lunge,
+.stage[data-defeated] .flinch {
   animation: none;
-  transform: rotate(-16deg) translateY(6px);
-  filter: grayscale(0.85) brightness(0.6);
-  transition: transform 400ms ease, filter 400ms ease;
+}
+.stage[data-defeated] .body {
+  transform: rotate(-18deg) translateY(8px);
+  filter: grayscale(0.85) brightness(0.55);
+  transition: transform 500ms ease, filter 500ms ease;
 }
 
 .shadow {
-  width: 46px;
-  height: 8px;
-  margin-top: -4px;
-  background: rgba(0, 0, 0, 0.45);
+  width: 52px;
+  height: 9px;
+  margin-top: -5px;
+  background: rgba(0, 0, 0, 0.5);
   border-radius: 50%;
-  filter: blur(1px);
+  filter: blur(2px);
 }

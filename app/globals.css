@@ -1,25 +1,34 @@
 :root {
-  /* Retro arcade palette */
-  --bg-deep: #100c22;
-  --bg: #181231;
-  --panel: #221a44;
-  --panel-2: #2c2257;
-  --edge: #3b2f70;
+  /* ---- Palette ------------------------------------------------------- */
+  --bg-deep: #0d0a1c;
+  --bg: #15102e;
+  --panel: #1f1842;
+  --panel-2: #2a2158;
+  --edge: #3d3180;
+  --edge-soft: #2f2765;
 
   --ink: #f3eeff;
-  --muted: #a498d8;
+  --muted: #a294dc;
+  --faint: #6f63a8;
 
   --player: #38bdf8;
-  --player-deep: #0b7fb8;
+  --player-deep: #0b6fa4;
   --opponent: #f4634f;
-  --opponent-deep: #b8331f;
+  --opponent-deep: #a82b18;
 
   --gold: #ffd66e;
-  --good: #4ade80;
-  --warn: #fbbf24;
+  --gold-deep: #c99a2a;
+  --good: #5ee08a;
   --bad: #ef4444;
 
-  --shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  /* ---- Scale --------------------------------------------------------- */
+  --gap-xs: 6px;
+  --gap-sm: 10px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+
+  --shadow: 0 4px 0 rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 * { box-sizing: border-box; }
@@ -35,13 +44,11 @@ html, body {
 
 body {
   font-family: var(--font-body), ui-monospace, 'Cascadia Code', Menlo, monospace;
-  /* Subtle glow + scanline wash so the whole screen reads as a CRT. */
   background-image:
-    radial-gradient(circle at 50% 0%, rgba(120, 80, 220, 0.28), transparent 60%),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+    radial-gradient(ellipse at 50% -10%, rgba(120, 80, 220, 0.35), transparent 65%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
 }
 
-/* Pixel art must never be smoothed. */
 img { image-rendering: pixelated; }
 
 .pixel-font {
@@ -50,6 +57,86 @@ img { image-rendering: pixelated; }
 }
 
 button { font-family: inherit; }
+
+/* =====================================================================
+   Shared UI kit — one definition each, used by every screen so the app
+   reads as a single product rather than three separately styled pages.
+   ===================================================================== */
+
+.panel {
+  background: var(--panel);
+  border: 3px solid var(--edge);
+  box-shadow: var(--shadow), var(--shadow-lift);
+  padding: 28px 32px;
+}
+
+.btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 13px 20px;
+  font-family: var(--font-pixel), var(--font-body), monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  border-bottom-width: 4px;
+  cursor: pointer;
+  transition: transform 90ms ease, background 140ms ease, border-color 140ms ease;
+}
+.btn:hover:not(:disabled) {
+  background: var(--edge-soft);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary { border-color: var(--player); }
+.btn-primary:hover:not(:disabled) { background: var(--player-deep); border-color: var(--player); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--edge-soft);
+  font-size: 10px;
+  padding: 9px 16px;
+}
+
+.btn-sub { color: var(--faint); font-size: 9px; }
+
+.eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+}
+
+.kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 2px solid var(--edge);
+  border-bottom-width: 3px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--player);
+  font-size: 11px;
+}
+
+.field {
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg-deep);
+  border: 2px solid var(--edge);
+  outline: none;
+  transition: border-color 140ms ease;
+}
+.field:focus { border-color: var(--player); }
+.field::placeholder { color: var(--faint); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

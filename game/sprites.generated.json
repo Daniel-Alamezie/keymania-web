@@ -46,5 +46,25 @@
   "impact-3": {
     "width": 96,
     "height": 96
+  },
+  "tile-floor": {
+    "width": 48,
+    "height": 48
+  },
+  "tile-wall": {
+    "width": 48,
+    "height": 48
+  },
+  "torch-1": {
+    "width": 44,
+    "height": 80
+  },
+  "torch-2": {
+    "width": 44,
+    "height": 80
+  },
+  "torch-3": {
+    "width": 44,
+    "height": 80
   }
 }

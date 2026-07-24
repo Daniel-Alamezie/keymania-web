@@ -10,6 +10,7 @@ import type { MessageHandler } from '@/game/useDuelSocket';
 import type { BladeTier, Difficulty, Side } from '@/game/types';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
+import ArenaScene from './ArenaScene';
 import SentenceView from './SentenceView';
 import ComboMeter from './ComboMeter';
 import styles from './Duel.module.css';
@@ -45,7 +46,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const screenRef = useRef<HTMLElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledHit = useRef(0);
+  const flashRef = useRef<HTMLDivElement>(null);
   const [impact, setImpact] = useState<Impact | null>(null);
+  const [attack, setAttack] = useState<{ side: Side; tick: number } | null>(null);
   const [muted, setMuted] = useState(false);
   const [liveWpm, setLiveWpm] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
@@ -133,11 +136,22 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     if (state.winner === 'opponent') audio.defeat();
   }, [state.winner]);
 
-  /** Screen shake, scaled to the blow and driven imperatively. */
+  /**
+   * Impact feedback: a hit-stop flash plus shake scaled to the blow.
+   *
+   * The flash is the fighting-game trick that sells weight — a single frame of
+   * white before the shake reads as the moment of contact.
+   */
   useEffect(() => {
     if (!impact) return;
     const heavy = impact.damage >= 3.5;
-    const amount = heavy ? 9 : 4;
+    const amount = heavy ? 10 : 4;
+
+    flashRef.current?.animate(
+      [{ opacity: heavy ? 0.5 : 0.24 }, { opacity: 0 }],
+      { duration: heavy ? 150 : 90, easing: 'ease-out' },
+    );
+
     screenRef.current?.animate(
       [
         { transform: 'translate(0, 0)' },
@@ -146,7 +160,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         { transform: `translate(${-amount / 2}px, ${amount / 3}px)` },
         { transform: 'translate(0, 0)' },
       ],
-      { duration: heavy ? 300 : 190, easing: 'ease-out' },
+      { duration: heavy ? 310 : 190, easing: 'ease-out' },
     );
   }, [impact]);
 
@@ -168,6 +182,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
     const target: Side = hit.side === 'player' ? 'opponent' : 'player';
     effects.current?.launch(hit.side, hit.tier);
+    setAttack({ side: hit.side, tick: Date.now() });
     if (hit.side === 'player') audio.throwBlade(hit.tier);
     if (isMulti) return;
 
@@ -191,7 +206,10 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         const mine = message.fromSlot === mySlot;
         const tier = message.tier as BladeTier;
         // Our own blade is already in flight from the local prediction.
-        if (!mine) effects.current?.launch('opponent', tier);
+        if (!mine) {
+          effects.current?.launch('opponent', tier);
+          setAttack({ side: 'opponent', tick: Date.now() });
+        }
         dispatch({
           type: 'setOpponentProgress',
           progress: (message.progress[1 - mySlot] % 8) / 8,
@@ -265,12 +283,13 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         />
       </header>
 
-      <section className={styles.arena}>
+      <ArenaScene className={styles.arena}>
         <div className={styles.lane} data-lane="player">
           <Fighter
             team="blue"
             facing="right"
             hitTick={impact?.side === 'player' ? impact.tick : 0}
+            attackTick={attack?.side === 'player' ? attack.tick : 0}
             defeated={state.winner === 'opponent'}
           />
         </div>
@@ -282,6 +301,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             team="red"
             facing="left"
             hitTick={impact?.side === 'opponent' ? impact.tick : 0}
+            attackTick={attack?.side === 'opponent' ? attack.tick : 0}
             defeated={state.winner === 'player'}
           />
         </div>
@@ -291,7 +311,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             -{impact.damage}
           </span>
         )}
-      </section>
+
+        <div ref={flashRef} className={styles.flash} aria-hidden="true" />
+      </ArenaScene>
 
       <section className={styles.deck}>
         <SentenceView sentence={state.sentence} cursor={state.cursor} missTick={state.missTick} />
@@ -300,15 +322,18 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       {state.phase === 'idle' && !isMulti && (
         <div className={styles.overlay}>
-          <div className={styles.panel}>
+          <div className={`panel ${styles.dialog}`}>
             <h1 className={`${styles.title} pixel-font`}>READY?</h1>
+            <p className={styles.blurb}>
+              Type each word, then hit <kbd className="kbd">SPACE</kbd> to throw.
+            </p>
             <button
-              className={`${styles.button} pixel-font`}
+              className="btn btn-primary"
               onClick={() => { audio.setEnabled(!muted); dispatch({ type: 'start', difficulty }); }}
             >
               Fight {BOT_PROFILES[difficulty].label}
             </button>
-            <button className={`${styles.button} ${styles.ghost} pixel-font`} onClick={onExit}>Back</button>
+            <button className="btn btn-ghost" onClick={onExit}>Back</button>
           </div>
         </div>
       )}
@@ -323,7 +348,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       {state.phase === 'over' && (
         <div className={styles.overlay}>
-          <div className={styles.panel}>
+          <div className={`panel ${styles.dialog}`}>
             <h2 className={`${styles.result} pixel-font`} data-win={state.winner === 'player' || undefined}>
               {state.winner === 'player' ? 'VICTORY' : 'DEFEATED'}
             </h2>
@@ -338,16 +363,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
             <div className={styles.choices}>
               {!isMulti && (
-                <button
-                  className={`${styles.button} pixel-font`}
-                  onClick={() => dispatch({ type: 'start', difficulty })}
-                >
+                <button className="btn btn-primary" onClick={() => dispatch({ type: 'start', difficulty })}>
                   Rematch
                 </button>
               )}
-              <button className={`${styles.button} ${styles.ghost} pixel-font`} onClick={onExit}>
-                Back to menu
-              </button>
+              <button className="btn btn-ghost" onClick={onExit}>Back to menu</button>
             </div>
           </div>
         </div>

@@ -42,19 +42,19 @@ export default function Lobby({
 
   if (!configured) {
     return (
-      <div className={styles.panel}>
+      <div className={`panel ${styles.lobby}`}>
         <h2 className={`${styles.heading} pixel-font`}>Multiplayer unavailable</h2>
         <p className={styles.note}>
           No duel server is configured. Set <code>NEXT_PUBLIC_WS_URL</code> and reload.
         </p>
-        <button className={`${styles.btn} pixel-font`} onClick={onBack}>Back</button>
+        <button className="btn" onClick={onBack}>Back</button>
       </div>
     );
   }
 
   if (waitingCode) {
     return (
-      <div className={styles.panel}>
+      <div className={`panel ${styles.lobby}`}>
         <h2 className={`${styles.heading} pixel-font`}>Waiting for a challenger</h2>
         <p className={styles.note}>
           {waitingVisibility === 'public'
@@ -63,24 +63,24 @@ export default function Lobby({
         </p>
         <div className={`${styles.code} pixel-font`}>{waitingCode}</div>
         <button
-          className={`${styles.btn} pixel-font`}
+          className="btn"
           onClick={() => navigator.clipboard?.writeText(waitingCode)}
         >
           Copy code
         </button>
-        <button className={`${styles.btn} ${styles.ghost} pixel-font`} onClick={onBack}>Cancel</button>
+        <button className="btn btn-ghost" onClick={onBack}>Cancel</button>
       </div>
     );
   }
 
   return (
-    <div className={styles.panel}>
+    <div className={`panel ${styles.lobby}`}>
       <h2 className={`${styles.heading} pixel-font`}>Duel a human</h2>
 
-      <label className={styles.field}>
-        <span className={styles.label}>Your name</span>
+      <label className={styles.nameRow}>
+        <span className="eyebrow">Your name</span>
         <input
-          className={styles.input}
+          className="field"
           value={name}
           maxLength={16}
           placeholder="Challenger"
@@ -89,13 +89,13 @@ export default function Lobby({
       </label>
 
       <div className={styles.row}>
-        <button className={`${styles.btn} pixel-font`} onClick={() => onCreate(displayName, 'public')}>
+        <button className="btn" onClick={() => onCreate(displayName, 'public')}>
           Host public
-          <small className={styles.sub}>listed in the lobby</small>
+          <small className="btn-sub">listed in the lobby</small>
         </button>
-        <button className={`${styles.btn} pixel-font`} onClick={() => onCreate(displayName, 'private')}>
+        <button className="btn" onClick={() => onCreate(displayName, 'private')}>
           Host private
-          <small className={styles.sub}>code only</small>
+          <small className="btn-sub">code only</small>
         </button>
       </div>
 
@@ -103,7 +103,7 @@ export default function Lobby({
 
       <div className={styles.row}>
         <input
-          className={`${styles.input} ${styles.codeInput}`}
+          className={`field ${styles.codeInput}`}
           value={code}
           maxLength={5}
           placeholder="CODE"
@@ -111,7 +111,7 @@ export default function Lobby({
           onKeyDown={(e) => { if (e.key === 'Enter' && code) onJoin(code, displayName); }}
         />
         <button
-          className={`${styles.btn} pixel-font`}
+          className="btn"
           disabled={code.length < 4}
           onClick={() => onJoin(code, displayName)}
         >
@@ -120,7 +120,7 @@ export default function Lobby({
       </div>
 
       <div className={styles.listHead}>
-        <span className={styles.label}>Open duels</span>
+        <span className="eyebrow">Open duels</span>
         <button className={styles.refresh} onClick={onRefresh} aria-label="Refresh">⟳</button>
       </div>
 
@@ -133,7 +133,7 @@ export default function Lobby({
           <li key={room.roomId} className={styles.room}>
             <span className={styles.host}>{room.host}</span>
             <span className={`${styles.roomCode} pixel-font`}>{room.roomId}</span>
-            <button className={`${styles.btn} ${styles.small} pixel-font`} onClick={() => onJoin(room.roomId, displayName)}>
+            <button className="btn btn-ghost" onClick={() => onJoin(room.roomId, displayName)}>
               Fight
             </button>
           </li>
@@ -141,7 +141,7 @@ export default function Lobby({
       </ul>
 
       {error && <p className={styles.error}>{error}</p>}
-      <button className={`${styles.btn} ${styles.ghost} pixel-font`} onClick={onBack}>Back</button>
+      <button className="btn btn-ghost" onClick={onBack}>Back</button>
     </div>
   );
 }
