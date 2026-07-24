@@ -1,6 +1,6 @@
 import { applyDamage, bladeTier, keepsCombo, scoreWord, wpmFor } from './engine';
 import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
-import { randomSentence } from './sentences';
+import { OPENING_SENTENCE, randomSentence } from './sentences';
 import type { BladeTier, Difficulty, Phase, Side } from './types';
 
 export interface DuelStats {
@@ -58,7 +58,8 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     phase: 'idle',
     difficulty,
     countdown: COUNTDOWN_FROM,
-    sentence: freshSentence(),
+    // Fixed, not random — this state is server-rendered too (see OPENING_SENTENCE).
+    sentence: `${OPENING_SENTENCE} `,
     cursor: 0,
     wordStartedAt: 0,
     lastWordAt: 0,

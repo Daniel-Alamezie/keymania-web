@@ -31,11 +31,39 @@ export default function Duel() {
   const [muted, setMuted] = useState(false);
   const [liveWpm, setLiveWpm] = useState(0);
 
-  // Keeps the key handler reading current state without rebinding every keystroke.
+  const screenRef = useRef<HTMLElement>(null);
+
+  // Keeps the key handler reading current state without rebinding every
+  // keystroke. Updated in an effect rather than during render, which must stay pure.
   const stateRef = useRef(state);
-  stateRef.current = state;
+  useEffect(() => {
+    stateRef.current = state;
+  });
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  /**
+   * Screen shake, driven imperatively and scaled to the blow.
+   *
+   * Deriving this during render from Date.now() would be both impure and
+   * unreliable — the shake would only appear if a render happened to land
+   * inside its window.
+   */
+  useEffect(() => {
+    if (!impact) return;
+    const heavy = impact.damage >= 3.5;
+    const amount = heavy ? 9 : 4;
+    screenRef.current?.animate(
+      [
+        { transform: 'translate(0, 0)' },
+        { transform: `translate(${-amount}px, ${amount / 2}px)` },
+        { transform: `translate(${amount}px, ${-amount / 2}px)` },
+        { transform: `translate(${-amount / 2}px, ${amount / 3}px)` },
+        { transform: 'translate(0, 0)' },
+      ],
+      { duration: heavy ? 300 : 190, easing: 'ease-out' },
+    );
+  }, [impact]);
 
   /** Keyboard is the controller. SPACE is a real key here: it commits a word. */
   useEffect(() => {
@@ -125,15 +153,13 @@ export default function Duel() {
     });
   };
 
-  const recent = impact && Date.now() - impact.tick < 260;
-  const heavy = impact && impact.damage >= 3.5;
   const profile = BOT_PROFILES[state.difficulty];
   const playerLow = state.playerHealth <= 25 && state.phase === 'playing';
 
   return (
     <main
+      ref={screenRef}
       className={styles.screen}
-      data-shake={recent ? (heavy ? 'heavy' : 'light') : undefined}
       data-heat={state.playerCombo >= HEAT_COMBO || undefined}
       data-danger={playerLow || undefined}
     >

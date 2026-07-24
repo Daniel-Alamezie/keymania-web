@@ -8,14 +8,7 @@
   user-select: none;
 }
 
-.sentence[data-shaking] { animation: shake 260ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
-
-@keyframes shake {
-  10%, 90% { transform: translateX(-3px); }
-  20%, 80% { transform: translateX(5px); }
-  30%, 50%, 70% { transform: translateX(-8px); }
-  40%, 60% { transform: translateX(8px); }
-}
+/* The typo shake is applied imperatively in SentenceView (Web Animations API). */
 
 .token { white-space: nowrap; }
 

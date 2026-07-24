@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import styles from './SentenceView.module.css';
 
 interface SentenceViewProps {
@@ -36,17 +36,29 @@ export default function SentenceView({ sentence, cursor, missTick }: SentenceVie
     return out;
   }, [sentence]);
 
-  const [shaking, setShaking] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
+  // Driven imperatively rather than through state: the shake is purely visual,
+  // so it should not cost a React render (and setting state inside an effect
+  // for this is what the react-hooks/set-state-in-effect rule warns about).
   useEffect(() => {
     if (missTick === 0) return;
-    setShaking(true);
-    const timer = setTimeout(() => setShaking(false), 280);
-    return () => clearTimeout(timer);
+    rootRef.current?.animate(
+      [
+        { transform: 'translateX(0)' },
+        { transform: 'translateX(-4px)' },
+        { transform: 'translateX(7px)' },
+        { transform: 'translateX(-9px)' },
+        { transform: 'translateX(6px)' },
+        { transform: 'translateX(-3px)' },
+        { transform: 'translateX(0)' },
+      ],
+      { duration: 260, easing: 'cubic-bezier(0.36, 0.07, 0.19, 0.97)' },
+    );
   }, [missTick]);
 
   return (
-    <div className={styles.sentence} data-shaking={shaking || undefined}>
+    <div ref={rootRef} className={styles.sentence}>
       {tokens.map((token) => (
         <span key={token.key} className={styles.token}>
           {token.chars.map(({ ch, index }) => {
