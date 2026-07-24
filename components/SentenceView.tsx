@@ -17,9 +17,9 @@ interface Token {
 
 /**
  * The sentence being typed, rendered per character so each keystroke gets its
- * own feedback. Spaces are drawn explicitly because SPACE is the key that
- * commits a word and throws the blade — hiding it would hide the beat of the
- * whole game. Each word keeps its trailing space so lines never break mid-word.
+ * own feedback. Spaces render as real blank space — the caret sitting on an
+ * empty slot is signal enough that SPACE is expected next. Each word keeps its
+ * trailing space so lines never break mid-word.
  */
 export default function SentenceView({ sentence, cursor, missTick }: SentenceViewProps) {
   const tokens = useMemo<Token[]>(() => {
@@ -58,7 +58,7 @@ export default function SentenceView({ sentence, cursor, missTick }: SentenceVie
                 className={`${styles.char} ${isSpace ? styles.space : ''} ${index === cursor - 1 ? styles.pop : ''}`}
                 data-state={state}
               >
-                {isSpace ? '␣' : ch}
+                {isSpace ? ' ' : ch}
               </span>
             );
           })}

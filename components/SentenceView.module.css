@@ -40,19 +40,8 @@
   50% { box-shadow: 0 0 0 7px rgba(255, 214, 110, 0.14); }
 }
 
-/* The commit key is drawn faintly until it is your turn to press it. */
-.space { opacity: 0.4; }
-.space[data-state='done'] { opacity: 0.55; }
-.space[data-state='current'] {
-  opacity: 1;
-  background: var(--player);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.32);
-  animation: commit 700ms steps(2) infinite;
-}
-
-@keyframes commit {
-  50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0.18); }
-}
+/* Spaces are blank; the caret resting on an empty slot is the cue to press SPACE. */
+.space { min-width: 0.5em; }
 
 .pop { animation: pop 180ms cubic-bezier(0.2, 1.6, 0.4, 1); }
 
