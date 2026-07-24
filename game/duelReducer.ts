@@ -1,18 +1,26 @@
-import { applyDamage, bladeTier, keepsCombo, scoreWord } from './engine';
+import { applyDamage, bladeTier, keepsCombo, scoreWord, wpmFor } from './engine';
 import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { randomSentence } from './sentences';
 import type { BladeTier, Difficulty, Phase, Side } from './types';
+
+export interface DuelStats {
+  wordsTyped: number;
+  charsTyped: number;
+  mistakes: number;
+  maxCombo: number;
+  bestWpm: number;
+  startedAt: number;
+}
 
 export interface DuelState {
   phase: Phase;
   difficulty: Difficulty;
   countdown: number;
 
+  /** Always carries a trailing space so every word is committed with SPACE. */
   sentence: string;
   cursor: number;
-  /** When the current word was started, for speed scoring. */
   wordStartedAt: number;
-  /** When the previous word landed, for combo-window checks. */
   lastWordAt: number;
 
   playerHealth: number;
@@ -21,16 +29,12 @@ export interface DuelState {
   opponentCombo: number;
   opponentProgress: number;
 
-  /** Bumped on every typo so the UI can retrigger its shake animation. */
   missTick: number;
-  /**
-   * The most recent scored word. Carries a monotonic `id` so the effect that
-   * launches blades can process each hit exactly once — without it, React's
-   * double-invoked effects could double-schedule a landing, and a cleanup-based
-   * fix would cancel a pending landing whenever a second word lands first.
-   */
   lastHit: { id: number; side: Side; damage: number; wpm: number; tier: BladeTier } | null;
   hitSeq: number;
+  /** Bumped when the player forges a bigger blade, for the fanfare. */
+  tierUpTick: number;
+  stats: DuelStats;
   winner: Side | null;
 }
 
@@ -42,12 +46,19 @@ export type DuelAction =
   | { type: 'land'; target: Side; damage: number }
   | { type: 'reset' };
 
+/** Sentences always end in a space so the final word is committed like any other. */
+const freshSentence = (exclude?: string) => `${randomSentence(exclude)} `;
+
+const emptyStats = (): DuelStats => ({
+  wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0,
+});
+
 export function initialState(difficulty: Difficulty = 'rival'): DuelState {
   return {
     phase: 'idle',
     difficulty,
     countdown: COUNTDOWN_FROM,
-    sentence: randomSentence(),
+    sentence: freshSentence(),
     cursor: 0,
     wordStartedAt: 0,
     lastWordAt: 0,
@@ -59,67 +70,75 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     missTick: 0,
     lastHit: null,
     hitSeq: 0,
+    tierUpTick: 0,
+    stats: emptyStats(),
     winner: null,
   };
-}
-
-/** Advance past the space that follows a completed word. */
-function skipSpace(sentence: string, cursor: number): number {
-  return sentence[cursor] === ' ' ? cursor + 1 : cursor;
 }
 
 export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   switch (action.type) {
     case 'start':
-      return {
-        ...initialState(action.difficulty),
-        phase: 'countdown',
-        sentence: randomSentence(),
-      };
+      return { ...initialState(action.difficulty), phase: 'countdown', sentence: freshSentence() };
 
     case 'countdown': {
       if (state.phase !== 'countdown') return state;
       const next = state.countdown - 1;
       if (next > 0) return { ...state, countdown: next };
       const now = Date.now();
-      return { ...state, phase: 'playing', countdown: 0, wordStartedAt: now, lastWordAt: now };
+      return {
+        ...state,
+        phase: 'playing',
+        countdown: 0,
+        wordStartedAt: now,
+        lastWordAt: now,
+        stats: { ...emptyStats(), startedAt: now },
+      };
     }
 
     case 'typed': {
       if (state.phase !== 'playing') return state;
       const expected = state.sentence[state.cursor];
 
-      // Stray spaces are ignored rather than punished — words auto-advance.
-      if (action.char === ' ' && expected !== ' ') return state;
-
       if (action.char !== expected) {
-        return { ...state, playerCombo: 0, missTick: state.missTick + 1 };
+        return {
+          ...state,
+          playerCombo: 0,
+          missTick: state.missTick + 1,
+          stats: { ...state.stats, mistakes: state.stats.mistakes + 1 },
+        };
       }
 
       const advanced = state.cursor + 1;
-      const finishedWord = advanced >= state.sentence.length || state.sentence[advanced] === ' ';
-      if (!finishedWord) return { ...state, cursor: advanced };
+      const stats = { ...state.stats, charsTyped: state.stats.charsTyped + 1 };
 
-      // Score the word that just landed.
+      // Mid-word: just advance the cursor.
+      if (expected !== ' ') {
+        return { ...state, cursor: advanced, stats };
+      }
+
+      // SPACE committed the word — score everything that came before it.
+      const wordStart = state.sentence.lastIndexOf(' ', state.cursor - 1) + 1;
+      const characters = state.cursor - wordStart;
       const combo = keepsCombo(action.now - state.lastWordAt) ? state.playerCombo : 0;
-      const characters = advanced - (state.sentence.lastIndexOf(' ', state.cursor) + 1);
       const result = scoreWord({
         characters,
         elapsedMs: Math.max(1, action.now - state.wordStartedAt),
         combo,
       });
 
-      const cursor = skipSpace(state.sentence, advanced);
-      const sentenceDone = cursor >= state.sentence.length;
+      const sentenceDone = advanced >= state.sentence.length;
+      const wpm = wpmFor(characters, Math.max(1, action.now - state.wordStartedAt));
 
       return {
         ...state,
-        sentence: sentenceDone ? randomSentence(state.sentence) : state.sentence,
-        cursor: sentenceDone ? 0 : cursor,
+        sentence: sentenceDone ? freshSentence(state.sentence) : state.sentence,
+        cursor: sentenceDone ? 0 : advanced,
         playerCombo: result.combo,
         wordStartedAt: action.now,
         lastWordAt: action.now,
         hitSeq: state.hitSeq + 1,
+        tierUpTick: result.tierUp ? state.tierUpTick + 1 : state.tierUpTick,
         lastHit: {
           id: state.hitSeq + 1,
           side: 'player',
@@ -127,12 +146,17 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
           wpm: result.wpm,
           tier: result.tier,
         },
+        stats: {
+          ...stats,
+          wordsTyped: stats.wordsTyped + 1,
+          maxCombo: Math.max(stats.maxCombo, result.combo),
+          bestWpm: Math.max(stats.bestWpm, Math.round(wpm)),
+        },
       };
     }
 
     case 'botWord': {
       if (state.phase !== 'playing') return state;
-      // A fumble breaks the bot's streak exactly as a typo breaks the player's.
       const combo = action.fumbled ? 0 : state.opponentCombo;
       const result = scoreWord({ characters: action.characters, elapsedMs: action.elapsedMs, combo });
       return {
@@ -162,13 +186,7 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       const winner: Side | null =
         opponentHealth <= 0 ? 'player' : playerHealth <= 0 ? 'opponent' : null;
 
-      return {
-        ...state,
-        playerHealth,
-        opponentHealth,
-        phase: winner ? 'over' : state.phase,
-        winner,
-      };
+      return { ...state, playerHealth, opponentHealth, phase: winner ? 'over' : state.phase, winner };
     }
 
     case 'reset':
@@ -179,7 +197,18 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   }
 }
 
-/** Convenience selector: the blade the player is currently charging. */
 export function currentTier(state: DuelState): BladeTier {
   return bladeTier(state.playerCombo);
+}
+
+/** Accuracy as a percentage of keystrokes that landed correctly. */
+export function accuracy(stats: DuelStats): number {
+  const total = stats.charsTyped + stats.mistakes;
+  return total === 0 ? 100 : Math.round((stats.charsTyped / total) * 100);
+}
+
+/** Overall words-per-minute across the whole duel. */
+export function overallWpm(stats: DuelStats, now: number): number {
+  if (!stats.startedAt) return 0;
+  return Math.round(wpmFor(stats.charsTyped, now - stats.startedAt));
 }

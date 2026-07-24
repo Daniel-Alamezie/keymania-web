@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { toWords } from '@/game/engine';
 import styles from './SentenceView.module.css';
 
 interface SentenceViewProps {
@@ -11,16 +10,34 @@ interface SentenceViewProps {
   missTick: number;
 }
 
+interface Token {
+  key: number;
+  chars: { ch: string; index: number }[];
+}
+
 /**
- * The sentence being typed, rendered per character so each keystroke can be
- * given its own feedback. Words are kept as inline blocks so they never break
- * across lines mid-word.
+ * The sentence being typed, rendered per character so each keystroke gets its
+ * own feedback. Spaces are drawn explicitly because SPACE is the key that
+ * commits a word and throws the blade — hiding it would hide the beat of the
+ * whole game. Each word keeps its trailing space so lines never break mid-word.
  */
 export default function SentenceView({ sentence, cursor, missTick }: SentenceViewProps) {
-  const words = useMemo(() => toWords(sentence), [sentence]);
+  const tokens = useMemo<Token[]>(() => {
+    const out: Token[] = [];
+    let current: Token['chars'] = [];
+    for (let i = 0; i < sentence.length; i++) {
+      current.push({ ch: sentence[i], index: i });
+      if (sentence[i] === ' ') {
+        out.push({ key: out.length, chars: current });
+        current = [];
+      }
+    }
+    if (current.length) out.push({ key: out.length, chars: current });
+    return out;
+  }, [sentence]);
+
   const [shaking, setShaking] = useState(false);
 
-  // Retrigger the shake each time a typo lands.
   useEffect(() => {
     if (missTick === 0) return;
     setShaking(true);
@@ -30,21 +47,18 @@ export default function SentenceView({ sentence, cursor, missTick }: SentenceVie
 
   return (
     <div className={styles.sentence} data-shaking={shaking || undefined}>
-      {words.map((word) => (
-        <span key={word.start} className={styles.word}>
-          {word.text.split('').map((char, i) => {
-            const index = word.start + i;
+      {tokens.map((token) => (
+        <span key={token.key} className={styles.token}>
+          {token.chars.map(({ ch, index }) => {
             const state = index < cursor ? 'done' : index === cursor ? 'current' : 'pending';
-            // Only the character just completed carries .pop, so the animation
-            // runs exactly once as the cursor passes over it.
-            const popped = index === cursor - 1;
+            const isSpace = ch === ' ';
             return (
               <span
                 key={index}
-                className={`${styles.char} ${popped ? styles.pop : ''}`}
+                className={`${styles.char} ${isSpace ? styles.space : ''} ${index === cursor - 1 ? styles.pop : ''}`}
                 data-state={state}
               >
-                {char}
+                {isSpace ? '␣' : ch}
               </span>
             );
           })}

@@ -1,48 +1,82 @@
 .screen {
+  position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 14px 20px 20px;
-  gap: 10px;
+  padding: 14px 20px 18px;
+  gap: 12px;
 }
 
-.screen[data-shake] { animation: screenShake 220ms ease-out; }
+/* Shake scales with how hard the blow landed. */
+.screen[data-shake='light'] { animation: shakeLight 200ms ease-out; }
+.screen[data-shake='heavy'] { animation: shakeHeavy 300ms ease-out; }
 
-@keyframes screenShake {
-  25% { transform: translate(5px, -3px); }
-  50% { transform: translate(-5px, 2px); }
-  75% { transform: translate(3px, 3px); }
+@keyframes shakeLight {
+  25% { transform: translate(3px, -2px); }
+  50% { transform: translate(-3px, 1px); }
+  75% { transform: translate(2px, 2px); }
+}
+@keyframes shakeHeavy {
+  15% { transform: translate(-9px, 4px) rotate(-0.35deg); }
+  35% { transform: translate(8px, -5px) rotate(0.35deg); }
+  55% { transform: translate(-6px, 3px); }
+  75% { transform: translate(5px, -2px); }
 }
 
-/* ---------- Split HUD ---------- */
-.hud { display: flex; justify-content: flex-end; }
+/* The screen itself gets hotter as the streak builds. */
+.screen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 320ms ease;
+  box-shadow: inset 0 0 120px rgba(255, 214, 110, 0.35);
+}
+.screen[data-heat]::before { opacity: 1; }
 
-.hudSide {
+/* Near death, the edges bleed red and pulse. */
+.screen::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 400ms ease;
+  box-shadow: inset 0 0 150px rgba(239, 68, 68, 0.6);
+}
+.screen[data-danger]::after { opacity: 1; animation: pulse 900ms ease-in-out infinite; }
+
+@keyframes pulse { 50% { opacity: 0.45; } }
+
+.mute {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 8;
+  background: transparent;
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.mute:hover { opacity: 1; }
+
+/* ---------- HUD ---------- */
+.hud {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: min(460px, 60%);
+  align-items: center;
+  gap: 16px;
 }
 
-.tag {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-}
-.tag[data-side='opponent'] { color: var(--opponent); text-align: right; }
-.tag[data-side='player'] { color: var(--player); }
-
-.progress {
-  height: 6px;
-  background: #0d0a1c;
-  border: 1px solid var(--edge);
-}
-.progressFill {
-  height: 100%;
-  background: var(--opponent);
-  opacity: 0.75;
-  transition: width 200ms linear;
+.vs {
+  font-size: 13px;
+  color: var(--muted);
+  flex: 0 0 auto;
 }
 
 /* ---------- Arena ---------- */
@@ -50,21 +84,21 @@
   position: relative;
   border: 2px solid var(--edge);
   background:
-    linear-gradient(180deg, rgba(56, 189, 248, 0.06), transparent 40%),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 6px),
-    var(--bg);
+    radial-gradient(ellipse at 50% 100%, rgba(56, 189, 248, 0.10), transparent 65%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #1d1640, #14102c);
   overflow: hidden;
-  min-height: 190px;
+  min-height: 200px;
 }
 
-/* Ground line so the fighters feel planted. */
+/* Floor line so the fighters feel planted rather than floating. */
 .arena::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
-  bottom: 26%;
-  height: 2px;
-  background: var(--edge);
+  bottom: 24%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--edge) 12%, var(--edge) 88%, transparent);
 }
 
 .canvas {
@@ -78,30 +112,31 @@
 
 .lane {
   position: absolute;
-  bottom: 22%;
+  bottom: 20%;
   z-index: 2;
   transform: translateX(-50%);
 }
-.lane[data-lane='opponent'] { left: 16%; }
-.lane[data-lane='player'] { left: 84%; }
+/* You are always on the left. */
+.lane[data-lane='player'] { left: 17%; }
+.lane[data-lane='opponent'] { left: 83%; }
 
 .damage {
   position: absolute;
-  top: 26%;
+  top: 24%;
   z-index: 4;
-  font-size: 18px;
+  font-size: 20px;
   color: var(--gold);
-  text-shadow: 0 2px 0 #000;
-  animation: floatUp 900ms ease-out forwards;
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(255, 214, 110, 0.6);
+  animation: floatUp 950ms ease-out forwards;
   pointer-events: none;
 }
-.damage[data-side='opponent'] { left: 16%; }
-.damage[data-side='player'] { left: 84%; }
+.damage[data-side='player'] { left: 17%; }
+.damage[data-side='opponent'] { left: 83%; }
 
 @keyframes floatUp {
-  0% { transform: translate(-50%, 10px) scale(0.7); opacity: 0; }
-  25% { transform: translate(-50%, -6px) scale(1.25); opacity: 1; }
-  100% { transform: translate(-50%, -46px) scale(1); opacity: 0; }
+  0% { transform: translate(-50%, 12px) scale(0.6); opacity: 0; }
+  22% { transform: translate(-50%, -8px) scale(1.35); opacity: 1; }
+  100% { transform: translate(-50%, -52px) scale(1); opacity: 0; }
 }
 
 /* ---------- Typing deck ---------- */
@@ -112,30 +147,13 @@
   align-items: center;
 }
 
-.deckRow {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  width: 100%;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.playerHealth {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-width: 260px;
-}
-
 /* ---------- Overlays ---------- */
 .overlay {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(10, 7, 22, 0.86);
+  background: rgba(10, 7, 22, 0.88);
   z-index: 10;
 }
 
@@ -143,12 +161,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   padding: 34px 40px;
   background: var(--panel);
   border: 3px solid var(--edge);
   box-shadow: var(--shadow);
-  max-width: 560px;
+  max-width: 600px;
   text-align: center;
 }
 
@@ -159,11 +177,16 @@
   text-shadow: 0 4px 0 var(--opponent-deep);
 }
 
-.blurb {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--muted);
+.blurb { margin: 0; font-size: 13px; line-height: 1.8; color: var(--muted); }
+
+.kbd {
+  padding: 2px 8px;
+  border: 2px solid var(--edge);
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--player);
+  font-size: 11px;
 }
 
 .choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
@@ -186,7 +209,6 @@
 .button:active { transform: translateY(2px); border-bottom-width: 2px; }
 
 .ghost { background: transparent; font-size: 10px; }
-
 .wpm { color: var(--muted); font-size: 9px; }
 
 .countdown {
@@ -197,9 +219,8 @@
 }
 
 @keyframes countIn {
-  0% { transform: scale(2.4); opacity: 0; }
+  0% { transform: scale(2.6); opacity: 0; }
   40% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
 }
 
 .result {
@@ -209,3 +230,30 @@
   text-shadow: 0 4px 0 #000;
 }
 .result[data-win] { color: var(--good); }
+
+/* ---------- Post-duel stats ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 12px 22px;
+  margin: 0;
+  width: 100%;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+}
+
+.statLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.statValue { margin: 0; font-size: 15px; color: var(--gold); }

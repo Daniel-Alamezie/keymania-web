@@ -163,51 +163,58 @@ def make_blade(blade_len: int, thick: int, steel: tuple, glow) -> list[list[tupl
 # fighters — hand-authored pixel map, recoloured per team
 # --------------------------------------------------------------------------
 FIGHTER_MAP = [
-    "................",
-    ".....OOOOOO.....",
-    "....OAAAAAAO....",
-    "...OAAAAAAAAO...",
-    "...OASSSSSSAO...",
-    "...OASEESEEAO...",
-    "...OASSSSSSAO...",
-    "....OSSSSSSO....",
-    ".....OOOOOO.....",
-    "....OAAAAAAO....",
-    "...OLAAAAAALO...",
-    "..OSAAAAAAAASO..",
-    "..OSAADDDDAASO..",
-    "...OAAAAAAAAO...",
-    "...OAAAAAAAAO...",
-    "....OAAAAAAO....",
-    "....OAAOOAAO....",
-    "....OAAOOAAO....",
-    "...OBBOOOOBBO...",
-    "...OOOO..OOOO...",
+    "....................",
+    "........OO..........",
+    ".......OCCO.........",
+    "......OCCCCO........",
+    ".....OOOOOOOO.......",
+    ".....OLLLLLLO.......",
+    ".....OLAAAALO.......",
+    ".....OASSSSAO.......",
+    ".....OASEESAO.......",
+    ".....OASSSSAO.......",
+    "......OAAAAO........",
+    ".....OOOOOOOO.......",
+    "....OLAAAAAALO......",
+    "...OGAAAAAAAAGO.....",
+    "...OGAAADDAAAGO.....",
+    "...OGAAADDAAAGO.....",
+    "....OAAAAAAAAO......",
+    ".....OAAAAAAO.......",
+    ".....OAAOOAAO.......",
+    ".....OAAOOAAO.......",
+    ".....OAAOOAAO.......",
+    "....OBBOOOOBBO......",
+    "....OOOO..OOOO......",
+    "....................",
 ]
 
 TEAMS = {
-    "blue": {"main": (74, 144, 226), "dark": (38, 92, 160), "light": (140, 196, 255)},
-    "red": {"main": (226, 84, 74), "dark": (158, 46, 40), "light": (255, 150, 140)},
+    "blue": {
+        "main": (74, 144, 226), "dark": (30, 78, 142), "light": (150, 202, 255),
+        "crest": (255, 214, 110), "glove": (44, 58, 92),
+    },
+    "red": {
+        "main": (226, 84, 74), "dark": (146, 38, 32), "light": (255, 158, 148),
+        "crest": (255, 236, 180), "glove": (96, 38, 34),
+    },
 }
 
 
 def fighter_palette(team: str, hit: bool) -> dict:
     c = TEAMS[team]
     if hit:
-        return {
-            "O": (255, 255, 255, 255), "A": (255, 255, 255, 255),
-            "D": (255, 228, 228, 255), "L": (255, 255, 255, 255),
-            "S": (255, 255, 255, 255), "E": (220, 60, 60, 255),
-            "B": (255, 240, 240, 255),
-        }
+        return {k: (255, 255, 255, 255) for k in "OALDSBCG"} | {"E": (200, 40, 40, 255)}
     return {
-        "O": (26, 24, 38, 255),
-        "A": (*c["main"], 255),
-        "D": (*c["dark"], 255),
-        "L": (*c["light"], 255),
-        "S": (236, 190, 152, 255),
-        "E": (26, 24, 38, 255),
-        "B": (72, 62, 58, 255),
+        "O": (22, 18, 34, 255),          # outline
+        "A": (*c["main"], 255),          # armour
+        "D": (*c["dark"], 255),          # armour shadow
+        "L": (*c["light"], 255),         # armour highlight
+        "C": (*c["crest"], 255),         # helmet crest
+        "G": (*c["glove"], 255),         # gauntlets
+        "S": (240, 198, 162, 255),       # skin
+        "E": (22, 18, 34, 255),          # eyes
+        "B": (64, 54, 52, 255),          # boots
     }
 
 

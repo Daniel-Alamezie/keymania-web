@@ -17,17 +17,29 @@ WebSocket) lives in [`keymania`](https://github.com/Daniel-Alamezie/keymania).
 
 ## The core loop
 
+Type each word, then press <kbd>SPACE</kbd> to commit it — that is the moment a
+blade is forged and thrown.
+
 | Moment | What happens |
 |--------|--------------|
-| Keystroke | the character snaps green and pops |
-| Word completed | it is scored, a blade is forged and thrown |
-| Blade lands | screen shake, pixel debris, health chunks down |
-| Typo | red shake, combo shatters back to zero |
+| Keystroke | the character snaps green and pops, with a click that rises in pitch as your combo grows |
+| <kbd>SPACE</kbd> | the word is scored, a blade is forged and hurled |
+| Blade lands | screen shake scaled to the damage, pixel debris, health chunks down |
+| Combo up | the blade visibly upgrades, with a rising fanfare |
+| Typo | red shake, buzz, combo shatters back to zero |
 
 Speed matters twice over — but deliberately unevenly. Typing faster throws
 *more* blades per second, which is the main reward; the per-word speed
 multiplier is a modest bonus on top. Rewarding speed steeply in both rate and
 damage compounds quadratically and turns duels into blowouts.
+
+Space is a real key rather than something the game skips for you. It gives every
+word a deliberate trigger, and keeps the typing honest.
+
+## Sound
+
+All effects are synthesised at runtime with the Web Audio API — oscillators and
+filtered noise, no audio files. Toggle with the speaker icon.
 
 ## Layout
 

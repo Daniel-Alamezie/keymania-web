@@ -32,8 +32,11 @@ const TIER_COLORS: Record<BladeTier, string[]> = {
   5: ['#ffd66e', '#fff3c4', '#ff9d3c'],
 };
 
-/** Where each fighter stands, as a fraction of canvas width. */
-const LANE = { opponent: 0.16, player: 0.84 };
+/**
+ * Where each fighter stands, as a fraction of canvas width.
+ * The player is always on the left so their side of the screen never moves.
+ */
+const LANE = { player: 0.17, opponent: 0.83 };
 
 const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function EffectsCanvas(
   { className },

@@ -2,16 +2,13 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0 16px;
-  font-size: clamp(20px, 3.2vw, 34px);
-  line-height: 1.6;
+  font-size: clamp(20px, 3vw, 32px);
+  line-height: 1.55;
   padding: 4px 8px;
   user-select: none;
 }
 
-.sentence[data-shaking] {
-  animation: shake 260ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
-}
+.sentence[data-shaking] { animation: shake 260ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
 
 @keyframes shake {
   10%, 90% { transform: translateX(-3px); }
@@ -20,11 +17,13 @@
   40%, 60% { transform: translateX(8px); }
 }
 
-.word { white-space: nowrap; }
+.token { white-space: nowrap; }
 
 .char {
   display: inline-block;
   transition: color 90ms linear;
+  min-width: 0.42em;
+  text-align: center;
 }
 
 .char[data-state='pending'] { color: var(--muted); }
@@ -38,13 +37,26 @@
 }
 
 @keyframes caret {
-  50% { box-shadow: 0 0 0 6px rgba(255, 214, 110, 0.12); }
+  50% { box-shadow: 0 0 0 7px rgba(255, 214, 110, 0.14); }
 }
 
-/* The satisfying snap as a character is completed. */
+/* The commit key is drawn faintly until it is your turn to press it. */
+.space { opacity: 0.4; }
+.space[data-state='done'] { opacity: 0.55; }
+.space[data-state='current'] {
+  opacity: 1;
+  background: var(--player);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.32);
+  animation: commit 700ms steps(2) infinite;
+}
+
+@keyframes commit {
+  50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0.18); }
+}
+
 .pop { animation: pop 180ms cubic-bezier(0.2, 1.6, 0.4, 1); }
 
 @keyframes pop {
-  0% { transform: translateY(0) scale(1.5); color: #ffffff; }
-  100% { transform: translateY(0) scale(1); }
+  0% { transform: scale(1.55); color: #ffffff; }
+  100% { transform: scale(1); }
 }

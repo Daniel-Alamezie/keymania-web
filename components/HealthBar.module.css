@@ -1,50 +1,79 @@
-.wrap {
+.plate {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
-.wrap[data-side='opponent'] { flex-direction: row-reverse; }
+/* The opponent's plate is a mirror image, so each side reads as "theirs". */
+.plate[data-align='right'] { flex-direction: row-reverse; }
+
+.portrait {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 56px;
+  flex: 0 0 auto;
+  background: #0d0a1c;
+  border: 2px solid var(--edge);
+}
+.portrait[data-team='blue'] { border-color: var(--player); }
+.portrait[data-team='red'] { border-color: var(--opponent); }
+.plate[data-align='right'] .portrait { transform: scaleX(-1); }
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.top { display: flex; align-items: baseline; gap: 10px; }
+.plate[data-align='right'] .top { flex-direction: row-reverse; }
+
+.name { font-size: 12px; letter-spacing: 0.12em; }
+.name[data-team='blue'] { color: var(--player); }
+.name[data-team='red'] { color: var(--opponent); }
+
+.value { font-size: 12px; margin-left: auto; }
+.plate[data-align='right'] .value { margin-left: 0; margin-right: auto; }
+.value[data-state='low'] { color: var(--bad); }
 
 .track {
   position: relative;
-  flex: 1;
-  height: 18px;
+  height: 22px;
   background: #0d0a1c;
   border: 2px solid var(--edge);
   overflow: hidden;
+  display: flex;
 }
+/* Mirrored so the opponent's bar drains toward their own side. */
+.plate[data-align='right'] .track { justify-content: flex-end; }
 
 .fill {
   height: 100%;
-  transition: width 260ms cubic-bezier(0.2, 0.8, 0.3, 1), background 300ms ease;
+  transition: width 240ms cubic-bezier(0.2, 0.8, 0.3, 1), background 300ms ease;
 }
-.fill[data-state='high'] { background: linear-gradient(180deg, #6ef2a0, #2fa864); }
+.fill[data-state='high'] { background: linear-gradient(180deg, #7bf7ab, #29a35f); }
 .fill[data-state='mid'] { background: linear-gradient(180deg, #ffd66e, #d99a1d); }
 .fill[data-state='low'] {
   background: linear-gradient(180deg, #ff7a6a, #c1291a);
-  animation: danger 700ms steps(2) infinite;
+  animation: danger 620ms steps(2) infinite;
 }
 
-@keyframes danger {
-  50% { filter: brightness(1.45); }
-}
+@keyframes danger { 50% { filter: brightness(1.5); } }
 
-/* Ticks drawn over the bar to keep the chunky arcade look. */
 .notches {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 17px,
-    rgba(0, 0, 0, 0.45) 17px 19px
-  );
+  background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(0,0,0,0.5) 19px 21px);
   pointer-events: none;
 }
 
-.value {
-  min-width: 46px;
-  font-size: 12px;
-  text-align: center;
+.caption {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
 }
-.value[data-state='low'] { color: var(--bad); }
+.plate[data-align='right'] .caption { text-align: right; }
