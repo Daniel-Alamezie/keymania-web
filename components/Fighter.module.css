@@ -1,0 +1,41 @@
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stage[data-facing='left'] { transform: scaleX(-1); }
+
+.body {
+  animation: idle 1.6s steps(2) infinite, flinch 320ms ease-out;
+  transform-origin: bottom center;
+}
+
+/* Gentle two-step bob keeps the sprite alive without distracting the eye. */
+@keyframes idle {
+  50% { transform: translateY(-3px); }
+}
+
+/* Retriggered per hit: knocked back and flashed white. */
+@keyframes flinch {
+  0% { transform: translateX(0); filter: none; }
+  20% { transform: translateX(-9px); filter: brightness(3) saturate(0); }
+  60% { transform: translateX(4px); filter: brightness(1.4); }
+  100% { transform: translateX(0); filter: none; }
+}
+
+.stage[data-defeated] .body {
+  animation: none;
+  transform: rotate(-16deg) translateY(6px);
+  filter: grayscale(0.85) brightness(0.6);
+  transition: transform 400ms ease, filter 400ms ease;
+}
+
+.shadow {
+  width: 46px;
+  height: 8px;
+  margin-top: -4px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  filter: blur(1px);
+}

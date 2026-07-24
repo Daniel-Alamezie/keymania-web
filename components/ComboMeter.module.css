@@ -1,0 +1,66 @@
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  min-width: 260px;
+}
+
+.blade {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 130px;
+  animation: forge 320ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+/* Plays whenever the tier changes, so upgrades feel earned. */
+@keyframes forge {
+  0% { transform: scale(0.6) translateX(-8px); filter: brightness(2.4); }
+  100% { transform: scale(1) translateX(0); filter: none; }
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.count {
+  font-size: 15px;
+  color: var(--gold);
+  animation: bump 220ms ease-out;
+}
+
+@keyframes bump {
+  0% { transform: scale(1.6); color: #fff; }
+  100% { transform: scale(1); }
+}
+
+.name {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.track {
+  height: 5px;
+  background: #0d0a1c;
+  border: 1px solid var(--edge);
+}
+
+.fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width 220ms ease;
+}
+
+.meter[data-tier='4'] { border-color: var(--player); }
+.meter[data-tier='5'] {
+  border-color: var(--gold);
+  box-shadow: 0 0 18px rgba(255, 214, 110, 0.35);
+}

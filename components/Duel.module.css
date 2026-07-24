@@ -1,0 +1,211 @@
+.screen {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 20px 20px;
+  gap: 10px;
+}
+
+.screen[data-shake] { animation: screenShake 220ms ease-out; }
+
+@keyframes screenShake {
+  25% { transform: translate(5px, -3px); }
+  50% { transform: translate(-5px, 2px); }
+  75% { transform: translate(3px, 3px); }
+}
+
+/* ---------- Split HUD ---------- */
+.hud { display: flex; justify-content: flex-end; }
+
+.hudSide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(460px, 60%);
+}
+
+.tag {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.tag[data-side='opponent'] { color: var(--opponent); text-align: right; }
+.tag[data-side='player'] { color: var(--player); }
+
+.progress {
+  height: 6px;
+  background: #0d0a1c;
+  border: 1px solid var(--edge);
+}
+.progressFill {
+  height: 100%;
+  background: var(--opponent);
+  opacity: 0.75;
+  transition: width 200ms linear;
+}
+
+/* ---------- Arena ---------- */
+.arena {
+  position: relative;
+  border: 2px solid var(--edge);
+  background:
+    linear-gradient(180deg, rgba(56, 189, 248, 0.06), transparent 40%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 6px),
+    var(--bg);
+  overflow: hidden;
+  min-height: 190px;
+}
+
+/* Ground line so the fighters feel planted. */
+.arena::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 26%;
+  height: 2px;
+  background: var(--edge);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.lane {
+  position: absolute;
+  bottom: 22%;
+  z-index: 2;
+  transform: translateX(-50%);
+}
+.lane[data-lane='opponent'] { left: 16%; }
+.lane[data-lane='player'] { left: 84%; }
+
+.damage {
+  position: absolute;
+  top: 26%;
+  z-index: 4;
+  font-size: 18px;
+  color: var(--gold);
+  text-shadow: 0 2px 0 #000;
+  animation: floatUp 900ms ease-out forwards;
+  pointer-events: none;
+}
+.damage[data-side='opponent'] { left: 16%; }
+.damage[data-side='player'] { left: 84%; }
+
+@keyframes floatUp {
+  0% { transform: translate(-50%, 10px) scale(0.7); opacity: 0; }
+  25% { transform: translate(-50%, -6px) scale(1.25); opacity: 1; }
+  100% { transform: translate(-50%, -46px) scale(1); opacity: 0; }
+}
+
+/* ---------- Typing deck ---------- */
+.deck {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.deckRow {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.playerHealth {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 260px;
+}
+
+/* ---------- Overlays ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 7, 22, 0.86);
+  z-index: 10;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 34px 40px;
+  background: var(--panel);
+  border: 3px solid var(--edge);
+  box-shadow: var(--shadow);
+  max-width: 560px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(26px, 6vw, 46px);
+  color: var(--gold);
+  text-shadow: 0 4px 0 var(--opponent-deep);
+}
+
+.blurb {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 20px;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  border-bottom-width: 4px;
+  cursor: pointer;
+  transition: transform 90ms ease, background 140ms ease;
+}
+.button:hover { background: var(--edge); transform: translateY(-2px); }
+.button:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+.ghost { background: transparent; font-size: 10px; }
+
+.wpm { color: var(--muted); font-size: 9px; }
+
+.countdown {
+  font-size: clamp(48px, 14vw, 120px);
+  color: var(--gold);
+  text-shadow: 0 6px 0 var(--opponent-deep);
+  animation: countIn 700ms ease-out;
+}
+
+@keyframes countIn {
+  0% { transform: scale(2.4); opacity: 0; }
+  40% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.result {
+  margin: 0;
+  font-size: clamp(24px, 6vw, 40px);
+  color: var(--opponent);
+  text-shadow: 0 4px 0 #000;
+}
+.result[data-win] { color: var(--good); }
