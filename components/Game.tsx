@@ -87,6 +87,7 @@ export default function Game() {
             subscribe,
             onWord: (word: string, elapsedMs: number) =>
               send({ action: 'wordComplete', word, elapsedMs }),
+            onResign: () => send({ action: 'resign' }),
           }
         : undefined,
     [match, subscribe, send],

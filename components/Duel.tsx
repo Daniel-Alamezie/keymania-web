@@ -22,6 +22,8 @@ export interface MultiplayerConfig {
   /** Subscribe to server messages; returns an unsubscribe function. */
   subscribe: (handler: MessageHandler) => () => void;
   onWord: (word: string, elapsedMs: number) => void;
+  /** Forfeit — the opponent is awarded the win. */
+  onResign: () => void;
 }
 
 interface DuelProps {
@@ -52,6 +54,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [muted, setMuted] = useState(false);
   const [liveWpm, setLiveWpm] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirmQuit, setConfirmQuit] = useState(false);
 
   const isMulti = Boolean(multiplayer);
 
@@ -84,8 +87,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     if (state.phase !== 'playing') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      // Escape is the way out mid-duel — it only opens the confirmation, since
+      // forfeiting hands the opponent the win and cannot be undone.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setConfirmQuit((open) => !open);
+        return;
+      }
+
       const key = e.key === 'Spacebar' ? ' ' : e.key;
-      if (key.length !== 1) return;
+      if (key.length !== 1 || confirmQuit) return;
       e.preventDefault();
 
       const snapshot = stateRef.current;
@@ -105,7 +117,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.phase, multiplayer]);
+  }, [state.phase, multiplayer, confirmQuit]);
 
   /** Countdown ticks into the duel. */
   useEffect(() => {
@@ -226,12 +238,14 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       }
 
       if (message.type === 'gameOver') {
+        const iWon = message.winnerSlot === mySlot;
+        if (message.reason === 'resign') {
+          setNotice(iWon ? 'Your opponent forfeited.' : 'You forfeited the duel.');
+        }
+        // A forfeit ends things immediately; a knockout waits for the blade to land.
         track(setTimeout(
-          () => dispatch({
-            type: 'finish',
-            winner: message.winnerSlot === mySlot ? 'player' : 'opponent',
-          }),
-          PROJECTILE_FLIGHT_MS + 120,
+          () => dispatch({ type: 'finish', winner: iWon ? 'player' : 'opponent' }),
+          message.reason === 'resign' ? 0 : PROJECTILE_FLIGHT_MS + 120,
         ));
       }
 
@@ -249,6 +263,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     });
   };
 
+  /**
+   * Leaving mid-duel. Against a human this is a resignation — the server
+   * awards them the win — so it is confirmed first. Against the bot there is
+   * nothing at stake, so it simply exits.
+   */
+  const quit = () => {
+    setConfirmQuit(false);
+    if (multiplayer) multiplayer.onResign();
+    else onExit();
+  };
+
   const opponentLabel = isMulti
     ? (multiplayer!.opponentName || 'RIVAL').toUpperCase()
     : BOT_PROFILES[state.difficulty].label.toUpperCase();
@@ -261,9 +286,21 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       data-heat={state.playerCombo >= HEAT_COMBO || undefined}
       data-danger={playerLow || undefined}
     >
-      <button className={styles.mute} onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
-        {muted ? '🔇' : '🔊'}
-      </button>
+      <div className={styles.controls}>
+        <button className={styles.iconBtn} onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
+          {muted ? '🔇' : '🔊'}
+        </button>
+        {state.phase !== 'over' && (
+          <button
+            className={styles.iconBtn}
+            onClick={() => setConfirmQuit(true)}
+            aria-label="Leave the duel"
+            title="Leave the duel (Esc)"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       <header className={styles.hud}>
         <HealthBar
@@ -343,6 +380,29 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           <span key={state.countdown} className={`${styles.countdown} pixel-font`}>
             {state.countdown > 0 ? state.countdown : 'GO'}
           </span>
+        </div>
+      )}
+
+      {confirmQuit && state.phase !== 'over' && (
+        <div className={styles.overlay}>
+          <div className={`panel ${styles.dialog}`}>
+            <h2 className={`${styles.title} pixel-font`}>
+              {isMulti ? 'FORFEIT?' : 'LEAVE DUEL?'}
+            </h2>
+            <p className={styles.blurb}>
+              {isMulti
+                ? 'Quitting now hands the victory to your opponent. This cannot be undone.'
+                : 'Your progress in this duel will be lost.'}
+            </p>
+            <div className={styles.choices}>
+              <button className="btn btn-ghost" onClick={quit}>
+                {isMulti ? 'Forfeit' : 'Leave'}
+              </button>
+              <button className="btn btn-primary" onClick={() => setConfirmQuit(false)}>
+                Keep fighting
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

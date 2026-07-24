@@ -34,7 +34,7 @@ export type ServerMessage =
       healths: number[];
       progress: number[];
     }
-  | { type: 'gameOver'; winnerSlot: number }
+  | { type: 'gameOver'; winnerSlot: number; reason?: 'resign' }
   | { type: 'opponentLeft' }
   | { type: 'error'; message: string };
 
@@ -42,6 +42,7 @@ export type ClientMessage =
   | { action: 'createRoom'; name: string; visibility: 'public' | 'private' }
   | { action: 'joinRoom'; roomId: string; name: string }
   | { action: 'listRooms' }
-  | { action: 'wordComplete'; word: string; elapsedMs: number };
+  | { action: 'wordComplete'; word: string; elapsedMs: number }
+  | { action: 'resign' };
 
 export type SocketStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';
