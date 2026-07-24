@@ -79,7 +79,7 @@
 .arena {
   position: relative;
   border: 3px solid var(--edge);
-  min-height: 210px;
+  min-height: 250px;
 }
 
 .canvas {

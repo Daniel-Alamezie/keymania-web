@@ -23,8 +23,8 @@ export default function Fighter({ team, facing, hitTick, attackTick = 0, defeate
           <div className={styles.body}>
             <PixelSprite
               name={team === 'blue' ? 'fighter-blue' : 'fighter-red'}
-              alt={team === 'blue' ? 'Your fighter' : 'Opponent fighter'}
-              height={96}
+              alt={team === 'blue' ? 'Your wraith' : 'Opponent wraith'}
+              height={132}
             />
           </div>
         </div>

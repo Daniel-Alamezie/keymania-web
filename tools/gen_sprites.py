@@ -167,7 +167,128 @@ def make_blade(blade_len: int, thick: int, steel: tuple, glow) -> list[list[tupl
 
 
 # --------------------------------------------------------------------------
-# fighters — hand-authored pixel map, recoloured per team
+# fighters — hooded wraiths, built from shapes rather than a hand-drawn map
+#
+# Shape-driven so both duellists share one silhouette and differ only by
+# palette, and so proportions can be tuned by changing numbers.
+# --------------------------------------------------------------------------
+WRAITH_W, WRAITH_H = 26, 32
+
+
+def fill_span(canvas, y: int, cx: int, half: float, colour) -> None:
+    for x in range(int(round(cx - half)), int(round(cx + half)) + 1):
+        put(canvas, x, y, colour)
+
+
+def make_wraith(palette: dict, hit: bool = False) -> list[list[tuple]]:
+    canvas = new_canvas(WRAITH_W, WRAITH_H)
+    cx = WRAITH_W // 2
+
+    cloak = palette["cloak"]
+    cloak_dark = palette["cloak_dark"]
+    cloak_light = palette["cloak_light"]
+    void = palette["void"]
+    glow = palette["glow"]
+    glow_core = palette["glow_core"]
+    wisp = palette["wisp"]
+
+    if hit:
+        cloak = cloak_light = cloak_dark = (255, 255, 255, 255)
+        void = (250, 235, 235, 255)
+
+    # --- wispy flame rising from the hood -------------------------------
+    for i, (dx, top, height) in enumerate(((-3, 1, 6), (0, 0, 8), (3, 2, 5))):
+        for y in range(top, top + height):
+            drift = int(round(math.sin((y - top) * 0.9 + i) * 1.6))
+            half = 0.5 if y < top + height - 2 else 1.2
+            fill_span(canvas, y, cx + dx + drift, half, wisp)
+
+    # --- cloak body first, so the hood overlaps and reads as in front ----
+    body_top, body_bottom = 16, 26
+    for y in range(body_top, body_bottom):
+        t = (y - body_top) / (body_bottom - body_top)
+        half = 6.0 + t * 5.0
+        shade = cloak_dark if t > 0.5 else cloak
+        fill_span(canvas, y, cx, half, shade)
+        put(canvas, int(round(cx - half)), y, cloak_light)
+
+    # Ragged hem: distinct triangular points rather than soft noise, so the
+    # silhouette reads as torn cloth even at a small size.
+    hem_half = 11.0
+    for i, x in enumerate(range(int(cx - hem_half), int(cx + hem_half) + 1, 3)):
+        depth = 5 if i % 2 == 0 else 3
+        for d in range(depth):
+            spread = 1 if d < depth - 2 else 0
+            for dx in range(-spread, spread + 1):
+                put(canvas, x + dx, body_bottom + d, cloak_dark)
+
+    # --- clawed hands, held clear of the body silhouette -----------------
+    for side in (-1, 1):
+        hx = cx + side * 11
+        for y in range(19, 22):
+            put(canvas, hx, y, cloak_dark)
+            put(canvas, hx - side, y, cloak)
+        for claw in range(3):
+            tip = 22 + (1 if claw == 1 else 0)
+            fx = hx + side * (claw - 1)
+            put(canvas, fx, 22, cloak_light)
+            put(canvas, fx, tip, glow if claw == 1 else cloak_light)
+
+    # --- hood: domed top, narrower than the shoulders --------------------
+    hood_top, hood_bottom, hood_r = 4, 17, 8.0
+    for y in range(hood_top, hood_bottom):
+        if y < hood_top + hood_r:
+            dy = (hood_top + hood_r) - y
+            half = math.sqrt(max(0.0, hood_r ** 2 - dy ** 2))
+        else:
+            half = hood_r - (y - hood_top - hood_r) * 0.8
+        shade = cloak_light if y < hood_top + 3 else cloak
+        fill_span(canvas, y, cx, half, shade)
+        put(canvas, int(round(cx - half)), y, cloak_light)
+
+    # --- shadowed face opening -------------------------------------------
+    for y in range(9, 17):
+        dy = (y - 12.5) / 4.0
+        half = 5.6 * math.sqrt(max(0.0, 1 - dy * dy))
+        fill_span(canvas, y, cx, half, void)
+
+    # --- glowing eyes ----------------------------------------------------
+    for side in (-1, 1):
+        ex = cx + side * 3
+        for y in range(11, 15):
+            half = 1.7 if y in (12, 13) else 1.0
+            fill_span(canvas, y, ex, half, glow)
+        put(canvas, ex, 12, glow_core)
+        put(canvas, ex, 13, glow_core)
+
+    outline(canvas, (18, 14, 28, 255))
+    return canvas
+
+
+WRAITH_PALETTES = {
+    "blue": {
+        "cloak": (86, 128, 168, 255),
+        "cloak_dark": (52, 84, 118, 255),
+        "cloak_light": (140, 190, 224, 255),
+        "void": (28, 40, 62, 255),
+        "glow": (72, 226, 190, 255),
+        "glow_core": (214, 255, 246, 255),
+        "wisp": (108, 240, 208, 255),
+    },
+    "red": {
+        "cloak": (92, 70, 118, 255),
+        "cloak_dark": (56, 40, 78, 255),
+        "cloak_light": (150, 120, 186, 255),
+        "void": (34, 24, 46, 255),
+        "glow": (246, 106, 196, 255),
+        "glow_core": (255, 220, 246, 255),
+        "wisp": (206, 128, 240, 255),
+    },
+}
+
+
+# --------------------------------------------------------------------------
+# legacy knight map (kept for reference; wraiths are used in game)
 # --------------------------------------------------------------------------
 FIGHTER_MAP = [
     "....................",
@@ -344,9 +465,9 @@ def main() -> None:
         save(make_blade(length, thick, steel, glow), f"blade-{i}.png")
 
     print("fighters:")
-    for team in TEAMS:
-        save(from_map(FIGHTER_MAP, fighter_palette(team, False)), f"fighter-{team}.png")
-        save(from_map(FIGHTER_MAP, fighter_palette(team, True)), f"fighter-{team}-hit.png")
+    for team, palette in WRAITH_PALETTES.items():
+        save(make_wraith(palette), f"fighter-{team}.png")
+        save(make_wraith(palette, hit=True), f"fighter-{team}-hit.png")
 
     print("impacts:")
     for f in range(3):

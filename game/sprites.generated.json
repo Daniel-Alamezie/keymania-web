@@ -20,20 +20,20 @@
     "height": 80
   },
   "fighter-blue": {
-    "width": 80,
-    "height": 96
+    "width": 104,
+    "height": 128
   },
   "fighter-blue-hit": {
-    "width": 80,
-    "height": 96
+    "width": 104,
+    "height": 128
   },
   "fighter-red": {
-    "width": 80,
-    "height": 96
+    "width": 104,
+    "height": 128
   },
   "fighter-red-hit": {
-    "width": 80,
-    "height": 96
+    "width": 104,
+    "height": 128
   },
   "impact-1": {
     "width": 96,

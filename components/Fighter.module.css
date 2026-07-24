@@ -47,11 +47,17 @@
   transition: transform 500ms ease, filter 500ms ease;
 }
 
+/* Wraiths hover rather than stand, so the shadow drifts beneath them. */
 .shadow {
-  width: 52px;
-  height: 9px;
-  margin-top: -5px;
+  width: 60px;
+  height: 10px;
+  margin-top: -8px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 50%;
-  filter: blur(2px);
+  filter: blur(3px);
+  animation: drift 1.6s steps(2) infinite;
+}
+
+@keyframes drift {
+  50% { transform: scaleX(0.88); opacity: 0.75; }
 }
