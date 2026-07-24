@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import PixelSprite from './PixelSprite';
 import styles from './Fighter.module.css';
 
 interface FighterProps {
@@ -17,12 +17,10 @@ export default function Fighter({ team, facing, hitTick, defeated }: FighterProp
     <div className={styles.stage} data-facing={facing} data-defeated={defeated || undefined}>
       {/* key on hitTick so the flinch animation restarts on every hit */}
       <div key={hitTick} className={styles.body}>
-        <Image
-          src={`/sprites/fighter-${team}.png`}
+        <PixelSprite
+          name={team === 'blue' ? 'fighter-blue' : 'fighter-red'}
           alt={team === 'blue' ? 'Your fighter' : 'Opponent fighter'}
-          width={64}
-          height={80}
-          priority
+          height={96}
         />
       </div>
       <div className={styles.shadow} aria-hidden="true" />

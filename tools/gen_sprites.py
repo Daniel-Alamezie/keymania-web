@@ -14,13 +14,19 @@ result stays crisp, authentic pixel art.
 
 from __future__ import annotations
 
+import json
 import math
 import os
 from PIL import Image
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "public", "sprites")
+MANIFEST = os.path.join(os.path.dirname(__file__), "..", "game", "sprites.generated.json")
 SCALE = 4
 TRANSPARENT = (0, 0, 0, 0)
+
+# Every sprite's final size, written out for the app to import. Declaring these
+# by hand in components is how they silently drift out of sync with the art.
+SIZES: dict[str, dict[str, int]] = {}
 
 
 # --------------------------------------------------------------------------
@@ -42,6 +48,7 @@ def save(canvas, name: str, scale: int = SCALE) -> None:
     img = img.resize((w * scale, h * scale), Image.NEAREST)
     os.makedirs(OUT_DIR, exist_ok=True)
     img.save(os.path.join(OUT_DIR, name))
+    SIZES[name.replace(".png", "")] = {"width": w * scale, "height": h * scale}
     print(f"  {name}  {w}x{h} -> {w * scale}x{h * scale}")
 
 
@@ -260,6 +267,12 @@ def main() -> None:
     print("impacts:")
     for f in range(3):
         save(make_impact(f), f"impact-{f + 1}.png")
+
+    os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
+    with open(MANIFEST, "w", encoding="utf-8") as fh:
+        json.dump(dict(sorted(SIZES.items())), fh, indent=2)
+        fh.write("\n")
+    print(f"manifest: {os.path.relpath(MANIFEST)} ({len(SIZES)} sprites)")
 
 
 if __name__ == "__main__":

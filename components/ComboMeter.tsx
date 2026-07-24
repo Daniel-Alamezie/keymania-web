@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import PixelSprite, { type SpriteName } from './PixelSprite';
 import { TIER_THRESHOLDS } from '@/game/constants';
 import type { BladeTier } from '@/game/types';
 import styles from './ComboMeter.module.css';
@@ -35,12 +35,11 @@ export default function ComboMeter({ combo, tier }: ComboMeterProps) {
   return (
     <div className={styles.meter} data-tier={tier}>
       <div className={styles.blade} key={tier}>
-        <Image
-          src={`/sprites/blade-${tier}.png`}
+        {/* Height grows with the tier; width follows the sprite's own aspect. */}
+        <PixelSprite
+          name={`blade-${tier}` as SpriteName}
           alt={`${TIER_NAMES[tier]} blade`}
-          width={122}
-          height={40}
-          style={{ width: `${58 + tier * 14}px`, height: 'auto' }}
+          height={20 + tier * 4}
         />
       </div>
 

@@ -1,0 +1,50 @@
+{
+  "blade-1": {
+    "width": 116,
+    "height": 56
+  },
+  "blade-2": {
+    "width": 140,
+    "height": 60
+  },
+  "blade-3": {
+    "width": 172,
+    "height": 64
+  },
+  "blade-4": {
+    "width": 204,
+    "height": 72
+  },
+  "blade-5": {
+    "width": 244,
+    "height": 80
+  },
+  "fighter-blue": {
+    "width": 80,
+    "height": 96
+  },
+  "fighter-blue-hit": {
+    "width": 80,
+    "height": 96
+  },
+  "fighter-red": {
+    "width": 80,
+    "height": 96
+  },
+  "fighter-red-hit": {
+    "width": 80,
+    "height": 96
+  },
+  "impact-1": {
+    "width": 96,
+    "height": 96
+  },
+  "impact-2": {
+    "width": 96,
+    "height": 96
+  },
+  "impact-3": {
+    "width": 96,
+    "height": 96
+  }
+}

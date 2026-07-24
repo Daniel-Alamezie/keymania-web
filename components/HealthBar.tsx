@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import PixelSprite from './PixelSprite';
 import { MAX_HEALTH } from '@/game/constants';
 import styles from './HealthBar.module.css';
 
@@ -25,7 +25,7 @@ export default function HealthBar({ name, value, team, align, caption }: HealthB
   return (
     <div className={styles.plate} data-align={align} data-team={team}>
       <div className={styles.portrait} data-team={team}>
-        <Image src={`/sprites/fighter-${team}.png`} alt="" width={40} height={48} />
+        <PixelSprite name={team === 'blue' ? 'fighter-blue' : 'fighter-red'} height={44} />
       </div>
 
       <div className={styles.info}>
