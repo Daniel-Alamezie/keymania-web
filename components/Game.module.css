@@ -99,3 +99,19 @@
   .menu { gap: 9px; padding: 18px 22px; }
   .blurb { display: none; }
 }
+
+/* A quiet link rather than a button: it should be findable without competing
+   with the two things that actually start a game. */
+.guideLink {
+  margin-top: 2px;
+  background: transparent;
+  border: none;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 140ms ease;
+}
+.guideLink:hover { color: var(--gold); }

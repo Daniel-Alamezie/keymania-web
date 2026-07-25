@@ -431,6 +431,86 @@ def make_torch(frame: int) -> list[list[tuple]]:
 
 
 # --------------------------------------------------------------------------
+# power icons — drawn rather than borrowed from the emoji set, so the guide
+# and the HUD match the rest of the art instead of inheriting a system font
+# --------------------------------------------------------------------------
+WARD_MAP = [
+    "................",
+    "...XXXXXXXXXX...",
+    "..XLLLLLLLLLLX..",
+    "..XLSSSSSSSSLX..",
+    "..XLSSSSSSSSLX..",
+    "..XLSSSSSSSSLX..",
+    "..XLSSSSSSSSLX..",
+    "..XLSSSSSSSSLX..",
+    "..XLSSSSSSSSLX..",
+    "...XLSSSSSSLX...",
+    "....XLSSSSLX....",
+    ".....XLSSLX.....",
+    "......XLLX......",
+    ".......XX.......",
+    "................",
+    "................",
+]
+
+SURGE_MAP = [
+    "................",
+    ".........XXX....",
+    "........XLLX....",
+    ".......XLLLX....",
+    "......XLLLX.....",
+    ".....XLLLX......",
+    "....XLLLXXXX....",
+    "....XLLLLLLX....",
+    ".....XXXLLLX....",
+    "........XLLX....",
+    ".......XLLX.....",
+    "......XLLX......",
+    ".....XLLX.......",
+    ".....XX.........",
+    "................",
+    "................",
+]
+
+MEND_MAP = [
+    "................",
+    "......XXXX......",
+    "......XLLX......",
+    "......XLLX......",
+    "..XXXXXLLXXXXX..",
+    "..XLLLLLLLLLLX..",
+    "..XLLLLLLLLLLX..",
+    "..XXXXXLLXXXXX..",
+    "......XLLX......",
+    "......XLLX......",
+    "......XLLX......",
+    "......XXXX......",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+POWER_ICONS = {
+    "ward": (WARD_MAP, {
+        "X": (22, 18, 34, 255),
+        "L": (140, 214, 255, 255),
+        "S": (56, 150, 220, 255),
+    }),
+    "surge": (SURGE_MAP, {
+        "X": (22, 18, 34, 255),
+        "L": (255, 214, 110, 255),
+        "S": (214, 160, 50, 255),
+    }),
+    "mend": (MEND_MAP, {
+        "X": (22, 18, 34, 255),
+        "L": (110, 232, 152, 255),
+        "S": (48, 168, 96, 255),
+    }),
+}
+
+
+# --------------------------------------------------------------------------
 # impact burst — three expanding frames
 # --------------------------------------------------------------------------
 def make_impact(frame: int, total: int = 3) -> list[list[tuple]]:
@@ -468,6 +548,10 @@ def main() -> None:
     for team, palette in WRAITH_PALETTES.items():
         save(make_wraith(palette), f"fighter-{team}.png")
         save(make_wraith(palette, hit=True), f"fighter-{team}-hit.png")
+
+    print("powers:")
+    for name, (rows, palette) in POWER_ICONS.items():
+        save(from_map(rows, palette), f"power-{name}.png")
 
     print("impacts:")
     for f in range(3):

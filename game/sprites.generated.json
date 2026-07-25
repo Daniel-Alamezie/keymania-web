@@ -47,6 +47,18 @@
     "width": 96,
     "height": 96
   },
+  "power-mend": {
+    "width": 64,
+    "height": 64
+  },
+  "power-surge": {
+    "width": 64,
+    "height": 64
+  },
+  "power-ward": {
+    "width": 64,
+    "height": 64
+  },
   "tile-floor": {
     "width": 48,
     "height": 48

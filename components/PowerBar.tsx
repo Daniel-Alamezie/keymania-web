@@ -1,6 +1,7 @@
 'use client';
 
 import { POWER_META } from '@/game/powers';
+import PixelSprite from './PixelSprite';
 import styles from './PowerBar.module.css';
 
 interface PowerBarProps {
@@ -27,14 +28,14 @@ export default function PowerBar({ ward, surge, blockTick }: PowerBarProps) {
         data-blocked={blockTick > 0 || undefined}
         title={`${POWER_META.ward.label} — ${POWER_META.ward.blurb}`}
       >
-        {POWER_META.ward.icon}
+        <PixelSprite name="power-ward" height={20} />
       </span>
       <span
         className={styles.slot}
         data-active={surge || undefined}
         title={`${POWER_META.surge.label} — ${POWER_META.surge.blurb}`}
       >
-        {POWER_META.surge.icon}
+        <PixelSprite name="power-surge" height={20} />
       </span>
     </div>
   );

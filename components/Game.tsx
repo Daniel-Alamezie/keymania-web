@@ -12,6 +12,7 @@ import ArenaScene from './ArenaScene';
 import Fighter from './Fighter';
 import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
+import HowToPlay from './HowToPlay';
 import styles from './Game.module.css';
 
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
@@ -36,6 +37,7 @@ export default function Game() {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [waiting, setWaiting] = useState<{ code: string; visibility: 'public' | 'private' } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
   const [match, setMatch] = useState<Match | null>(null);
 
   /** Lobby-level messages. The duel subscribes separately for its own. */
@@ -167,9 +169,15 @@ export default function Game() {
             Multiplayer
             <small className="btn-sub">host or join a room</small>
           </button>
+
+          <button className={styles.guideLink} onClick={() => setShowGuide(true)}>
+            New here? Read how to play
+          </button>
         </div>
         <LeaderboardPanel />
       </div>
+
+      {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
     </main>
   );
 }
