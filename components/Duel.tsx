@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import EffectsCanvas, { type EffectsHandle } from '@/render/EffectsCanvas';
-import { accuracy, currentTier, duelReducer, initialState, overallWpm } from '@/game/duelReducer';
+import {
+  accuracy, currentTier, duelReducer, finalWpm, initialState, overallWpm,
+} from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
@@ -205,7 +207,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
     track(setTimeout(() => {
       land(target, hit.damage, hit.tier);
-      dispatch({ type: 'land', target, damage: hit.damage });
+      dispatch({ type: 'land', target, damage: hit.damage, now: Date.now() });
     }, PROJECTILE_FLIGHT_MS));
   }, [state.lastHit, isMulti, land]);
 
@@ -258,14 +260,14 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         }
         // A forfeit ends things immediately; a knockout waits for the blade to land.
         track(setTimeout(
-          () => dispatch({ type: 'finish', winner: iWon ? 'player' : 'opponent' }),
+          () => dispatch({ type: 'finish', winner: iWon ? 'player' : 'opponent', now: Date.now() }),
           message.reason === 'resign' ? 0 : PROJECTILE_FLIGHT_MS + 120,
         ));
       }
 
       if (message.type === 'opponentLeft') {
         setNotice('Your opponent left the duel.');
-        dispatch({ type: 'finish', winner: 'player' });
+        dispatch({ type: 'finish', winner: 'player', now: Date.now() });
       }
     });
   }, [multiplayer, land]);
@@ -438,10 +440,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             {notice && <p className={styles.blurb}>{notice}</p>}
 
             <dl className={styles.stats}>
-              <Stat label="Best combo" value={`x${state.stats.maxCombo}`} />
-              <Stat label="Top speed" value={`${state.stats.bestWpm} wpm`} />
+              {/* Sustained speed leads — a single fast word is mostly luck. */}
+              <Stat label="Speed" value={`${finalWpm(state.stats)} wpm`} />
               <Stat label="Accuracy" value={`${accuracy(state.stats)}%`} />
-              <Stat label="Words" value={String(state.stats.wordsTyped)} />
+              <Stat label="Best combo" value={`x${state.stats.maxCombo}`} />
+              <Stat label="Peak word" value={`${state.stats.bestWpm} wpm`} />
             </dl>
 
             <div className={styles.choices}>

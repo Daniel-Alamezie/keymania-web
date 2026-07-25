@@ -9,8 +9,11 @@ export interface DuelStats {
   charsTyped: number;
   mistakes: number;
   maxCombo: number;
+  /** Fastest single word. A burst figure — see `finalWpm` for the honest one. */
   bestWpm: number;
   startedAt: number;
+  /** Frozen when the duel ends, so results stop moving once they are shown. */
+  endedAt: number;
 }
 
 export interface DuelState {
@@ -65,13 +68,14 @@ export type DuelAction =
   | { type: 'countdown' }
   | { type: 'typed'; char: string; now: number }
   | { type: 'botWord'; characters: number; elapsedMs: number; progress: number; fumbled: boolean }
-  | { type: 'land'; target: Side; damage: number }
+  /** `now` is passed in rather than read inside, keeping the reducer pure. */
+  | { type: 'land'; target: Side; damage: number; now: number }
   /** Authoritative health from the server — never computed locally in multiplayer. */
   | { type: 'setHealths'; playerHealth: number; opponentHealth: number }
   | { type: 'setOpponentProgress'; progress: number }
   /** Authoritative power state from the server. */
   | { type: 'setPowers'; ward: boolean; surge: boolean; granted?: PowerKind; blocked?: boolean }
-  | { type: 'finish'; winner: Side }
+  | { type: 'finish'; winner: Side; now: number }
   | { type: 'reset' };
 
 /** Sentences always end in a space so the final word is committed like any other. */
@@ -88,7 +92,7 @@ function shiftCharges(
 }
 
 const emptyStats = (): DuelStats => ({
-  wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0,
+  wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0, endedAt: 0,
 });
 
 export function initialState(difficulty: Difficulty = 'rival'): DuelState {
@@ -190,16 +194,24 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
       // SPACE committed the word — score everything that came before it.
       const wordStart = state.sentence.lastIndexOf(' ', state.cursor - 1) + 1;
-      const characters = state.cursor - wordStart;
+
+      // The committing space is a keystroke too, and the measured time spans
+      // it, so it counts toward the word's length. Standard typing measures
+      // define a "word" as five characters *including* the space. Leaving it
+      // out understates speed by 1/(n+1) — and because that fraction depends on
+      // word length, short words would look slower than long ones at an
+      // identical typing rate.
+      const keystrokes = state.cursor - wordStart + 1;
+
       const combo = keepsCombo(action.now - state.lastWordAt) ? state.playerCombo : 0;
       const result = scoreWord({
-        characters,
+        characters: keystrokes,
         elapsedMs: Math.max(1, action.now - state.wordStartedAt),
         combo,
       });
 
       const sentenceDone = advanced >= state.sentence.length;
-      const wpm = wpmFor(characters, Math.max(1, action.now - state.wordStartedAt));
+      const wpm = wpmFor(keystrokes, Math.max(1, action.now - state.wordStartedAt));
 
       // Which word of the whole script this was, so charged words line up with
       // whatever the server marked.
@@ -302,7 +314,15 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       const winner: Side | null =
         opponentHealth <= 0 ? 'player' : playerHealth <= 0 ? 'opponent' : null;
 
-      return { ...state, playerHealth, opponentHealth, phase: winner ? 'over' : state.phase, winner };
+      return {
+        ...state,
+        playerHealth,
+        opponentHealth,
+        phase: winner ? 'over' : state.phase,
+        winner,
+        // Freeze the clock the moment it is decided, so the results are settled.
+        stats: winner ? { ...state.stats, endedAt: action.now } : state.stats,
+      };
     }
 
     case 'setHealths': {
@@ -329,7 +349,12 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       };
 
     case 'finish':
-      return { ...state, phase: 'over', winner: action.winner };
+      return {
+        ...state,
+        phase: 'over',
+        winner: action.winner,
+        stats: { ...state.stats, endedAt: state.stats.endedAt || action.now },
+      };
 
     case 'reset':
       return initialState(state.difficulty);
@@ -349,8 +374,25 @@ export function accuracy(stats: DuelStats): number {
   return total === 0 ? 100 : Math.round((stats.charsTyped / total) * 100);
 }
 
-/** Overall words-per-minute across the whole duel. */
+/** Overall words-per-minute across the whole duel, live. */
 export function overallWpm(stats: DuelStats, now: number): number {
   if (!stats.startedAt) return 0;
   return Math.round(wpmFor(stats.charsTyped, now - stats.startedAt));
+}
+
+/**
+ * The duel's settled speed — the figure worth ranking.
+ *
+ * Uses the frozen end time rather than the clock: computing this live on a
+ * results screen would make the number fall steadily as the player sat there,
+ * since elapsed time keeps growing while the character count does not.
+ *
+ * Preferred over `bestWpm` for any leaderboard. A single fast short word is
+ * mostly luck; sustained speed over a whole duel is the actual skill. Note that
+ * because a wrong key never advances the cursor, mistakes already cost time —
+ * so this figure honestly reflects accuracy without needing a separate penalty.
+ */
+export function finalWpm(stats: DuelStats): number {
+  if (!stats.startedAt || !stats.endedAt) return 0;
+  return Math.round(wpmFor(stats.charsTyped, stats.endedAt - stats.startedAt));
 }

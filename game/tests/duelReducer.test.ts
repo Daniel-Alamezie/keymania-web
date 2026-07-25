@@ -11,7 +11,10 @@ function playing(sentence = 'the cat sat '): DuelState {
     cursor: 0,
     wordStartedAt: now,
     lastWordAt: now,
-    stats: { wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: now },
+    stats: {
+      wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0,
+      bestWpm: 0, startedAt: now, endedAt: 0,
+    },
   };
 }
 
@@ -85,19 +88,19 @@ describe('damage and victory', () => {
   it('applies damage only when a blade lands', () => {
     const thrown = type(playing(), 'the ');
     expect(thrown.opponentHealth).toBe(100);
-    const landed = duelReducer(thrown, { type: 'land', target: 'opponent', damage: 4 });
+    const landed = duelReducer(thrown, { type: 'land', target: 'opponent', damage: 4, now: 1 });
     expect(landed.opponentHealth).toBe(96);
   });
 
   it('ends the duel when a fighter is emptied', () => {
-    const state = duelReducer(playing(), { type: 'land', target: 'opponent', damage: 999 });
+    const state = duelReducer(playing(), { type: 'land', target: 'opponent', damage: 999, now: 1 });
     expect(state.phase).toBe('over');
     expect(state.winner).toBe('player');
   });
 
   it('ignores further hits once the duel is over', () => {
-    const over = duelReducer(playing(), { type: 'land', target: 'player', damage: 999 });
-    const after = duelReducer(over, { type: 'land', target: 'opponent', damage: 50 });
+    const over = duelReducer(playing(), { type: 'land', target: 'player', damage: 999, now: 1 });
+    const after = duelReducer(over, { type: 'land', target: 'opponent', damage: 50, now: 1 });
     expect(after.opponentHealth).toBe(100);
     expect(after.winner).toBe('opponent');
   });
@@ -105,7 +108,7 @@ describe('damage and victory', () => {
 
 describe('accuracy', () => {
   it('is 100% with no keystrokes and drops with mistakes', () => {
-    expect(accuracy({ wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0 })).toBe(100);
-    expect(accuracy({ wordsTyped: 0, charsTyped: 9, mistakes: 1, maxCombo: 0, bestWpm: 0, startedAt: 0 })).toBe(90);
+    expect(accuracy({ wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0, endedAt: 0 })).toBe(100);
+    expect(accuracy({ wordsTyped: 0, charsTyped: 9, mistakes: 1, maxCombo: 0, bestWpm: 0, startedAt: 0, endedAt: 0 })).toBe(90);
   });
 });
