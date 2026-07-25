@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { BOT_PROFILES } from '@/game/constants';
 import type { RoomSummary } from '@/game/protocol';
+import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/game/types';
 import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
@@ -17,6 +18,7 @@ interface Match {
   script: string[];
   opponentName: string;
   mySlot: number;
+  powers: Record<number, PowerKind>;
 }
 
 /**
@@ -47,7 +49,12 @@ export default function Game() {
         if (message.type === 'matchStart') {
           setError(null);
           setWaiting(null);
-          setMatch({ script: message.script, opponentName: message.opponent, mySlot: message.slot });
+          setMatch({
+            script: message.script,
+            opponentName: message.opponent,
+            mySlot: message.slot,
+            powers: message.powers ?? {},
+          });
           setScreen('duel');
         }
       }),
@@ -84,6 +91,7 @@ export default function Game() {
             script: match.script,
             opponentName: match.opponentName,
             mySlot: match.mySlot,
+            powers: match.powers,
             subscribe,
             onWord: (word: string, elapsedMs: number) =>
               send({ action: 'wordComplete', word, elapsedMs }),

@@ -7,18 +7,22 @@ import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import type { MessageHandler } from '@/game/useDuelSocket';
+import type { PowerKind } from '@/game/powers';
 import type { BladeTier, Difficulty, Side } from '@/game/types';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
 import ArenaScene from './ArenaScene';
 import SentenceView from './SentenceView';
 import ComboMeter from './ComboMeter';
+import PowerBar from './PowerBar';
 import styles from './Duel.module.css';
 
 export interface MultiplayerConfig {
   script: string[];
   opponentName: string;
   mySlot: number;
+  /** Charged words, decided by the server. */
+  powers: Record<number, PowerKind>;
   /** Subscribe to server messages; returns an unsubscribe function. */
   subscribe: (handler: MessageHandler) => () => void;
   onWord: (word: string, elapsedMs: number) => void;
@@ -77,6 +81,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       type: 'startMulti',
       script: multiplayer.script,
       opponentName: multiplayer.opponentName,
+      powers: multiplayer.powers,
     });
     // Only re-arm when a genuinely new match arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,11 +233,20 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         });
 
         track(setTimeout(() => {
-          if (!mine) land('player', message.damage, tier);
+          // A warded blade lands with a block rather than damage.
+          if (!mine && !message.blocked) land('player', message.damage, tier);
           dispatch({
             type: 'setHealths',
             playerHealth: message.healths[mySlot],
             opponentHealth: message.healths[1 - mySlot],
+          });
+          // The server owns power state; overwrite whatever we predicted.
+          dispatch({
+            type: 'setPowers',
+            ward: message.wards?.[mySlot] ?? false,
+            surge: message.surges?.[mySlot] ?? false,
+            granted: mine ? message.granted : undefined,
+            blocked: message.blocked && !mine,
           });
         }, PROJECTILE_FLIGHT_MS));
       }
@@ -353,8 +367,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       </ArenaScene>
 
       <section className={styles.deck}>
-        <SentenceView sentence={state.sentence} cursor={state.cursor} missTick={state.missTick} />
-        <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />
+        <SentenceView
+          sentence={state.sentence}
+          cursor={state.cursor}
+          missTick={state.missTick}
+          powers={state.powers}
+          wordOffset={state.wordOffset}
+        />
+        <div className={styles.deckRow}>
+          <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />
+          <PowerBar ward={state.ward} surge={state.surge} blockTick={state.blockTick} />
+        </div>
       </section>
 
       {state.phase === 'idle' && !isMulti && (

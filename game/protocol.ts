@@ -6,6 +6,8 @@
  * failing silently at runtime.
  */
 
+import type { PowerKind } from './powers';
+
 export interface RoomSummary {
   roomId: string;
   host: string;
@@ -19,6 +21,8 @@ export type ServerMessage =
       type: 'matchStart';
       roomId: string;
       script: string[];
+      /** Charged words keyed by flat word index. */
+      powers: Record<number, PowerKind>;
       countdownMs: number;
       slot: number;
       you: string;
@@ -33,6 +37,14 @@ export type ServerMessage =
       wpm: number;
       healths: number[];
       progress: number[];
+      /** Power the thrower just collected, if the word was charged. */
+      granted?: PowerKind;
+      /** The target's ward absorbed this blade. */
+      blocked?: boolean;
+      /** The throw was doubled by a surge. */
+      surged?: boolean;
+      wards?: boolean[];
+      surges?: boolean[];
     }
   | { type: 'gameOver'; winnerSlot: number; reason?: 'resign' }
   | { type: 'opponentLeft' }

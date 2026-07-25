@@ -49,6 +49,37 @@
 /* Spaces stay blank — the caret sitting on an empty slot is the cue. */
 .space { min-width: 0.5em; }
 
+/* Charged words are unmissable — worth rushing for, but a typo still costs you
+   the combo, which is the tension the whole mechanic rests on. */
+.token[data-charge] {
+  position: relative;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(255, 214, 110, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(255, 214, 110, 0.45);
+  animation: charged 1.5s ease-in-out infinite;
+}
+.token[data-charge] .char[data-state='pending'] { color: var(--gold); }
+
+@keyframes charged {
+  50% {
+    background: rgba(255, 214, 110, 0.24);
+    box-shadow: inset 0 0 0 2px rgba(255, 214, 110, 0.9), 0 0 22px rgba(255, 214, 110, 0.4);
+  }
+}
+
+.charge {
+  position: absolute;
+  top: -0.85em;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.42em;
+  filter: drop-shadow(0 0 6px rgba(255, 214, 110, 0.9));
+  animation: bob 1.5s ease-in-out infinite;
+}
+
+@keyframes bob { 50% { transform: translateX(-50%) translateY(-3px); } }
+
 .pop { animation: pop 190ms cubic-bezier(0.2, 1.7, 0.4, 1); }
 
 @keyframes pop {

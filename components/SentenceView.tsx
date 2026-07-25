@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { POWER_META, type PowerKind } from '@/game/powers';
 import styles from './SentenceView.module.css';
 
 interface SentenceViewProps {
@@ -8,6 +9,10 @@ interface SentenceViewProps {
   cursor: number;
   /** Increments on every typo; drives the error shake. */
   missTick: number;
+  /** Charged words keyed by flat script index. */
+  powers?: Record<number, PowerKind>;
+  /** Flat index of this sentence's first word. */
+  wordOffset?: number;
 }
 
 interface Token {
@@ -27,7 +32,9 @@ interface Token {
  * Both animations are driven imperatively through the Web Animations API:
  * they are purely visual, so they should not cost a React render.
  */
-export default function SentenceView({ sentence, cursor, missTick }: SentenceViewProps) {
+export default function SentenceView({
+  sentence, cursor, missTick, powers = {}, wordOffset = 0,
+}: SentenceViewProps) {
   const tokens = useMemo<Token[]>(() => {
     const out: Token[] = [];
     let current: Token['chars'] = [];
@@ -88,13 +95,17 @@ export default function SentenceView({ sentence, cursor, missTick }: SentenceVie
       {tokens.map((token) => {
         const state =
           token.index < activeWord ? 'done' : token.index === activeWord ? 'active' : 'ahead';
+        const charge = powers[wordOffset + token.index];
         return (
           <span
             key={token.key}
             ref={(el) => { wordRefs.current[token.index] = el; }}
             className={styles.token}
             data-word={state}
+            data-charge={charge}
+            title={charge ? `${POWER_META[charge].label} — ${POWER_META[charge].blurb}` : undefined}
           >
+            {charge && <span className={styles.charge} aria-hidden="true">{POWER_META[charge].icon}</span>}
             {token.chars.map(({ ch, index }) => {
               const charState = index < cursor ? 'done' : index === cursor ? 'current' : 'pending';
               return (

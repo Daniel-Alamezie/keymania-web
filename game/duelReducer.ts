@@ -1,6 +1,7 @@
 import { applyDamage, bladeTier, keepsCombo, scoreWord, wpmFor } from './engine';
 import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
+import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER, type PowerKind } from './powers';
 import type { BladeTier, Difficulty, Phase, Side } from './types';
 
 export interface DuelStats {
@@ -36,6 +37,19 @@ export interface DuelState {
   opponentCombo: number;
   opponentProgress: number;
 
+  /** Charged words, keyed by flat word index across the whole script. */
+  powers: Record<number, PowerKind>;
+  /** Flat index of the first word of the current sentence. */
+  wordOffset: number;
+  /** Absorbs the next blade aimed at you. */
+  ward: boolean;
+  /** Doubles your next throw. */
+  surge: boolean;
+  /** Most recent power collected, for the pickup flourish. */
+  lastPower: { kind: PowerKind; tick: number } | null;
+  /** Bumped when a ward absorbs a blade. */
+  blockTick: number;
+
   missTick: number;
   lastHit: { id: number; side: Side; damage: number; wpm: number; tier: BladeTier } | null;
   hitSeq: number;
@@ -47,7 +61,7 @@ export interface DuelState {
 
 export type DuelAction =
   | { type: 'start'; difficulty: Difficulty }
-  | { type: 'startMulti'; script: string[]; opponentName: string }
+  | { type: 'startMulti'; script: string[]; opponentName: string; powers: Record<number, PowerKind> }
   | { type: 'countdown' }
   | { type: 'typed'; char: string; now: number }
   | { type: 'botWord'; characters: number; elapsedMs: number; progress: number; fumbled: boolean }
@@ -55,11 +69,23 @@ export type DuelAction =
   /** Authoritative health from the server — never computed locally in multiplayer. */
   | { type: 'setHealths'; playerHealth: number; opponentHealth: number }
   | { type: 'setOpponentProgress'; progress: number }
+  /** Authoritative power state from the server. */
+  | { type: 'setPowers'; ward: boolean; surge: boolean; granted?: PowerKind; blocked?: boolean }
   | { type: 'finish'; winner: Side }
   | { type: 'reset' };
 
 /** Sentences always end in a space so the final word is committed like any other. */
 const freshSentence = (exclude?: string) => `${randomSentence(exclude)} `;
+
+/** Re-key per-sentence charges into flat script coordinates. */
+function shiftCharges(
+  charges: Record<number, PowerKind>,
+  offset: number,
+): Record<number, PowerKind> {
+  const out: Record<number, PowerKind> = {};
+  for (const [index, kind] of Object.entries(charges)) out[Number(index) + offset] = kind;
+  return out;
+}
 
 const emptyStats = (): DuelStats => ({
   wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0,
@@ -84,6 +110,12 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     playerCombo: 0,
     opponentCombo: 0,
     opponentProgress: 0,
+    powers: {},
+    wordOffset: 0,
+    ward: false,
+    surge: false,
+    lastPower: null,
+    blockTick: 0,
     missTick: 0,
     lastHit: null,
     hitSeq: 0,
@@ -95,8 +127,15 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
 
 export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   switch (action.type) {
-    case 'start':
-      return { ...initialState(action.difficulty), phase: 'countdown', sentence: freshSentence() };
+    case 'start': {
+      const sentence = freshSentence();
+      return {
+        ...initialState(action.difficulty),
+        phase: 'countdown',
+        sentence,
+        powers: chargeSentence(sentence.trim()),
+      };
+    }
 
     case 'startMulti':
       return {
@@ -106,6 +145,8 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         script: action.script,
         scriptIndex: 0,
         opponentName: action.opponentName,
+        // The server decides which words are charged; we only render them.
+        powers: action.powers,
         // Both players type the same words in the same order — the server sent
         // this script, and it also validates every submission against it.
         sentence: `${action.script[0]} `,
@@ -160,29 +201,58 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       const sentenceDone = advanced >= state.sentence.length;
       const wpm = wpmFor(characters, Math.max(1, action.now - state.wordStartedAt));
 
+      // Which word of the whole script this was, so charged words line up with
+      // whatever the server marked.
+      const localWord = state.sentence.slice(0, wordStart).split(' ').length - 1;
+      const granted = state.powers[state.wordOffset + localWord];
+
+      // Surge is spent on this throw, unless it is the power we just picked up.
+      const spendSurge = state.surge && granted !== 'surge';
+      const damage = spendSurge
+        ? Math.round(result.damage * SURGE_MULTIPLIER * 10) / 10
+        : result.damage;
+
       // Multiplayer walks the server's script in order so both sides stay in
       // step; solo play just picks another sentence at random.
       const nextIndex = sentenceDone ? state.scriptIndex + 1 : state.scriptIndex;
+      const wordsThisSentence = state.sentence.trim().split(' ').length;
       const nextSentence = !sentenceDone
         ? state.sentence
         : state.script
           ? `${state.script[nextIndex % state.script.length]} `
           : freshSentence(state.sentence);
 
+      // Solo charges each new sentence as it arrives; multiplayer already has
+      // the whole script's charges from the server.
+      const rolledOffset = sentenceDone ? state.wordOffset + wordsThisSentence : state.wordOffset;
+      const nextPowers = sentenceDone && !state.script
+        ? shiftCharges(chargeSentence(nextSentence.trim()), rolledOffset)
+        : state.powers;
+
       return {
         ...state,
         sentence: nextSentence,
         scriptIndex: nextIndex,
+        wordOffset: rolledOffset,
+        powers: nextPowers,
         cursor: sentenceDone ? 0 : advanced,
         playerCombo: result.combo,
         wordStartedAt: action.now,
         lastWordAt: action.now,
         hitSeq: state.hitSeq + 1,
         tierUpTick: result.tierUp ? state.tierUpTick + 1 : state.tierUpTick,
+        // Powers only resolve locally in solo; in multiplayer the server's
+        // `setPowers` overwrites this with the authoritative state.
+        ward: granted === 'ward' ? true : state.ward,
+        surge: granted === 'surge' ? true : spendSurge ? false : state.surge,
+        playerHealth: granted === 'mend'
+          ? Math.min(MAX_HEALTH, state.playerHealth + MEND_AMOUNT)
+          : state.playerHealth,
+        lastPower: granted ? { kind: granted, tick: action.now } : state.lastPower,
         lastHit: {
           id: state.hitSeq + 1,
           side: 'player',
-          damage: result.damage,
+          damage,
           wpm: result.wpm,
           tier: result.tier,
         },
@@ -216,6 +286,12 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
     case 'land': {
       if (state.phase !== 'playing') return state;
+
+      // A ward absorbs the blade entirely and is consumed doing so.
+      if (action.target === 'player' && state.ward) {
+        return { ...state, ward: false, blockTick: state.blockTick + 1 };
+      }
+
       const playerHealth = action.target === 'player'
         ? applyDamage(state.playerHealth, action.damage)
         : state.playerHealth;
@@ -240,6 +316,17 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
     case 'setOpponentProgress':
       return { ...state, opponentProgress: action.progress };
+
+    case 'setPowers':
+      return {
+        ...state,
+        ward: action.ward,
+        surge: action.surge,
+        blockTick: action.blocked ? state.blockTick + 1 : state.blockTick,
+        lastPower: action.granted
+          ? { kind: action.granted, tick: Date.now() }
+          : state.lastPower,
+      };
 
     case 'finish':
       return { ...state, phase: 'over', winner: action.winner };

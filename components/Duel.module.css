@@ -138,6 +138,14 @@
   align-items: center;
 }
 
+.deckRow {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* ---------- Overlays ---------- */
 .overlay {
   position: fixed;

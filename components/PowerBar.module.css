@@ -1,0 +1,38 @@
+.bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.slot {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+  opacity: 0.3;
+  filter: grayscale(1);
+  transition: opacity 200ms ease, filter 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.slot[data-active] {
+  opacity: 1;
+  filter: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(255, 214, 110, 0.45);
+  animation: ready 1.8s ease-in-out infinite;
+}
+
+@keyframes ready {
+  50% { box-shadow: 0 0 26px rgba(255, 214, 110, 0.75); }
+}
+
+/* Flashes as a ward is spent, so the block is visible rather than silent. */
+.slot[data-blocked] { animation: spend 420ms ease-out; }
+
+@keyframes spend {
+  0% { transform: scale(1.5); filter: brightness(3); border-color: var(--player); }
+  100% { transform: scale(1); }
+}
