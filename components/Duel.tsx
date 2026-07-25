@@ -7,6 +7,7 @@ import {
 } from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
+import { recordDuel } from '@/game/profile';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
@@ -150,9 +151,16 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     if (state.tierUpTick > 0) audio.tierUp();
   }, [state.tierUpTick]);
 
+  /** Fold the finished duel into the player's record, exactly once. */
   useEffect(() => {
+    if (!state.winner) return;
     if (state.winner === 'player') audio.victory();
-    if (state.winner === 'opponent') audio.defeat();
+    else audio.defeat();
+
+    const stats = stateRef.current.stats;
+    if (stats.endedAt) {
+      recordDuel(stats, state.winner === 'player', finalWpm(stats), accuracy(stats));
+    }
   }, [state.winner]);
 
   /**

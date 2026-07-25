@@ -10,6 +10,8 @@ import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
 import ArenaScene from './ArenaScene';
 import Fighter from './Fighter';
+import RecordPanel from './RecordPanel';
+import LeaderboardPanel from './LeaderboardPanel';
 import styles from './Game.module.css';
 
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
@@ -132,7 +134,12 @@ export default function Game() {
   return (
     <main className={styles.screen}>
       <Backdrop />
-      <div className={`panel ${styles.menu}`}>
+      {/* Three columns on a wide screen, stacking down to one on narrow. The
+          arena is a big room; leaving the menu alone in the middle of it wasted
+          the space and made the game feel emptier than it is. */}
+      <div className={styles.wide}>
+        <RecordPanel />
+        <div className={`panel ${styles.menu}`}>
         <h1 className={`${styles.title} pixel-font`}>KEYMANIA</h1>
         <p className={styles.tagline}>type fast · strike hard</p>
 
@@ -155,11 +162,13 @@ export default function Game() {
           ))}
         </div>
 
-        <span className="eyebrow">Or duel a human</span>
-        <button className={`btn btn-primary ${styles.wide}`} onClick={openLobby}>
-          Multiplayer
-          <small className="btn-sub">host or join a room</small>
-        </button>
+          <span className="eyebrow">Or duel a human</span>
+          <button className={`btn btn-primary ${styles.full}`} onClick={openLobby}>
+            Multiplayer
+            <small className="btn-sub">host or join a room</small>
+          </button>
+        </div>
+        <LeaderboardPanel />
       </div>
     </main>
   );
