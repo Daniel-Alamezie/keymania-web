@@ -1,0 +1,68 @@
+# =============================================================================
+# CI — the gate that has to pass before anything reaches main.
+#
+# Vercel already builds this repo on push, but a failed Vercel build tells you
+# after the fact. This runs the same checks on the pull request, so a break is
+# caught before it is merged rather than after it is live.
+#
+# Nothing here deploys. Vercel owns deployment; this owns whether the code is
+# allowed to get there.
+# =============================================================================
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A quick follow-up push should replace the run it supersedes rather than
+# queue behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # `ci` rather than `install`: it installs exactly what the lockfile says
+      # and fails if the lockfile and package.json disagree, so a dependency
+      # cannot drift in without the lockfile being updated too.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Catches the things type-checking cannot: the scoring rules, the charged
+      # word distribution, and where a finished duel gets recorded.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholders, NOT secrets, and never used to authenticate anything.
+          #
+          # `next build` imports the Kinde auth route to collect its page data,
+          # and the SDK validates its configuration at import time — with these
+          # unset the build fails outright with "Failed to collect page data".
+          # The real values live in Vercel's environment settings.
+          KINDE_CLIENT_ID: ci-placeholder
+          KINDE_CLIENT_SECRET: ci-placeholder
+          KINDE_ISSUER_URL: https://example.kinde.com
+          KINDE_SITE_URL: http://localhost:3000
+          KINDE_POST_LOGIN_REDIRECT_URL: http://localhost:3000
+          KINDE_POST_LOGOUT_REDIRECT_URL: http://localhost:3000

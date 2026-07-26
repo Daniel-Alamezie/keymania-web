@@ -218,6 +218,21 @@ export function useDisplayName(): string | null {
   return useSyncExternalStore(subscribe, nameSnapshot, () => null);
 }
 
+/**
+ * Which name to show, given the saved one and the account's own.
+ *
+ * Extracted so the distinction can be tested. Collapsing `null` (not known yet)
+ * into `''` (known, none chosen) is exactly what caused the account name to
+ * flash on screen and then be rewritten — the two look alike and behave
+ * completely differently.
+ *
+ * Returns null to mean "render nothing yet", never a guess.
+ */
+export function resolveDisplayName(saved: string | null, accountName: string): string | null {
+  if (saved === null) return null;
+  return saved || accountName;
+}
+
 /** Recent form: the mean of the last few duels, which is what "current speed"
  *  actually means to a player — a single lucky run is not a level. */
 export function currentSpeed(history: DuelResult[], sample = 5): number {

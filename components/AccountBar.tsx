@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { LoginLink, LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
-import { forgetDisplayName, useDisplayName } from '@/game/serverProfile';
+import { forgetDisplayName, resolveDisplayName, useDisplayName } from '@/game/serverProfile';
 import { forgetDuelToken } from '@/game/duelToken';
 import styles from './AccountBar.module.css';
 
@@ -18,16 +18,10 @@ export default function AccountBar() {
   const { loading, signedIn, displayName, avatar } = useAccount();
   const saved = useDisplayName();
 
-  /**
-   * null means we genuinely do not know yet, so nothing is rendered rather
-   * than the account name — showing that and then rewriting it to the chosen
-   * username is the flicker. '' means we do know, and they have not chosen
-   * one, so the account name is the right answer.
-   *
-   * After a first visit the name comes out of localStorage synchronously, so
-   * this placeholder is only ever seen once.
-   */
-  const shown = saved === null ? null : saved || displayName;
+  // null means "not known yet, render nothing" rather than a guess at the
+  // account name — see resolveDisplayName. After a first visit the name comes
+  // out of localStorage synchronously, so the placeholder is rarely seen.
+  const shown = resolveDisplayName(saved, displayName);
 
   // Render nothing rather than a flash of "signed out" while the session
   // is still being checked.

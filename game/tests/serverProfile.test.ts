@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentSpeed, trend, type DuelResult } from '../serverProfile';
+import { currentSpeed, resolveDisplayName, trend, type DuelResult } from '../serverProfile';
 
 /**
  * The profile summary figures.
@@ -17,6 +17,34 @@ function historyFrom(oldestFirst: number[]): DuelResult[] {
     .map((wpm, i) => ({ wpm, accuracy: 95, won: true, at: 1000 + i, ranked: true }))
     .reverse();
 }
+
+describe('resolveDisplayName', () => {
+  /**
+   * The distinction these protect caused a real bug: "not loaded yet" and
+   * "loaded, none chosen" were both null, so the account name was rendered in
+   * both cases — and then visibly rewritten once the saved name arrived.
+   */
+  it('renders nothing while the saved name is unknown', () => {
+    expect(resolveDisplayName(null, 'Daniel Alamezie')).toBeNull();
+  });
+
+  it('falls back to the account name once we know none is set', () => {
+    expect(resolveDisplayName('', 'Daniel Alamezie')).toBe('Daniel Alamezie');
+  });
+
+  it('prefers the chosen name over the account name', () => {
+    expect(resolveDisplayName('Fenrir', 'Daniel Alamezie')).toBe('Fenrir');
+  });
+
+  it('does not confuse a whitespace name with an unset one', () => {
+    // ' ' is truthy, so it is a name the player somehow saved, not an absence.
+    expect(resolveDisplayName(' ', 'Daniel Alamezie')).toBe(' ');
+  });
+
+  it('still returns null when unknown even with no account name', () => {
+    expect(resolveDisplayName(null, '')).toBeNull();
+  });
+});
 
 describe('currentSpeed', () => {
   it('averages the most recent duels, not the whole history', () => {
