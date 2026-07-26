@@ -123,44 +123,99 @@ export function useServerProfile(): ProfileState {
  * rendering and reading it during render would break hydration.
  * ---------------------------------------------------------------------- */
 
+/**
+ * The last known name, kept in localStorage.
+ *
+ * This is what removes the flicker. Without it, a refresh shows the account's
+ * full name the moment Kinde resolves, then visibly rewrites it to the chosen
+ * username a beat later once /api/me/profile lands — a wrong value on screen,
+ * which reads far worse than a blank one. Seeded from storage, the correct name
+ * is there from the first paint and the network round trip only confirms it.
+ */
+const NAME_KEY = 'keymania.displayName.v1';
+
 const nameListeners = new Set<() => void>();
-/** null means "not loaded yet"; '' means "loaded, and they have not set one". */
-let nameCache: string | null = null;
+
+/**
+ * undefined — never read, so localStorage has not been consulted yet
+ * null      — genuinely unknown; render a placeholder, never a guess
+ * ''        — known, and they have not chosen one; fall back to the account name
+ */
+let nameCache: string | null | undefined;
 let nameRequest: Promise<void> | null = null;
 
 function announceName() {
   nameListeners.forEach((notify) => notify());
 }
 
+/** Memoised, so getSnapshot does not touch localStorage on every render. */
+function nameSnapshot(): string | null {
+  if (nameCache === undefined) {
+    try {
+      nameCache = typeof window === 'undefined' ? null : localStorage.getItem(NAME_KEY);
+    } catch {
+      nameCache = null;
+    }
+  }
+  return nameCache;
+}
+
+function rememberName(name: string | null) {
+  nameCache = name;
+  try {
+    if (name === null) localStorage.removeItem(NAME_KEY);
+    else localStorage.setItem(NAME_KEY, name);
+  } catch {
+    /* private mode — the flicker returns, nothing else breaks */
+  }
+  announceName();
+}
+
 function loadNameOnce() {
   nameRequest ??= (async () => {
     try {
       const response = await fetch('/api/me/profile', { cache: 'no-store' });
-      nameCache = response.ok ? ((await response.json()) as ServerProfile).displayName : '';
+      if (response.status === 401) {
+        // Signed out. Drop the cache so the next person to sign in on this
+        // browser is never briefly greeted by someone else's name.
+        rememberName(null);
+        return;
+      }
+      rememberName(response.ok ? ((await response.json()) as ServerProfile).displayName : '');
     } catch {
-      nameCache = '';
+      // Offline: keep whatever was cached rather than blanking a good name.
+      if (nameSnapshot() === null) rememberName('');
     }
-    announceName();
   })();
 }
 
 /** Push a freshly saved name into the store so every reader updates at once. */
 export function publishDisplayName(name: string): void {
-  nameCache = name;
-  announceName();
+  rememberName(name);
 }
 
-/** The saved name, or null while it is still being fetched. */
+/** Forget the cached name — call when signing out. */
+export function forgetDisplayName(): void {
+  rememberName(null);
+}
+
+/**
+ * The saved name, or null while it is genuinely unknown.
+ *
+ * Callers must treat null and '' differently: null means "do not render a name
+ * yet", '' means "they have not set one, use the account name".
+ */
 export function useDisplayName(): string | null {
   const subscribe = useCallback((listener: () => void) => {
     nameListeners.add(listener);
     // Kicked off from subscribe rather than render: this runs in an effect, so
-    // it never fires during server rendering.
+    // it never fires during server rendering. The cached value is already on
+    // screen by now; this only revalidates it.
     loadNameOnce();
     return () => { nameListeners.delete(listener); };
   }, []);
 
-  return useSyncExternalStore(subscribe, () => nameCache, () => null);
+  return useSyncExternalStore(subscribe, nameSnapshot, () => null);
 }
 
 /** Recent form: the mean of the last few duels, which is what "current speed"

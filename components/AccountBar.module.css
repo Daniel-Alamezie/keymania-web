@@ -52,6 +52,20 @@
   white-space: nowrap;
 }
 
+/* Holds the name's width while it is unknown, so the chip does not resize when
+   it arrives. Only ever seen on a first visit — after that the name is read
+   from localStorage before the first paint. */
+.pending {
+  width: 84px;
+  height: 11px;
+  background: var(--edge-soft);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% { opacity: 0.45; }
+}
+
 .signOut {
   background: transparent;
   border: none;

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { LoginLink, LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
-import { useDisplayName } from '@/game/serverProfile';
+import { forgetDisplayName, useDisplayName } from '@/game/serverProfile';
+import { forgetDuelToken } from '@/game/duelToken';
 import styles from './AccountBar.module.css';
 
 /**
@@ -17,10 +18,16 @@ export default function AccountBar() {
   const { loading, signedIn, displayName, avatar } = useAccount();
   const saved = useDisplayName();
 
-  // The name they chose wins. Their Kinde name is only a stand-in until they
-  // set one — and it is what shows while the saved name is still loading, so
-  // the chip never flashes empty.
-  const shown = saved || displayName;
+  /**
+   * null means we genuinely do not know yet, so nothing is rendered rather
+   * than the account name — showing that and then rewriting it to the chosen
+   * username is the flicker. '' means we do know, and they have not chosen
+   * one, so the account name is the right answer.
+   *
+   * After a first visit the name comes out of localStorage synchronously, so
+   * this placeholder is only ever seen once.
+   */
+  const shown = saved === null ? null : saved || displayName;
 
   // Render nothing rather than a flash of "signed out" while the session
   // is still being checked.
@@ -48,11 +55,22 @@ export default function AccountBar() {
           // eslint-disable-next-line @next/next/no-img-element
           <img className={styles.avatar} src={avatar} alt="" width={24} height={24} />
         ) : (
-          <span className={styles.initial}>{shown.charAt(0).toUpperCase()}</span>
+          <span className={styles.initial}>
+            {shown ? shown.charAt(0).toUpperCase() : ''}
+          </span>
         )}
-        <span className={styles.name}>{shown}</span>
+        {shown === null
+          ? <span className={styles.pending} aria-label="Loading your name" />
+          : <span className={styles.name}>{shown}</span>}
       </Link>
-      <LogoutLink className={styles.signOut}>Sign out</LogoutLink>
+      {/* Clear the cached identity before the browser leaves, so the next
+          person to sign in here is never briefly greeted by this one's name. */}
+      <LogoutLink
+        className={styles.signOut}
+        onClick={() => { forgetDisplayName(); forgetDuelToken(); }}
+      >
+        Sign out
+      </LogoutLink>
     </div>
   );
 }
