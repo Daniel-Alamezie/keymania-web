@@ -107,12 +107,25 @@ export default function Game() {
     send({ action: 'joinRoom', roomId, name, token });
   }, [send]);
 
+  /**
+   * Back to the menu.
+   *
+   * Navigation happens before the socket is torn down, not after. Closing the
+   * connection is the one step here that touches the outside world, and if it
+   * ever throws — a socket in an odd state, a browser quirk — every setState
+   * below it would be skipped and the button would appear to do nothing at all.
+   * Leaving is the user's intent; the cleanup is bookkeeping.
+   */
   const leave = useCallback(() => {
-    disconnect();
     setMatch(null);
     setWaiting(null);
     setRooms([]);
     setScreen('menu');
+    try {
+      disconnect();
+    } catch {
+      /* already gone — the screen has changed either way */
+    }
   }, [disconnect]);
 
   // Memoised so the duel does not tear down its subscription on every render.
