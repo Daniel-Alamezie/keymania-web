@@ -1,9 +1,24 @@
+/**
+ * The dashboard is for reading, not playing: it scrolls, unlike every other
+ * screen in the game.
+ *
+ * `height`, not `min-height`. The body is `overflow: hidden` so the arena can
+ * never scroll, which means this element has to be its own scroll container —
+ * and `min-height` is a floor, not a cap: the element just grows to fit its
+ * content, never overflows itself, and `overflow-y` never engages. The page
+ * then runs off the bottom of a body that refuses to scroll, and everything
+ * below the fold is simply unreachable.
+ *
+ * `dvh` rather than `vh` so a phone's collapsing address bar does not leave the
+ * last card hidden underneath it.
+ */
 .screen {
-  min-height: 100vh;
+  height: 100dvh;
   padding: 32px 20px 60px;
-  /* The dashboard is for reading, not playing: no arena behind it, and it
-     scrolls, unlike every other screen in the game. */
   overflow-y: auto;
+  /* Momentum scrolling on iOS, and it keeps the arena from rubber-banding
+     behind this when the list ends. */
+  overscroll-behavior: contain;
 }
 
 .card {
