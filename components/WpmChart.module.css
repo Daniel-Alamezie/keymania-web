@@ -1,0 +1,81 @@
+.wrap {
+  margin: 0;
+  width: 100%;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--edge-soft);
+  stroke-width: 1;
+}
+
+.average {
+  stroke: var(--player);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
+
+.line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+  /* Mitred joins keep the corners sharp; the default round join sands them off
+     and the line stops matching everything around it. */
+  stroke-linejoin: miter;
+  stroke-linecap: square;
+}
+
+.dot {
+  fill: var(--faint);
+  stroke: var(--bg-deep);
+  stroke-width: 1;
+}
+.dot[data-ranked] { fill: var(--gold); }
+
+.axis {
+  fill: var(--faint);
+  font-size: 8px;
+  font-family: var(--font-body), monospace;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--faint);
+}
+
+/* Square swatches, matching the markers on the chart. */
+.key::before,
+.avgKey::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--faint);
+}
+.key[data-ranked]::before { background: var(--gold); }
+.avgKey::before {
+  height: 2px;
+  background: var(--player);
+}
+
+.empty {
+  margin: 0;
+  padding: 26px 0;
+  text-align: center;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--faint);
+}

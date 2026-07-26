@@ -9,10 +9,15 @@ import type { Difficulty } from '@/game/types';
 import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
 import ArenaScene from './ArenaScene';
+import Embers from './Embers';
 import Fighter from './Fighter';
 import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
+import AccountBar from './AccountBar';
+import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
+import { useAccount } from '@/game/useAccount';
+import { duelToken } from '@/game/duelToken';
 import styles from './Game.module.css';
 
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
@@ -38,6 +43,7 @@ export default function Game() {
   const [waiting, setWaiting] = useState<{ code: string; visibility: 'public' | 'private' } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const account = useAccount();
   const [match, setMatch] = useState<Match | null>(null);
 
   /** Lobby-level messages. The duel subscribes separately for its own. */
@@ -79,6 +85,28 @@ export default function Game() {
     setScreen('lobby');
   };
 
+  /**
+   * Hosting and joining both carry an access token: the server refuses either
+   * without one, because only a verified identity can produce a ranked result.
+   */
+  const hostRoom = useCallback(async (name: string, visibility: 'public' | 'private') => {
+    const token = await duelToken();
+    if (!token) {
+      setError('Your session expired. Sign in again to duel.');
+      return;
+    }
+    send({ action: 'createRoom', name, visibility, token });
+  }, [send]);
+
+  const enterRoom = useCallback(async (roomId: string, name: string) => {
+    const token = await duelToken();
+    if (!token) {
+      setError('Your session expired. Sign in again to duel.');
+      return;
+    }
+    send({ action: 'joinRoom', roomId, name, token });
+  }, [send]);
+
   const leave = useCallback(() => {
     disconnect();
     setMatch(null);
@@ -97,8 +125,8 @@ export default function Game() {
             mySlot: match.mySlot,
             powers: match.powers,
             subscribe,
-            onWord: (word: string, elapsedMs: number) =>
-              send({ action: 'wordComplete', word, elapsedMs }),
+            onWord: (word: string, elapsedMs: number, accuracy: number) =>
+              send({ action: 'wordComplete', word, elapsedMs, accuracy }),
             onResign: () => send({ action: 'resign' }),
           }
         : undefined,
@@ -117,6 +145,7 @@ export default function Game() {
     return (
       <main className={styles.screen}>
         <Backdrop />
+        <AccountBar />
         <Lobby
           status={status}
           configured={configured}
@@ -124,8 +153,8 @@ export default function Game() {
           waitingCode={waiting?.code ?? null}
           waitingVisibility={waiting?.visibility ?? null}
           error={error}
-          onCreate={(name, visibility) => send({ action: 'createRoom', name, visibility })}
-          onJoin={(roomId, name) => { setError(null); send({ action: 'joinRoom', roomId, name }); }}
+          onCreate={(name, visibility) => void hostRoom(name, visibility)}
+          onJoin={(roomId, name) => { setError(null); void enterRoom(roomId, name); }}
           onRefresh={() => send({ action: 'listRooms' })}
           onBack={leave}
         />
@@ -136,6 +165,7 @@ export default function Game() {
   return (
     <main className={styles.screen}>
       <Backdrop />
+      <AccountBar />
       {/* Three columns on a wide screen, stacking down to one on narrow. The
           arena is a big room; leaving the menu alone in the middle of it wasted
           the space and made the game feel emptier than it is. */}
@@ -165,10 +195,19 @@ export default function Game() {
         </div>
 
           <span className="eyebrow">Or duel a human</span>
-          <button className={`btn btn-primary ${styles.full}`} onClick={openLobby}>
-            Multiplayer
-            <small className="btn-sub">host or join a room</small>
-          </button>
+          {account.signedIn ? (
+            <button className={`btn btn-primary ${styles.full}`} onClick={openLobby}>
+              Multiplayer
+              <small className="btn-sub">host or join a room</small>
+            </button>
+          ) : (
+            // Bots stay open to everyone; only human duels need an account,
+            // because only those results are server-verified enough to rank.
+            <LoginLink className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
+              Sign in to duel humans
+              <small className="btn-sub">Google or email · unlocks the leaderboard</small>
+            </LoginLink>
+          )}
 
           <button className={styles.guideLink} onClick={() => setShowGuide(true)}>
             New here? Read how to play
@@ -185,13 +224,17 @@ export default function Game() {
 /** The menu and lobby sit inside the same arena the duel happens in. */
 function Backdrop() {
   return (
-    <ArenaScene dim className={styles.backdrop}>
-      <div className={styles.standLeft}>
-        <Fighter team="blue" facing="right" hitTick={0} />
-      </div>
-      <div className={styles.standRight}>
-        <Fighter team="red" facing="left" hitTick={0} />
-      </div>
-    </ArenaScene>
+    <>
+      <ArenaScene dim className={styles.backdrop}>
+        <div className={styles.standLeft}>
+          <Fighter team="blue" facing="right" hitTick={0} />
+        </div>
+        <div className={styles.standRight}>
+          <Fighter team="red" facing="left" hitTick={0} />
+        </div>
+      </ArenaScene>
+      {/* Outside the scene, so the dim overlay does not swallow the motes. */}
+      <Embers />
+    </>
   );
 }

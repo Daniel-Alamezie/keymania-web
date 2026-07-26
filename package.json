@@ -6,8 +6,18 @@
   "license": "MIT",
   "author": "Daniel Alamezie",
   "homepage": "https://github.com/Daniel-Alamezie/keymania-web",
-  "repository": { "type": "git", "url": "https://github.com/Daniel-Alamezie/keymania-web.git" },
-  "keywords": ["typing-game", "game", "pixel-art", "nextjs", "typescript", "canvas"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Daniel-Alamezie/keymania-web.git"
+  },
+  "keywords": [
+    "typing-game",
+    "game",
+    "pixel-art",
+    "nextjs",
+    "typescript",
+    "canvas"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -20,9 +30,11 @@
     "banner": "python tools/gen_banner.py"
   },
   "dependencies": {
+    "@kinde-oss/kinde-auth-nextjs": "^2.13.0",
     "next": "16.2.11",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",

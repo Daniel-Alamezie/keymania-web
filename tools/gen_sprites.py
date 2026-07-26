@@ -41,15 +41,21 @@ def put(canvas, x: int, y: int, color) -> None:
         canvas[y][x] = color
 
 
-def save(canvas, name: str, scale: int = SCALE) -> None:
+def render(canvas, scale: int) -> Image.Image:
+    """Rasterise a pixel grid, upscaled with NEAREST so edges stay hard."""
     h, w = len(canvas), len(canvas[0])
     img = Image.new("RGBA", (w, h))
     img.putdata([canvas[y][x] for y in range(h) for x in range(w)])
-    img = img.resize((w * scale, h * scale), Image.NEAREST)
+    return img.resize((w * scale, h * scale), Image.NEAREST)
+
+
+def save(canvas, name: str, scale: int = SCALE) -> None:
+    h, w = len(canvas), len(canvas[0])
+    img = render(canvas, scale)
     os.makedirs(OUT_DIR, exist_ok=True)
     img.save(os.path.join(OUT_DIR, name))
-    SIZES[name.replace(".png", "")] = {"width": w * scale, "height": h * scale}
-    print(f"  {name}  {w}x{h} -> {w * scale}x{h * scale}")
+    SIZES[name.replace(".png", "")] = {"width": img.width, "height": img.height}
+    print(f"  {name}  {w}x{h} -> {img.width}x{img.height}")
 
 
 def from_map(rows: list[str], palette: dict) -> list[list[tuple]]:
@@ -539,6 +545,61 @@ def make_impact(frame: int, total: int = 3) -> list[list[tuple]]:
 
 
 # --------------------------------------------------------------------------
+# rank flames — burning beside the top three on the leaderboard
+#
+# Three frames each, cycled by CSS exactly like the wall torches. Colour is how
+# the ranks are told apart, so each is also a different brightness: on a board
+# read at a glance, first place should be the one that catches the eye.
+# --------------------------------------------------------------------------
+FLAME_W, FLAME_H = 11, 19
+
+FLAME_PALETTES: dict[str, tuple] = {
+    "gold": ((255, 138, 36), (255, 206, 92), (255, 250, 226)),
+    "azure": ((52, 122, 232), (124, 200, 255), (238, 251, 255)),
+    "ember": ((198, 44, 36), (246, 122, 58), (255, 216, 172)),
+}
+
+
+def make_flame(frame: int, palette: tuple) -> list[list[tuple]]:
+    outer, mid, core = ((*c, 255) for c in palette)
+    canvas = new_canvas(FLAME_W, FLAME_H)
+    cx = FLAME_W / 2 - 0.5
+
+    # Each frame leans and reaches differently. Three is the fewest that reads
+    # as fire rather than as a blinking image.
+    lean = (-0.9, 0.0, 0.9)[frame]
+    reach = (0.94, 1.0, 0.88)[frame]
+
+    for row in range(FLAME_H):
+        t = row / (FLAME_H - 1)          # 0 at the base, 1 at the tip
+        if t > reach:
+            continue
+        u = t / reach
+        y = FLAME_H - 1 - row
+
+        # Widest just above the base, then tapering to a point — a teardrop
+        # rather than a triangle, which is what makes it read as flame.
+        # The high exponent is what makes it a flame rather than an egg: width
+        # holds through the body, then collapses sharply into a point.
+        half = 4.5 * (1 - u ** 2.4) * (0.5 + 0.5 * min(1.0, u * 5))
+        if half < 0.4:
+            continue
+
+        # The tip leans further than the base, so the whole shape licks over.
+        centre = cx + lean * (u ** 2) * 2.4
+
+        fill_span(canvas, y, centre, half, outer)
+        if half > 1.6:
+            fill_span(canvas, y, centre, half - 1.35, mid)
+        # The white-hot core sits low, where a real flame is hottest.
+        if half > 3.0 and u < 0.5:
+            fill_span(canvas, y, centre, half - 2.7, core)
+
+    outline(canvas, OUTLINE)
+    return canvas
+
+
+# --------------------------------------------------------------------------
 def main() -> None:
     print("blades:")
     for i, (length, thick, steel, glow) in enumerate(BLADE_TIERS, start=1):
@@ -556,6 +617,11 @@ def main() -> None:
     print("impacts:")
     for f in range(3):
         save(make_impact(f), f"impact-{f + 1}.png")
+
+    print("rank flames:")
+    for name, palette in FLAME_PALETTES.items():
+        for f in range(3):
+            save(make_flame(f, palette), f"flame-{name}-{f + 1}.png")
 
     print("environment:")
     # Tiles are saved unscaled; CSS repeats them and scales with pixelated rendering.

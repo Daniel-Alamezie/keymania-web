@@ -1,0 +1,30 @@
+/* Sits above the dimmed arena but below the panels, so motes drift behind the
+   menu rather than over the text. */
+.field {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ember {
+  position: absolute;
+  bottom: -8px;
+  background: var(--gold);
+  opacity: 0;
+  animation-name: rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* A third of them carry the torches' orange instead of the gold, so the field
+   reads as firelight rather than one flat colour. */
+.ember[data-warm] { background: var(--opponent); }
+
+@keyframes rise {
+  from { transform: translate3d(0, 0, 0); opacity: 0; }
+  12% { opacity: 0.75; }
+  80% { opacity: 0.5; }
+  to { transform: translate3d(var(--drift), -102vh, 0); opacity: 0; }
+}

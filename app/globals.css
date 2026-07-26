@@ -13,6 +13,9 @@
 
   --player: #38bdf8;
   --player-deep: #0b6fa4;
+  /* Primary-button hover fill. Deliberately darker than --player-deep: that
+     one is light enough that a muted sub-label on top of it lands at 1:1. */
+  --player-shade: #08496b;
   --opponent: #f4634f;
   --opponent-deep: #a82b18;
 
@@ -96,7 +99,7 @@ button { font-family: inherit; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-primary { border-color: var(--player); }
-.btn-primary:hover:not(:disabled) { background: var(--player-deep); border-color: var(--player); }
+.btn-primary:hover:not(:disabled) { background: var(--player-shade); border-color: var(--player); }
 
 .btn-ghost {
   background: transparent;
@@ -105,7 +108,10 @@ button { font-family: inherit; }
   padding: 9px 16px;
 }
 
-.btn-sub { color: var(--faint); font-size: 9px; }
+/* Derived from the button's own text colour rather than a fixed token. A flat
+   --faint sat at 2.8:1 at rest and collapsed to 1.05:1 once a hover repainted
+   the background; tracking currentColor means it cannot be stranded again. */
+.btn-sub { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 9px; }
 
 .eyebrow {
   font-size: 10px;

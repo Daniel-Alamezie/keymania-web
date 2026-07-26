@@ -24,6 +24,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${pixel.variable} ${body.variable}`}>
+      {/* No Kinde provider needed: useKindeBrowserClient resolves the session
+          on its own, so the layout stays a plain server component. */}
       <body>{children}</body>
     </html>
   );

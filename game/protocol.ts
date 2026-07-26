@@ -51,10 +51,14 @@ export type ServerMessage =
   | { type: 'error'; message: string };
 
 export type ClientMessage =
-  | { action: 'createRoom'; name: string; visibility: 'public' | 'private' }
-  | { action: 'joinRoom'; roomId: string; name: string }
+  // `token` is a Kinde access token. The server refuses both of these without
+  // one — a duel has to be attributable to an account before it can count.
+  | { action: 'createRoom'; name: string; visibility: 'public' | 'private'; token: string }
+  | { action: 'joinRoom'; roomId: string; name: string; token: string }
   | { action: 'listRooms' }
-  | { action: 'wordComplete'; word: string; elapsedMs: number }
+  // Running accuracy rides along here rather than on its own route. The server
+  // cannot verify it, so it is stored for the player's record but never ranked.
+  | { action: 'wordComplete'; word: string; elapsedMs: number; accuracy?: number }
   | { action: 'resign' };
 
 export type SocketStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';

@@ -14,15 +14,25 @@
   z-index: 0;
 }
 
+/* The duellists wait in the room while you pick a mode. They are wraiths, so
+   they float rather than stand — a still sprite was what made the whole
+   backdrop read as a flat image instead of a place. */
 .standLeft, .standRight {
   position: absolute;
   bottom: 17%;
   z-index: 1;
   opacity: 0.5;
   transform: translateX(-50%);
+  animation: idle 4.6s ease-in-out infinite;
 }
 .standLeft { left: 17%; }
-.standRight { left: 83%; }
+/* Offset by half a cycle so the two never bob in lockstep, which would look
+   mechanical rather than alive. */
+.standRight { left: 83%; animation-delay: -2.3s; }
+
+@keyframes idle {
+  50% { transform: translateX(-50%) translateY(-11px); }
+}
 
 /* Menu flanked by the player's record and the standings. The side panels are
    dropped on narrow screens rather than stacked, so a phone still opens
@@ -115,3 +125,6 @@
   transition: color 140ms ease;
 }
 .guideLink:hover { color: var(--gold); }
+
+/* LoginLink renders an anchor, so it needs the button's text treatment. */
+.loginBtn { text-decoration: none; }

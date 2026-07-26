@@ -117,6 +117,17 @@
   font-size: 10px;
   color: var(--faint);
 }
+
+/* Fixed slot so a podium flame does not shunt the name out of line with the
+   rows beneath it. */
+.rankFlame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 14px;
+  height: 19px;
+}
 .rank[data-top] .rankPos { color: var(--gold); }
 
 .rankName {

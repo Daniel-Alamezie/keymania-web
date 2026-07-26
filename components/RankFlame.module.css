@@ -1,0 +1,30 @@
+.flame {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  /* Kills the descender gap under an inline image, which would otherwise push
+     the flame off the row's baseline. */
+  line-height: 0;
+}
+
+.frame {
+  opacity: 0;
+  animation: flicker 0.42s steps(1) infinite;
+}
+
+/* Frames two and three stack on the first, which is what gives the span its
+   width without hard-coding one. */
+.frame:not(:first-child) {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.frame:nth-child(1) { animation-delay: 0s; }
+.frame:nth-child(2) { animation-delay: 0.14s; }
+.frame:nth-child(3) { animation-delay: 0.28s; }
+
+@keyframes flicker {
+  0%, 33% { opacity: 1; }
+  34%, 100% { opacity: 0; }
+}

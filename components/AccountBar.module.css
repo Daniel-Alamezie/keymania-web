@@ -1,0 +1,65 @@
+.bar {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Reserved even while loading, so the menu does not shift when the
+     session resolves. */
+  min-height: 34px;
+}
+
+.action { text-decoration: none; }
+
+/* This is an anchor, so it needs its colour stated. Left to inherit it picks up
+   the browser's default link blue, which is close to unreadable on the panel. */
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 6px;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.who:hover {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+.avatar { border-radius: 50%; image-rendering: auto; }
+
+.initial {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--player-deep);
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.name {
+  font-size: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signOut {
+  background: transparent;
+  border: none;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.signOut:hover { color: var(--bad); }

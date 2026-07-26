@@ -7,7 +7,8 @@ import {
 } from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
-import { recordDuel } from '@/game/profile';
+import { saveResult } from '@/game/saveResult';
+import { useAccount } from '@/game/useAccount';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
@@ -28,7 +29,7 @@ export interface MultiplayerConfig {
   powers: Record<number, PowerKind>;
   /** Subscribe to server messages; returns an unsubscribe function. */
   subscribe: (handler: MessageHandler) => () => void;
-  onWord: (word: string, elapsedMs: number) => void;
+  onWord: (word: string, elapsedMs: number, accuracy: number) => void;
   /** Forfeit — the opponent is awarded the win. */
   onResign: () => void;
 }
@@ -51,6 +52,7 @@ const HEAT_COMBO = 4;
 
 export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [state, dispatch] = useReducer(duelReducer, undefined, () => initialState(difficulty));
+  const account = useAccount();
   const effects = useRef<EffectsHandle>(null);
   const screenRef = useRef<HTMLElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -118,7 +120,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         // Committing a word: report it before the reducer moves the cursor on.
         const wordStart = snapshot.sentence.lastIndexOf(' ', snapshot.cursor - 1) + 1;
         const word = snapshot.sentence.slice(wordStart, snapshot.cursor);
-        multiplayer.onWord(word, Math.max(1, Date.now() - snapshot.wordStartedAt));
+        // Accuracy travels with the word so the server can keep a running
+        // figure for the record without a route of its own. It is measured up
+        // to but not including this keystroke, which the reducer has yet to
+        // fold in — near enough for a statistic that is advisory anyway.
+        multiplayer.onWord(
+          word,
+          Math.max(1, Date.now() - snapshot.wordStartedAt),
+          accuracy(snapshot.stats),
+        );
       }
 
       dispatch({ type: 'typed', char: key.toLowerCase(), now: Date.now() });
@@ -159,8 +169,20 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
     const stats = stateRef.current.stats;
     if (stats.endedAt) {
-      recordDuel(stats, state.winner === 'player', finalWpm(stats), accuracy(stats));
+      saveResult({
+        stats,
+        won: state.winner === 'player',
+        wpm: finalWpm(stats),
+        accuracy: accuracy(stats),
+        signedIn: account.signedIn,
+        // A refereed duel is already recorded server-side from figures the
+        // server computed; only practice needs reporting from here.
+        multiplayer: Boolean(multiplayer),
+      });
     }
+    // account/multiplayer are read, not tracked: the effect must fire once, on
+    // the transition into a winner, not again if the session resolves later.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.winner]);
 
   /**
