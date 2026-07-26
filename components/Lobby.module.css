@@ -113,6 +113,29 @@
   from { transform: translateX(-8px); opacity: 0; }
 }
 
+/* Size picker. The chosen one is bordered like a primary button so the choice
+   survives a glance — hosting is a one-way door. */
+.sizes {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grow { flex: 1; }
+.grow[data-selected] {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+.seats {
+  font-size: 11px;
+  color: var(--faint);
+  flex: none;
+}
+
 .host { flex: 1; font-size: 13px; }
 .roomCode { font-size: 11px; color: var(--faint); letter-spacing: 0.15em; }
 

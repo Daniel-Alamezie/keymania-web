@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { BOT_PROFILES } from '@/game/constants';
-import type { RoomSummary } from '@/game/protocol';
+import type { RoomSize, RoomSummary } from '@/game/protocol';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/game/types';
 import Duel, { type MultiplayerConfig } from './Duel';
@@ -89,13 +89,17 @@ export default function Game() {
    * Hosting and joining both carry an access token: the server refuses either
    * without one, because only a verified identity can produce a ranked result.
    */
-  const hostRoom = useCallback(async (name: string, visibility: 'public' | 'private') => {
+  const hostRoom = useCallback(async (
+    name: string,
+    visibility: 'public' | 'private',
+    capacity: RoomSize,
+  ) => {
     const token = await duelToken();
     if (!token) {
       setError('Your session expired. Sign in again to duel.');
       return;
     }
-    send({ action: 'createRoom', name, visibility, token });
+    send({ action: 'createRoom', name, visibility, token, capacity });
   }, [send]);
 
   const enterRoom = useCallback(async (roomId: string, name: string) => {
@@ -166,7 +170,7 @@ export default function Game() {
           waitingCode={waiting?.code ?? null}
           waitingVisibility={waiting?.visibility ?? null}
           error={error}
-          onCreate={(name, visibility) => void hostRoom(name, visibility)}
+          onCreate={(name, visibility, capacity) => void hostRoom(name, visibility, capacity)}
           onJoin={(roomId, name) => { setError(null); void enterRoom(roomId, name); }}
           onRefresh={() => send({ action: 'listRooms' })}
           onBack={leave}

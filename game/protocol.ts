@@ -8,10 +8,17 @@
 
 import type { PowerKind } from './powers';
 
+/** A duel, or a four-way free-for-all. Mirrors ROOM_SIZES in the API. */
+export const ROOM_SIZES = [2, 4] as const;
+export type RoomSize = (typeof ROOM_SIZES)[number];
+
 export interface RoomSummary {
   roomId: string;
   host: string;
   createdAt: number;
+  /** Absent on rooms created before sizes existed; treat as a duel. */
+  players?: number;
+  capacity?: RoomSize;
 }
 
 export type ServerMessage =
@@ -53,7 +60,14 @@ export type ServerMessage =
 export type ClientMessage =
   // `token` is a Kinde access token. The server refuses both of these without
   // one — a duel has to be attributable to an account before it can count.
-  | { action: 'createRoom'; name: string; visibility: 'public' | 'private'; token: string }
+  | {
+      action: 'createRoom';
+      name: string;
+      visibility: 'public' | 'private';
+      token: string;
+      /** How many players the room waits for. Omitted means a duel. */
+      capacity?: RoomSize;
+    }
   | { action: 'joinRoom'; roomId: string; name: string; token: string }
   | { action: 'listRooms' }
   // Running accuracy rides along here rather than on its own route. The server

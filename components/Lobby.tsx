@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { RoomSummary, SocketStatus } from '@/game/protocol';
+import { ROOM_SIZES, type RoomSize, type RoomSummary, type SocketStatus } from '@/game/protocol';
 import styles from './Lobby.module.css';
 
 interface LobbyProps {
@@ -12,13 +12,24 @@ interface LobbyProps {
   waitingCode: string | null;
   waitingVisibility: 'public' | 'private' | null;
   error: string | null;
-  onCreate: (name: string, visibility: 'public' | 'private') => void;
+  onCreate: (name: string, visibility: 'public' | 'private', capacity: RoomSize) => void;
   onJoin: (roomId: string, name: string) => void;
   onRefresh: () => void;
   onBack: () => void;
 }
 
 const NAME_KEY = 'keymania.name';
+
+/**
+ * Four-way rooms can be created by the server already, but the duel view still
+ * shows exactly one opponent: it reads `healths[1 - mySlot]`, which for slot 2
+ * of four is `healths[-1]` — undefined, and a broken duel on the first hit.
+ *
+ * So the option is visible but not selectable. Flip this to true once the
+ * reducer holds a roster instead of two health scalars and the arena renders
+ * more than one opponent; nothing else here needs to change.
+ */
+const FOUR_PLAYER_READY = false;
 
 export default function Lobby({
   status, configured, rooms, waitingCode, waitingVisibility, error,
@@ -32,6 +43,9 @@ export default function Lobby({
     try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; }
   });
   const [code, setCode] = useState('');
+  // A duel is the default: it is the one that starts as soon as a single other
+  // person turns up.
+  const [capacity, setCapacity] = useState<RoomSize>(2);
 
   const remember = (value: string) => {
     setName(value);
@@ -88,12 +102,46 @@ export default function Lobby({
         />
       </label>
 
+      {/* Size is chosen before hosting, not after: it decides how many people
+          the room waits for, and a room cannot change its mind once open. */}
+      <fieldset className={styles.sizes}>
+        <legend className="eyebrow">Players</legend>
+        <div className={styles.row}>
+          {ROOM_SIZES.map((size) => {
+            const locked = size === 4 && !FOUR_PLAYER_READY;
+            return (
+              <button
+                key={size}
+                type="button"
+                className={`btn ${styles.grow}`}
+                data-selected={size === capacity || undefined}
+                aria-pressed={size === capacity}
+                disabled={locked}
+                title={locked ? 'The four-way arena is still being built' : undefined}
+                onClick={() => setCapacity(size)}
+              >
+                {size === 2 ? 'Duel' : 'Free-for-all'}
+                <small className="btn-sub">{locked ? 'soon' : `${size} players`}</small>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <p className={styles.note}>
+        {capacity === 2
+          ? FOUR_PLAYER_READY
+            ? 'One on one. Starts the moment someone joins.'
+            : 'One on one. Four-player free-for-all is on the way.'
+          : 'Four fighters, last one standing. Your blade always flies at whoever is furthest ahead, so leading makes you the target.'}
+      </p>
+
       <div className={styles.row}>
-        <button className="btn" onClick={() => onCreate(displayName, 'public')}>
+        <button className="btn" onClick={() => onCreate(displayName, 'public', capacity)}>
           Host public
           <small className="btn-sub">listed in the lobby</small>
         </button>
-        <button className="btn" onClick={() => onCreate(displayName, 'private')}>
+        <button className="btn" onClick={() => onCreate(displayName, 'private', capacity)}>
           Host private
           <small className="btn-sub">code only</small>
         </button>
@@ -129,15 +177,24 @@ export default function Lobby({
         {status === 'open' && rooms.length === 0 && (
           <li className={styles.empty}>No open duels. Host one and wait.</li>
         )}
-        {rooms.map((room) => (
-          <li key={room.roomId} className={styles.room}>
-            <span className={styles.host}>{room.host}</span>
-            <span className={`${styles.roomCode} pixel-font`}>{room.roomId}</span>
-            <button className="btn btn-ghost" onClick={() => onJoin(room.roomId, displayName)}>
-              Fight
-            </button>
-          </li>
-        ))}
+        {rooms.map((room) => {
+          const size = room.capacity ?? 2;
+          const here = room.players ?? 1;
+          return (
+            <li key={room.roomId} className={styles.room}>
+              <span className={styles.host}>{room.host}</span>
+              {/* Occupancy matters now: joining a four-way may still mean
+                  waiting, where joining a duel never does. */}
+              <span className={styles.seats} title={size === 2 ? 'Duel' : 'Free-for-all'}>
+                {here}/{size}
+              </span>
+              <span className={`${styles.roomCode} pixel-font`}>{room.roomId}</span>
+              <button className="btn btn-ghost" onClick={() => onJoin(room.roomId, displayName)}>
+                {here + 1 >= size ? 'Fight' : 'Join'}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {error && <p className={styles.error}>{error}</p>}
