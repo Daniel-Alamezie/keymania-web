@@ -3,7 +3,16 @@ export type BladeTier = 1 | 2 | 3 | 4 | 5;
 
 export type Side = 'player' | 'opponent';
 
-export type Phase = 'idle' | 'countdown' | 'playing' | 'over';
+/**
+ * `finishing` is the beat between the killing blow and the result screen.
+ *
+ * The duel is already decided — the winner is set and the clock is stopped —
+ * but the arena is still on screen: the loser falls, the light drains, and only
+ * then does the banner land. Without it the whole thing cuts from mid-fight to
+ * a statistics panel in a single frame, which is the one moment in a duel that
+ * should not feel like closing a spreadsheet.
+ */
+export type Phase = 'idle' | 'countdown' | 'playing' | 'finishing' | 'over';
 
 export type Difficulty = 'rookie' | 'rival' | 'master';
 

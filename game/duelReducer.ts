@@ -76,6 +76,7 @@ export type DuelAction =
   /** Authoritative power state from the server. */
   | { type: 'setPowers'; ward: boolean; surge: boolean; granted?: PowerKind; blocked?: boolean }
   | { type: 'finish'; winner: Side; now: number }
+  | { type: 'settle' }
   | { type: 'reset' };
 
 /** Sentences always end in a space so the final word is committed like any other. */
@@ -318,15 +319,19 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         ...state,
         playerHealth,
         opponentHealth,
-        phase: winner ? 'over' : state.phase,
+        phase: winner ? 'finishing' : state.phase,
         winner,
-        // Freeze the clock the moment it is decided, so the results are settled.
+        // Freeze the clock on the blow, not when the banner appears — the
+        // cinematic that follows must never be counted as typing time.
         stats: winner ? { ...state.stats, endedAt: action.now } : state.stats,
       };
     }
 
     case 'setHealths': {
-      if (state.phase === 'over') return state;
+      // Once decided, health is frozen. Keyed on the winner rather than the
+      // phase so a server update arriving during the finishing beat cannot
+      // quietly heal the fallen fighter mid-collapse.
+      if (state.winner) return state;
       return {
         ...state,
         playerHealth: action.playerHealth,
@@ -349,12 +354,20 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       };
 
     case 'finish':
+      // Already decided — a resign arriving after the killing blow must not
+      // restart the sequence or overwrite the winner.
+      if (state.winner) return state;
       return {
         ...state,
-        phase: 'over',
+        phase: 'finishing',
         winner: action.winner,
         stats: { ...state.stats, endedAt: state.stats.endedAt || action.now },
       };
+
+    /** The cinematic is done (or was skipped); show the result. */
+    case 'settle':
+      if (state.phase !== 'finishing') return state;
+      return { ...state, phase: 'over' };
 
     case 'reset':
       return initialState(state.difficulty);

@@ -109,6 +109,40 @@ class GameAudio {
     this.tone(150, 0.14, 'sawtooth', 0.28, 88);
   }
 
+  /**
+   * The swell under the finishing beat, before the result lands.
+   *
+   * A slow tone bed rather than a hit: it fills the hold while the loser falls
+   * and the arena drains, so the silence between the killing blow and the
+   * banner is charged rather than empty. Winning rises, losing sinks.
+   */
+  finishSwell(won: boolean) {
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    const now = ctx.currentTime;
+
+    osc.type = won ? 'triangle' : 'sawtooth';
+    osc.frequency.setValueAtTime(won ? 110 : 150, now);
+    // Lifting into the victory fanfare, or sagging away under the defeat sting.
+    osc.frequency.exponentialRampToValueAtTime(won ? 330 : 55, now + 1.7);
+
+    // Fades in rather than starting at full volume — a hard onset would read as
+    // a second impact right after the killing blow.
+    env.gain.setValueAtTime(0.0001, now);
+    env.gain.exponentialRampToValueAtTime(won ? 0.22 : 0.3, now + 0.9);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + 1.85);
+
+    osc.connect(env).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 1.9);
+
+    // A low thud on the moment of the blow itself.
+    this.tone(won ? 196 : 98, 0.5, 'sine', 0.45);
+  }
+
   victory() {
     [523, 659, 784, 1047, 1319].forEach((f, i) =>
       setTimeout(() => this.tone(f, 0.18, 'square', 0.3), i * 105),

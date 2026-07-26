@@ -50,6 +50,16 @@ interface Impact {
 /** Combo at which the screen starts visibly reacting to the streak. */
 const HEAT_COMBO = 4;
 
+/**
+ * How long the arena holds after the killing blow before the result appears.
+ *
+ * Tuned against the 500ms collapse in Fighter.module.css: the fall has to
+ * finish, and the drained arena has to sit still for a moment, before the
+ * banner lands. Much shorter and it reads as a stutter; much longer and it is
+ * something to sit through.
+ */
+const FINISH_HOLD_MS = 1900;
+
 export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [state, dispatch] = useReducer(duelReducer, undefined, () => initialState(difficulty));
   const account = useAccount();
@@ -164,8 +174,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   /** Fold the finished duel into the player's record, exactly once. */
   useEffect(() => {
     if (!state.winner) return;
-    if (state.winner === 'player') audio.victory();
-    else audio.defeat();
+    // The low swell under the collapse. The fanfare waits for the banner —
+    // playing both at once turns the whole beat into noise.
+    audio.finishSwell(state.winner === 'player');
 
     const stats = stateRef.current.stats;
     if (stats.endedAt) {
@@ -184,6 +195,36 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     // the transition into a winner, not again if the session resolves later.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.winner]);
+
+  /**
+   * The finishing beat: hold on the arena, then show the result.
+   *
+   * Long enough for the loser to fall and the light to drain, short enough not
+   * to be in the way on a rematch — and skippable, because the twentieth time
+   * you see it you want the numbers.
+   */
+  useEffect(() => {
+    if (state.phase !== 'finishing') return;
+
+    const settle = () => dispatch({ type: 'settle' });
+    const timer = setTimeout(settle, FINISH_HOLD_MS);
+    // Any key or click cuts to the result.
+    window.addEventListener('keydown', settle);
+    window.addEventListener('pointerdown', settle);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', settle);
+      window.removeEventListener('pointerdown', settle);
+    };
+  }, [state.phase]);
+
+  /** The fanfare belongs to the banner, not to the killing blow. */
+  useEffect(() => {
+    if (state.phase !== 'over' || !state.winner) return;
+    if (state.winner === 'player') audio.victory();
+    else audio.defeat();
+  }, [state.phase, state.winner]);
 
   /**
    * Impact feedback: a hit-stop flash plus shake scaled to the blow.
@@ -336,7 +377,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         <button className={styles.iconBtn} onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
           {muted ? '🔇' : '🔊'}
         </button>
-        {state.phase !== 'over' && (
+        {/* Hidden once decided: there is nothing left to forfeit, and offering
+            to quit over the top of the collapse undercuts it. */}
+        {!state.winner && state.phase !== 'over' && (
           <button
             className={styles.iconBtn}
             onClick={() => setConfirmQuit(true)}
@@ -461,10 +504,33 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         </div>
       )}
 
+      {/* The beat between the blow and the banner. The arena stays visible and
+          the colour drains out of it while the loser falls; the winner keeps
+          their light. Sits above the fight but below the result. */}
+      {state.phase === 'finishing' && (
+        <div
+          className={styles.finishing}
+          data-win={state.winner === 'player' || undefined}
+          aria-hidden="true"
+        >
+          <div className={styles.drain} />
+          <div className={styles.closeIn} />
+        </div>
+      )}
+
       {state.phase === 'over' && (
         <div className={styles.overlay}>
+          {/* Expanding ring behind the banner — the release the hold builds to. */}
+          <div
+            className={styles.shockwave}
+            data-win={state.winner === 'player' || undefined}
+            aria-hidden="true"
+          />
           <div className={`panel ${styles.dialog}`}>
-            <h2 className={`${styles.result} pixel-font`} data-win={state.winner === 'player' || undefined}>
+            <h2
+              className={`${styles.result} pixel-font`}
+              data-win={state.winner === 'player' || undefined}
+            >
               {state.winner === 'player' ? 'VICTORY' : 'DEFEATED'}
             </h2>
             {notice && <p className={styles.blurb}>{notice}</p>}

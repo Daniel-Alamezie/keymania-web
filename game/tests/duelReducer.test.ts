@@ -92,17 +92,66 @@ describe('damage and victory', () => {
     expect(landed.opponentHealth).toBe(96);
   });
 
-  it('ends the duel when a fighter is emptied', () => {
+  it('decides the duel when a fighter is emptied', () => {
     const state = duelReducer(playing(), { type: 'land', target: 'opponent', damage: 999, now: 1 });
-    expect(state.phase).toBe('over');
+    // Not 'over': the arena holds while the loser falls. See Phase.
+    expect(state.phase).toBe('finishing');
     expect(state.winner).toBe('player');
   });
 
-  it('ignores further hits once the duel is over', () => {
+  it('ignores further hits once the duel is decided', () => {
     const over = duelReducer(playing(), { type: 'land', target: 'player', damage: 999, now: 1 });
     const after = duelReducer(over, { type: 'land', target: 'opponent', damage: 50, now: 1 });
     expect(after.opponentHealth).toBe(100);
     expect(after.winner).toBe('opponent');
+  });
+});
+
+/**
+ * The beat between the killing blow and the result screen.
+ *
+ * The risk here is the duel getting stuck in it, or the cinematic time leaking
+ * into the player's speed — both of which would look like something else going
+ * wrong rather than like a bug in a transition.
+ */
+describe('the finishing beat', () => {
+  const decided = () =>
+    duelReducer(playing(), { type: 'land', target: 'opponent', damage: 999, now: 5000 });
+
+  it('settles into the result screen', () => {
+    expect(duelReducer(decided(), { type: 'settle' }).phase).toBe('over');
+  });
+
+  it('only settles from the finishing beat', () => {
+    // A stray settle mid-duel must not skip to the result screen.
+    expect(duelReducer(playing(), { type: 'settle' }).phase).toBe('playing');
+  });
+
+  it('stops the clock on the blow, not when the banner appears', () => {
+    // Otherwise every duel's speed would be diluted by the cinematic.
+    const settled = duelReducer(decided(), { type: 'settle' });
+    expect(settled.stats.endedAt).toBe(5000);
+  });
+
+  it('keeps the winner when a late resign arrives', () => {
+    // The opponent's resign can land after the killing blow: the server sends
+    // it, and the socket does not care that the duel is already decided.
+    const after = duelReducer(decided(), { type: 'finish', winner: 'opponent', now: 9000 });
+    expect(after.winner).toBe('player');
+    expect(after.stats.endedAt).toBe(5000);
+  });
+
+  it('does not let a late server update heal the fallen fighter', () => {
+    const after = duelReducer(decided(), {
+      type: 'setHealths', playerHealth: 90, opponentHealth: 90,
+    });
+    expect(after.opponentHealth).toBe(0);
+    expect(after.phase).toBe('finishing');
+  });
+
+  it('a resign goes through the same beat rather than cutting straight to the result', () => {
+    const resigned = duelReducer(playing(), { type: 'finish', winner: 'player', now: 5000 });
+    expect(resigned.phase).toBe('finishing');
   });
 });
 
