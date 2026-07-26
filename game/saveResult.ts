@@ -2,6 +2,7 @@
 
 import type { DuelStats } from './duelReducer';
 import { recordDuel } from './profile';
+import { invalidateProfile } from './serverProfile';
 
 /**
  * Where a finished duel goes.
@@ -30,6 +31,12 @@ export interface FinishedDuel {
 
 export function saveResult({ stats, won, wpm, accuracy, signedIn, multiplayer }: FinishedDuel): void {
   recordDuel(stats, won, wpm, accuracy);
+
+  // The account record now has a duel the cached copy does not know about —
+  // whether the server wrote it or the POST below does. Without this the
+  // dashboard would serve a stale record for up to a minute after a duel,
+  // which is exactly when a player goes to look at it.
+  if (signedIn) invalidateProfile();
 
   if (multiplayer || !signedIn) return;
 

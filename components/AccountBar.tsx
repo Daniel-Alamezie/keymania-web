@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { LoginLink, LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
-import { forgetDisplayName, resolveDisplayName, useDisplayName } from '@/game/serverProfile';
+import { forgetProfile, resolveDisplayName, useDisplayName } from '@/game/serverProfile';
 import { forgetDuelToken } from '@/game/duelToken';
 import styles from './AccountBar.module.css';
 
@@ -61,7 +61,7 @@ export default function AccountBar() {
           person to sign in here is never briefly greeted by this one's name. */}
       <LogoutLink
         className={styles.signOut}
-        onClick={() => { forgetDisplayName(); forgetDuelToken(); }}
+        onClick={() => { forgetProfile(); forgetDuelToken(); }}
       >
         Sign out
       </LogoutLink>
