@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { currentSpeed, resolveDisplayName, trend, type DuelResult } from '../serverProfile';
+import {
+  currentSpeed, EMPTY_TALLY, resolveDisplayName, trend, winRate, type DuelResult,
+} from '../serverProfile';
 
 /**
  * The profile summary figures.
@@ -17,6 +19,24 @@ function historyFrom(oldestFirst: number[]): DuelResult[] {
     .map((wpm, i) => ({ wpm, accuracy: 95, won: true, at: 1000 + i, ranked: true }))
     .reverse();
 }
+
+describe('winRate', () => {
+  it('is null with no duels, not zero', () => {
+    // "0%" reads as a record of losses. A player who has never duelled a human
+    // has no ranked record at all, and the UI needs to be able to say so.
+    expect(winRate({ ...EMPTY_TALLY })).toBeNull();
+  });
+
+  it('rounds to a whole percentage', () => {
+    expect(winRate({ ...EMPTY_TALLY, duels: 3, wins: 2 })).toBe(67);
+    expect(winRate({ ...EMPTY_TALLY, duels: 4, wins: 1 })).toBe(25);
+  });
+
+  it('reports a clean sweep and a clean slate', () => {
+    expect(winRate({ ...EMPTY_TALLY, duels: 5, wins: 5 })).toBe(100);
+    expect(winRate({ ...EMPTY_TALLY, duels: 5, wins: 0 })).toBe(0);
+  });
+});
 
 describe('resolveDisplayName', () => {
   /**

@@ -14,8 +14,9 @@ import type { ServerProfile } from '../serverProfile';
 
 const PROFILE: ServerProfile = {
   displayName: 'Fenrir',
-  duels: 12, wins: 8,
-  bestWpm: 91, bestAccuracy: 97, bestCombo: 14, bestRankedWpm: 88,
+  ranked: { duels: 5, wins: 3, bestWpm: 88, bestAccuracy: 97, bestCombo: 11 },
+  practice: { duels: 7, wins: 7, bestWpm: 91, bestAccuracy: 99, bestCombo: 14 },
+  bestRankedWpm: 88,
   history: [{ wpm: 88, accuracy: 97, won: true, at: 1000, ranked: true }],
 };
 

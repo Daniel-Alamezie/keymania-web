@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import {
-  currentSpeed, NAME_MAX, trend, useServerProfile, type DuelResult,
+  currentSpeed, EMPTY_TALLY, NAME_MAX, trend, useServerProfile, winRate, type DuelResult,
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
 import WpmChart, { type ChartPoint } from './WpmChart';
@@ -44,7 +44,10 @@ export default function ProfileDashboard() {
 
   const now = currentSpeed(profile.history);
   const movement = trend(profile.history);
-  const losses = profile.duels - profile.wins;
+  const ranked = profile.ranked ?? EMPTY_TALLY;
+  const practice = profile.practice ?? EMPTY_TALLY;
+  const rankedRate = winRate(ranked);
+  const practiceRate = winRate(practice);
 
   return (
     <Shell>
@@ -61,12 +64,49 @@ export default function ProfileDashboard() {
                 note={movement === null ? 'building a baseline'
                   : movement === 0 ? 'holding steady'
                   : `${movement > 0 ? '+' : ''}${movement} wpm vs earlier`} />
-          <Stat label="Best ever" value={profile.bestWpm} unit="wpm" />
-          <Stat label="Best ranked" value={profile.bestRankedWpm} unit="wpm"
-                note="vs humans — what the board uses" />
-          <Stat label="Best accuracy" value={profile.bestAccuracy} unit="%" />
-          <Stat label="Best combo" value={profile.bestCombo} prefix="x" />
-          <Stat label="Record" value={profile.wins} suffix={`W — ${losses}L`} />
+          <Stat label="Best ranked speed" value={profile.bestRankedWpm} unit="wpm"
+                note="what the board orders on" />
+        </dl>
+        <p className={styles.muted}>
+          Speed counts wherever you earn it — practice is still typing. Records
+          below are kept apart, so a run of bot wins never flatters the one that
+          decides the board.
+        </p>
+      </section>
+
+      {/* Two records, never merged. Beating Rookie on a loop is a fine way to
+          get faster and a worthless way to look good. */}
+      <section className={styles.section}>
+        <h2 className={`${styles.heading} pixel-font`}>Ranked · versus humans</h2>
+        <dl className={styles.stats}>
+          <Stat label="Duels" value={ranked.duels} highlight />
+          <Stat label="Record" value={ranked.wins}
+                suffix={`W — ${ranked.duels - ranked.wins}L`} />
+          <Stat label="Win rate" value={rankedRate ?? 0} unit="%"
+                note={rankedRate === null ? 'no ranked duels yet' : undefined} />
+          <Stat label="Best speed" value={ranked.bestWpm} unit="wpm" />
+          <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
+          <Stat label="Best combo" value={ranked.bestCombo} prefix="x" />
+        </dl>
+        {ranked.duels === 0 && (
+          <p className={styles.muted}>
+            Nothing here yet. Duel a human and this fills in — it is the only
+            record that reaches the leaderboard.
+          </p>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={`${styles.heading} pixel-font`}>Practice · versus bots</h2>
+        <dl className={styles.stats}>
+          <Stat label="Duels" value={practice.duels} />
+          <Stat label="Record" value={practice.wins}
+                suffix={`W — ${practice.duels - practice.wins}L`} />
+          <Stat label="Win rate" value={practiceRate ?? 0} unit="%"
+                note={practiceRate === null ? 'no practice yet' : undefined} />
+          <Stat label="Best speed" value={practice.bestWpm} unit="wpm" />
+          <Stat label="Best accuracy" value={practice.bestAccuracy} unit="%" />
+          <Stat label="Best combo" value={practice.bestCombo} prefix="x" />
         </dl>
       </section>
 

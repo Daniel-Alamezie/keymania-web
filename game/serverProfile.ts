@@ -21,16 +21,38 @@ export interface DuelResult {
   opponent?: string;
 }
 
-export interface ServerProfile {
-  displayName: string;
+/** One column of the record, tallied separately for ranked and practice. */
+export interface Tally {
   duels: number;
   wins: number;
   bestWpm: number;
   bestAccuracy: number;
   bestCombo: number;
+}
+
+export interface ServerProfile {
+  displayName: string;
+  /**
+   * Duels against humans, refereed by the server. The record that counts.
+   *
+   * Kept apart from practice because a combined tally is farmable: the quickest
+   * path to a perfect win rate would be beating the easiest bot on a loop.
+   */
+  ranked: Tally;
+  /** Bot practice. Real progress, but the client reported it about itself. */
+  practice: Tally;
   bestRankedWpm: number;
   /** Newest first, as the API stores it. */
   history: DuelResult[];
+}
+
+export const EMPTY_TALLY: Tally = {
+  duels: 0, wins: 0, bestWpm: 0, bestAccuracy: 0, bestCombo: 0,
+};
+
+/** Percentage of duels won, or null when there are none to divide by. */
+export function winRate(tally: Tally): number | null {
+  return tally.duels === 0 ? null : Math.round((tally.wins / tally.duels) * 100);
 }
 
 export const NAME_MAX = 16;
