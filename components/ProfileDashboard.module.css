@@ -146,3 +146,26 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- Identity ----------
+ *
+ * Mirrors the header on the public profile card, so the page you edit yourself
+ * on opens with the same thing everybody else sees.
+ */
+.identity {
+  margin-bottom: var(--gap-lg);
+}
+
+.identityName {
+  font-size: 20px;
+  margin: 0 0 var(--gap-xs);
+  /* A display name is free text and allowed to be awkward, so it wraps rather
+     than pushing the card wider. */
+  overflow-wrap: anywhere;
+}
+
+.identityHandle {
+  color: var(--faint);
+  font-size: 12px;
+  margin: 0;
+}

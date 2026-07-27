@@ -294,6 +294,23 @@ export function useDisplayName(): string | null {
 }
 
 /**
+ * Your own handle, or null while it is unknown.
+ *
+ * Separate from useDisplayName because the two answer different questions and
+ * only one of them is safe to compare. A display name is not unique, so
+ * "is this row me?" answered by name is wrong whenever two players share one —
+ * the leaderboard highlighted both of them as you. A handle is unique by
+ * construction, which is the whole reason it exists.
+ */
+export function useHandle(): string | null {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => readSnapshot().profile?.handle ?? null,
+    () => null,
+  );
+}
+
+/**
  * Which name to show, given the saved one and the account's own.
  *
  * Extracted so the distinction can be tested. Collapsing `null` (not known yet)

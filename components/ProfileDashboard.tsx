@@ -57,6 +57,22 @@ export default function ProfileDashboard() {
 
   return (
     <Shell>
+      {/*
+        * Who you are, before anything you can change about it.
+        *
+        * The same pairing the public card uses, and deliberately so: this is
+        * how other players see you, so recognising yourself here is the point.
+        * The name is what people read and the handle is what identifies them —
+        * showing only one would leave you unable to tell which is which when
+        * two players share a display name.
+        */}
+      <header className={styles.identity}>
+        <h1 className={`${styles.identityName} pixel-font`}>
+          {profile.displayName || account.displayName}
+        </h1>
+        {profile.handle && <p className={styles.identityHandle}>@{profile.handle}</p>}
+      </header>
+
       <NameEditor
         current={profile.displayName}
         suggestion={account.displayName}

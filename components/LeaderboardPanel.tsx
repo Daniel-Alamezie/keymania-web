@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useDisplayName } from '@/game/serverProfile';
+import { useDisplayName, useHandle } from '@/game/serverProfile';
 import type { BoardEntry, LeaderboardResponse } from '@/models/leaderboard';
 import RankFlame, { type Podium } from './RankFlame';
 import styles from './SidePanel.module.css';
@@ -30,6 +30,7 @@ export default function LeaderboardPanel() {
   const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [status, setStatus] = useState<Status>('loading');
   const myName = useDisplayName();
+  const myHandle = useHandle();
 
   useEffect(() => {
     // Guards a late response from overwriting state after unmount.
@@ -82,9 +83,19 @@ export default function LeaderboardPanel() {
                 // React had no way to tell their rows apart.
                 key={entry.handle ?? `${entry.position}-${entry.name}`}
                 className={styles.rank}
-                // Only marked when we actually know the name — before the
-                // profile loads, myName is null and nothing is highlighted.
-                data-me={(myName && entry.name === myName) || undefined}
+                /**
+                 * Matched on handle where both sides have one, and only on
+                 * name as a fallback.
+                 *
+                 * Names are not unique, so the old comparison highlighted
+                 * every player who happened to share yours as though they
+                 * were you. The fallback is kept for accounts that predate
+                 * handles, where a name is the only thing to go on and being
+                 * occasionally wrong beats never highlighting anybody.
+                 */
+                data-me={(myHandle && entry.handle
+                  ? entry.handle === myHandle
+                  : Boolean(myName) && entry.name === myName) || undefined}
                 data-top={entry.position === 1 || undefined}
               >
                 <span className={`${styles.rankPos} pixel-font`}>{entry.position}</span>
@@ -97,8 +108,16 @@ export default function LeaderboardPanel() {
                     reached the board before handles existed have nothing to
                     link to, and are rendered as plain text rather than as a
                     control that goes nowhere. */}
+                {/* Your own row points straight at the dashboard. Sending it
+                    to /u/ instead would render the public card and then bounce,
+                    and the flash of somebody else's view of you is exactly what
+                    the redirect is there to avoid. */}
                 {entry.handle ? (
-                  <Link href={`/u/${entry.handle}`} className={styles.rankName} data-link>
+                  <Link
+                    href={entry.handle === myHandle ? '/profile' : `/u/${entry.handle}`}
+                    className={styles.rankName}
+                    data-link
+                  >
                     {entry.name}
                   </Link>
                 ) : (

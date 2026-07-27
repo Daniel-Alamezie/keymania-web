@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useFriends } from '@/game/friends';
-import { EMPTY_TALLY, winRate } from '@/game/serverProfile';
+import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import type { PublicProfile as Profile } from '@/models/profile';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
@@ -23,8 +24,31 @@ type Status = 'loading' | 'ready' | 'missing' | 'signedOut' | 'error';
 
 export default function PublicProfile({ handle }: { handle: string }) {
   useUiSounds();
+  const router = useRouter();
+  const myHandle = useHandle();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState<Status>('loading');
+
+  /**
+   * Looking at yourself: go to the dashboard instead.
+   *
+   * The public card is a worse version of your own profile — it shows less and
+   * can do nothing, and offering yourself an "Add friend" button is plainly
+   * wrong. Links elsewhere already point your own row at /profile, so this is
+   * the backstop for a URL typed, bookmarked or shared back to you.
+   *
+   * Compared against the *fetched* handle rather than the one in the URL. Old
+   * handles keep resolving on purpose so shared links never break, which means
+   * /u/an_old_handle_of_mine is also me — and matching on the URL alone would
+   * miss it and show me a stranger's view of myself.
+   */
+  const mine = Boolean(myHandle) && profile?.handle === myHandle;
+
+  useEffect(() => {
+    // replace, not push: this page should not sit in history as a step to go
+    // back to, or Back from the dashboard would bounce straight here again.
+    if (mine) router.replace('/profile');
+  }, [mine, router]);
 
   // Only enabled once we know the visitor is signed in, so a signed-out visitor
   // does not fire a request that can only 401.
@@ -57,7 +81,11 @@ export default function PublicProfile({ handle }: { handle: string }) {
     return () => { live = false; };
   }, [handle]);
 
-  if (status === 'loading') return <Shell><p className={styles.muted}>Loading…</p></Shell>;
+  // Covers the frame between knowing it is you and the router acting, so the
+  // wrong page never paints even for one frame.
+  if (status === 'loading' || mine) {
+    return <Shell><p className={styles.muted}>Loading…</p></Shell>;
+  }
 
   if (status === 'signedOut') {
     return (
