@@ -97,7 +97,9 @@ export default function ProfileDashboard() {
 
               <section className={styles.section}>
                 <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
-                <dl className={styles.stats}>
+                {/* Two, not six — so it fills its row rather than leaving a
+                    gap where a third tile would go. */}
+                <dl className={styles.stats} data-pair>
                   <Stat label="Current speed" value={now} unit="wpm" highlight
                         note={movement === null ? 'building a baseline'
                           : movement === 0 ? 'holding steady'
@@ -118,8 +120,12 @@ export default function ProfileDashboard() {
                 <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
                 <dl className={styles.stats}>
                   <Stat label="Duels" value={ranked.duels} highlight />
-                  <Stat label="Record" value={ranked.wins}
-                        suffix={`W — ${ranked.duels - ranked.wins}L`} />
+                  {/* "11–3", not "11W — 3L". The long form is eight characters
+                      of a pixel font in a tile sized for four, so it broke after
+                      the dash and dragged the whole row taller to match. The
+                      label carries the W–L, where there is room for it. */}
+                  <Stat label="Record (W–L)" value={ranked.wins}
+                        suffix={`–${ranked.duels - ranked.wins}`} />
                   <Stat label="Win rate" value={rankedRate ?? 0} unit="%"
                         note={rankedRate === null ? 'no ranked duels yet' : undefined} />
                   <Stat label="Best speed" value={ranked.bestWpm} unit="wpm" />
@@ -138,8 +144,8 @@ export default function ProfileDashboard() {
                 <h2 className={`${styles.heading} pixel-font`}>Practice · versus bots</h2>
                 <dl className={styles.stats}>
                   <Stat label="Duels" value={practice.duels} />
-                  <Stat label="Record" value={practice.wins}
-                        suffix={`W — ${practice.duels - practice.wins}L`} />
+                  <Stat label="Record (W–L)" value={practice.wins}
+                        suffix={`–${practice.duels - practice.wins}`} />
                   <Stat label="Win rate" value={practiceRate ?? 0} unit="%"
                         note={practiceRate === null ? 'no practice yet' : undefined} />
                   <Stat label="Best speed" value={practice.bestWpm} unit="wpm" />

@@ -124,6 +124,20 @@
   display: flex;
   flex-direction: column;
   gap: 26px;
+}
+
+/*
+ * The record column is a container things inside it can measure against.
+ *
+ * Its width has nothing to do with the viewport — it is a share of a box that
+ * is itself a share of the page, so at 1400px wide it might be 690px and at
+ * 1200px it might be 760px. A media query asked about the wrong thing entirely,
+ * which is how six stat tiles ended up as a row of four and an orphaned row of
+ * two.
+ */
+.main {
+  container-type: inline-size;
+  container-name: record;
   /* minmax(0,…) above stops a wide chart forcing the column open; this stops a
      long unbroken word doing the same from inside. */
   min-width: 0;
@@ -195,11 +209,33 @@
 .input { flex: 1; min-width: 180px; }
 
 /* ---- stats ---- */
+/*
+ * A fixed count rather than auto-fit, because the count has to divide the
+ * content evenly.
+ *
+ * auto-fit packs in as many tiles as will go, which for six stats in a wide
+ * column meant four and then two — a ragged half-empty second row. Two or three
+ * both divide six; four does not, so it is never offered however much room
+ * there is.
+ */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
+}
+
+@container record (min-width: 460px) {
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The sections with exactly two stats fill their row instead of leaving a hole
+   where a third tile would be. Higher specificity than the rule above, so it
+   holds at every width without needing its own query. */
+.stats[data-pair] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stat {
@@ -219,7 +255,15 @@
   color: var(--faint);
 }
 
-.statValue { margin: 0; font-size: 17px; color: var(--ink); }
+/* Never wraps. A value that breaks across two lines makes its tile taller than
+   the rest of the row, and grid stretches every sibling to match — one long
+   figure was setting the height of six. */
+.statValue {
+  margin: 0;
+  font-size: 17px;
+  color: var(--ink);
+  white-space: nowrap;
+}
 .stat[data-highlight] .statValue { color: var(--gold); }
 
 .unit { font-size: 9px; margin-left: 4px; color: var(--faint); }
