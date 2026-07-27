@@ -189,6 +189,15 @@ class GameAudio {
     // Highpass keeps everything above the cutoff instead of everything below,
     // turning the same burst from a thock into a clack.
     type: BiquadFilterType = 'lowpass',
+    /**
+     * Resonance, for bandpass bursts.
+     *
+     * How hard the filter rings at its cutoff. Around 1 the result is just
+     * filtered static; push it up and the noise starts to take on the character
+     * of a hollow object being struck — without ever acquiring a pitch you
+     * could hum. That is the whole trick to a mechanical sound.
+     */
+    q = 1,
   ) {
     const ctx = this.ctx;
     if (!ctx || !this.master) return;
@@ -196,6 +205,7 @@ class GameAudio {
     src.buffer = this.noiseBuffer(ctx);
     const shape = ctx.createBiquadFilter();
     shape.type = type;
+    shape.Q.setValueAtTime(q, at);
     shape.frequency.setValueAtTime(cutoff, at);
     const env = ctx.createGain();
     env.gain.setValueAtTime(gain, at);
@@ -290,36 +300,36 @@ class GameAudio {
   }
 
   /**
-   * Pressing a button.
+   * Pressing a button — a typebar hitting paper.
    *
-   * The same construction as a keystroke, lighter and higher — the UI should
-   * feel like it belongs to the same object as the keyboard without pretending
-   * a menu button is a switch.
+   * The first attempt put a 1150Hz square at the centre of this, and a clear
+   * pitch is exactly what stops a sound reading as mechanical. A note sounds
+   * electronic no matter how bright it is or how fast it decays; nothing struck
+   * in the physical world produces one. That partial is gone, and what is left
+   * is entirely noise plus a knock too short to have a pitch at all.
    *
-   * It falls where the hover note rises. That pairing is the point: rising
-   * reads as an invitation, falling reads as something settling into place, so
-   * moving over a control and pressing it form a phrase rather than two
-   * unrelated noises.
+   * Three events a couple of milliseconds apart, which is what makes a
+   * typewriter sound like a machine rather than a click: the hammer, the hollow
+   * body it is mounted in, and the weight of the whole thing moving.
    */
   click() {
     const ctx = this.ensure();
     if (!ctx || !this.master || !this.enabled) return;
     const at = ctx.currentTime;
 
-    // The same three ingredients as a keystroke, inverted at every step. A
-    // clack is not a louder thock — it is the sound a thock is made by
-    // removing. Highpass instead of lowpass, so only the bright end survives.
-    this.tick(at, 0.013, 2600, 0.3, 'highpass');
+    // The strike. Bright, broadband, and over in nine milliseconds.
+    this.tick(at, 0.009, 2000, 0.3, 'highpass');
 
-    // No attack. The keystroke fades in over 4ms to lose its transient; this
-    // wants that transient, so the envelope starts at full and falls away.
-    // Square rather than triangle for the same reason: more harmonics, more
-    // edge, the hard plastic of a clicky switch rather than a damped case.
-    this.voice({ at, freq: 1150, to: 760, duration: 0.035, type: 'square', gain: 0.14 });
+    // The body of the machine. A resonant bandpass is the important part here —
+    // at Q of 1 this is just static, but wound up it rings like something hollow
+    // being hit, while never settling on a note you could hum. That is the
+    // difference between a mechanical sound and an electronic one.
+    this.tick(at + 0.002, 0.038, 760, 0.34, 'bandpass', 3.4);
 
-    // Enough low end to land as a press rather than a tick. Without it the
-    // sound is all treble and reads as cheap on anything but a laptop speaker.
-    this.voice({ at, freq: 250, to: 150, duration: 0.055, type: 'triangle', gain: 0.1 });
+    // Weight underneath. Deliberately under 45ms: a tone this short is heard as
+    // a knock rather than as a pitch, which is precisely where the last version
+    // went wrong — 35ms of 1150Hz was still long enough to register as a beep.
+    this.voice({ at, freq: 200, to: 92, duration: 0.042, type: 'triangle', gain: 0.22 });
   }
 
   /**
