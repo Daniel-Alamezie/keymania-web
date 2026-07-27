@@ -92,5 +92,13 @@ export type ClientMessage =
   | { action: 'listRooms' }
   // Running accuracy rides along here rather than on its own route. The server
   // cannot verify it, so it is stored for the player's record but never ranked.
-  | { action: 'wordComplete'; word: string; elapsedMs: number; accuracy?: number }
+  //
+  // `typos` is how many mistakes were made inside this word. The server needs
+  // it because a wrong key never reaches it: the cursor does not advance, so no
+  // message is sent, and without this its combo runs on where yours broke.
+  //
+  // Client-reported and therefore imperfect — under-reporting keeps a streak
+  // you lost. It is the same trust as elapsedMs, which the server already
+  // accepts and clamps, and lying only helps in one direction.
+  | { action: 'wordComplete'; word: string; elapsedMs: number; accuracy?: number; typos?: number }
   | { action: 'resign' };

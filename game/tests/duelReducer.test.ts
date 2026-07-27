@@ -42,6 +42,50 @@ describe('typing', () => {
   });
 });
 
+/**
+ * Typos and the streak.
+ *
+ * The server cannot see a typo — a wrong key does not advance the cursor, so no
+ * message is ever sent for it. It has to be told, which is what wordMistakes
+ * carries. Get this wrong and the server's combo runs on where the player's
+ * broke, inflating both their recorded best and the damage they deal.
+ */
+describe('typos break the streak', () => {
+  it('counts mistakes within the current word', () => {
+    let state = playing();
+    state = duelReducer(state, { type: 'typed', char: 'x', now: 1 });
+    state = duelReducer(state, { type: 'typed', char: 'z', now: 2 });
+    expect(state.wordMistakes).toBe(2);
+  });
+
+  it('resets the per-word count once the word is committed', () => {
+    // Otherwise every later word in the sentence would report the typo too,
+    // and the streak would never restart.
+    let state = duelReducer(playing(), { type: 'typed', char: 'x', now: 1 });
+    expect(state.wordMistakes).toBe(1);
+    state = type(state, 'the ');
+    expect(state.wordMistakes).toBe(0);
+  });
+
+  it('breaks the combo, so a mistyped word starts from one', () => {
+    const clean = type(type(playing(), 'the '), 'cat ');
+    expect(clean.playerCombo).toBe(2);
+
+    const fumbled = type(duelReducer(type(playing(), 'the '),
+      { type: 'typed', char: 'z', now: 2 }), 'cat ');
+    expect(fumbled.playerCombo).toBe(1);
+  });
+
+  it('keeps the per-duel mistake count separate from the per-word one', () => {
+    // Accuracy is measured across the whole duel; the streak is not.
+    let state = duelReducer(playing(), { type: 'typed', char: 'x', now: 1 });
+    state = type(state, 'the ');
+    state = duelReducer(state, { type: 'typed', char: 'z', now: 3 });
+    expect(state.stats.mistakes).toBe(2);
+    expect(state.wordMistakes).toBe(1);
+  });
+});
+
 describe('SPACE commits the word', () => {
   it('does not score the word until space is pressed', () => {
     const state = type(playing(), 'the');

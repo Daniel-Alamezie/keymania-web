@@ -62,6 +62,7 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     wordStartedAt: 0,
     lastWordAt: 0,
     playerCombo: 0,
+    wordMistakes: 0,
     powers: {},
     wordOffset: 0,
     ward: false,
@@ -141,6 +142,9 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         return {
           ...state,
           playerCombo: 0,
+          // Counted per word as well as per duel: the per-word figure is what
+          // tells the server this streak broke.
+          wordMistakes: state.wordMistakes + 1,
           missTick: state.missTick + 1,
           stats: { ...state.stats, mistakes: state.stats.mistakes + 1 },
         };
@@ -211,6 +215,8 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         powers: nextPowers,
         cursor: sentenceDone ? 0 : advanced,
         playerCombo: result.combo,
+        // A fresh word starts clean.
+        wordMistakes: 0,
         wordStartedAt: action.now,
         lastWordAt: action.now,
         hitSeq: state.hitSeq + 1,

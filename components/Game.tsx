@@ -145,8 +145,8 @@ export default function Game() {
             mySlot: match.mySlot,
             powers: match.powers,
             subscribe,
-            onWord: (word: string, elapsedMs: number, accuracy: number) =>
-              send({ action: 'wordComplete', word, elapsedMs, accuracy }),
+            onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>
+              send({ action: 'wordComplete', word, elapsedMs, accuracy, typos }),
             onResign: () => send({ action: 'resign' }),
           }
         : undefined,

@@ -74,6 +74,15 @@ export interface DuelState {
 
   /** Your own streak. Singular because there is only ever one of you. */
   playerCombo: number;
+  /**
+   * Typos made in the word currently being typed, reset on each commit.
+   *
+   * Reported to the server so its combo can break on a mistake too. Without it
+   * the server never learns a typo happened at all — a wrong key does not
+   * advance the cursor, so no message is ever sent for it — and its streak runs
+   * on where yours has visibly broken.
+   */
+  wordMistakes: number;
 
   /** Charged words, keyed by flat word index across the whole script. */
   powers: Record<number, PowerKind>;

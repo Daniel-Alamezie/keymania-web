@@ -33,7 +33,7 @@ export interface MultiplayerConfig {
   powers: Record<number, PowerKind>;
   /** Subscribe to server messages; returns an unsubscribe function. */
   subscribe: (handler: MessageHandler) => () => void;
-  onWord: (word: string, elapsedMs: number, accuracy: number) => void;
+  onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) => void;
   /** Forfeit — the opponent is awarded the win. */
   onResign: () => void;
 }
@@ -145,6 +145,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           word,
           Math.max(1, Date.now() - snapshot.wordStartedAt),
           accuracy(snapshot.stats),
+          // Mistakes inside this word. The server cannot see them any other
+          // way, and without them its combo never breaks.
+          snapshot.wordMistakes,
         );
       }
 
