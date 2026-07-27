@@ -33,11 +33,16 @@ export type ServerMessage =
       countdownMs: number;
       slot: number;
       you: string;
-      opponent: string;
+      /** Every player's name in slot order. */
+      roster: string[];
+      /** Legacy single-opponent name, sent only for two-player rooms. */
+      opponent?: string;
     }
   | {
       type: 'hit';
       fromSlot: number;
+      /** Who wore it. Past two players this cannot be inferred from fromSlot. */
+      toSlot: number;
       damage: number;
       tier: number;
       combo: number;
@@ -52,8 +57,22 @@ export type ServerMessage =
       surged?: boolean;
       wards?: boolean[];
       surges?: boolean[];
+      /** Who each fighter now aims at, recomputed after the damage. */
+      targets?: number[];
+      /** Set when this blow knocked somebody out. */
+      eliminatedSlot?: number;
     }
-  | { type: 'gameOver'; winnerSlot: number; reason?: 'resign' }
+  /** Somebody is out, but others are still fighting. Four-way only. */
+  | {
+      type: 'eliminated';
+      slot: number;
+      reason?: 'resign' | 'left';
+      healths: number[];
+      targets?: number[];
+    }
+  /** A room filling up before it is full enough to start. */
+  | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
+  | { type: 'gameOver'; winnerSlot: number; reason?: 'resign' | 'left' }
   | { type: 'opponentLeft' }
   | { type: 'error'; message: string };
 

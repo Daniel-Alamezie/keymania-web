@@ -92,7 +92,7 @@ describe('accuracy', () => {
 describe('the settled figure a leaderboard would rank', () => {
   it('freezes when the duel ends so results stop drifting', () => {
     let state = typeOut(playing('the cat '), 'the cat ', 100);
-    state = duelReducer(state, { type: 'finish', winner: 'player', now: START + 800 });
+    state = duelReducer(state, { type: 'finish', winnerSlot: 0, now: START + 800 });
 
     const settled = finalWpm(state.stats);
     expect(settled).toBeGreaterThan(0);

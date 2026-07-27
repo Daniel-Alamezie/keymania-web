@@ -2,7 +2,7 @@ import { applyDamage, bladeTier, keepsCombo, scoreWord, wpmFor } from './engine'
 import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
 import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER, type PowerKind } from './powers';
-import type { BladeTier, Difficulty, Phase, Side } from './types';
+import type { BladeTier, Difficulty, Phase } from './types';
 
 export interface DuelStats {
   wordsTyped: number;
@@ -26,7 +26,21 @@ export interface DuelState {
   /** The shared word script sent by the server; null in solo play. */
   script: string[] | null;
   scriptIndex: number;
-  opponentName: string;
+
+  /**
+   * Everyone in the duel, in the server's slot order — including you.
+   *
+   * Slots rather than "player and opponent" because that is the language the
+   * server already speaks: it sends healths[], progress[] and targets[] indexed
+   * by slot. Every index bug so far came from translating that into two sides
+   * at the boundary (`1 - mySlot`, and `healths[-1]` for slot 2 of four).
+   * Mirroring the server's shape removes the translation entirely.
+   *
+   * Solo play is simply two fighters: you, and the bot.
+   */
+  fighters: Fighter[];
+  /** Which slot is you. Always 0 in solo. */
+  mySlot: number;
 
   /** Always carries a trailing space so every word is committed with SPACE. */
   sentence: string;
@@ -34,11 +48,8 @@ export interface DuelState {
   wordStartedAt: number;
   lastWordAt: number;
 
-  playerHealth: number;
-  opponentHealth: number;
+  /** Your own streak. Singular because there is only ever one of you. */
   playerCombo: number;
-  opponentCombo: number;
-  opponentProgress: number;
 
   /** Charged words, keyed by flat word index across the whole script. */
   powers: Record<number, PowerKind>;
@@ -54,28 +65,76 @@ export interface DuelState {
   blockTick: number;
 
   missTick: number;
-  lastHit: { id: number; side: Side; damage: number; wpm: number; tier: BladeTier } | null;
+  lastHit: {
+    id: number;
+    /** Who threw it and who wore it. Both needed: with more than two fighters
+     *  neither can be inferred from the other. */
+    fromSlot: number;
+    toSlot: number;
+    damage: number;
+    wpm: number;
+    tier: BladeTier;
+  } | null;
   hitSeq: number;
   /** Bumped when the player forges a bigger blade, for the fanfare. */
   tierUpTick: number;
   stats: DuelStats;
-  winner: Side | null;
+  /** Winning slot, or null while it is still live. */
+  winner: number | null;
 }
+
+/** One fighter in the duel. */
+export interface Fighter {
+  name: string;
+  health: number;
+  combo: number;
+  /** How far through the current sentence they are, 0..1, for the HUD. */
+  progress: number;
+  /** The slot their blade currently flies at, or -1 if they have nobody left. */
+  target: number;
+}
+
+export const newFighter = (name: string, target = -1): Fighter =>
+  ({ name, health: MAX_HEALTH, combo: 0, progress: 0, target });
+
+/** You. */
+export const you = (state: DuelState): Fighter => state.fighters[state.mySlot];
+
+/** Everyone else, paired with their slot so callers never re-derive an index. */
+export const rivals = (state: DuelState): { slot: number; fighter: Fighter }[] =>
+  state.fighters
+    .map((fighter, slot) => ({ slot, fighter }))
+    .filter(({ slot }) => slot !== state.mySlot);
+
+export const isOut = (fighter: Fighter): boolean => fighter.health <= 0;
+
+/** Whether the local player has been knocked out but the duel continues. */
+export const spectating = (state: DuelState): boolean =>
+  isOut(you(state)) && state.winner === null;
 
 export type DuelAction =
   | { type: 'start'; difficulty: Difficulty }
-  | { type: 'startMulti'; script: string[]; opponentName: string; powers: Record<number, PowerKind> }
+  | {
+      type: 'startMulti';
+      script: string[];
+      /** Every player's name in slot order. */
+      roster: string[];
+      mySlot: number;
+      powers: Record<number, PowerKind>;
+    }
   | { type: 'countdown' }
   | { type: 'typed'; char: string; now: number }
   | { type: 'botWord'; characters: number; elapsedMs: number; progress: number; fumbled: boolean }
   /** `now` is passed in rather than read inside, keeping the reducer pure. */
-  | { type: 'land'; target: Side; damage: number; now: number }
+  | { type: 'land'; toSlot: number; damage: number; now: number }
   /** Authoritative health from the server — never computed locally in multiplayer. */
-  | { type: 'setHealths'; playerHealth: number; opponentHealth: number }
-  | { type: 'setOpponentProgress'; progress: number }
+  | { type: 'setHealths'; healths: number[] }
+  /** Who each fighter is currently aiming at, recomputed by the server. */
+  | { type: 'setTargets'; targets: number[] }
+  | { type: 'setProgress'; slot: number; progress: number }
   /** Authoritative power state from the server. */
   | { type: 'setPowers'; ward: boolean; surge: boolean; granted?: PowerKind; blocked?: boolean }
-  | { type: 'finish'; winner: Side; now: number }
+  | { type: 'finish'; winnerSlot: number; now: number }
   | { type: 'settle' }
   | { type: 'reset' };
 
@@ -104,17 +163,15 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     multiplayer: false,
     script: null,
     scriptIndex: 0,
-    opponentName: '',
+    // Solo shape: you in slot 0, the bot in slot 1, each aimed at the other.
+    fighters: [newFighter('You', 1), newFighter('', 0)],
+    mySlot: 0,
     // Fixed, not random — this state is server-rendered too (see OPENING_SENTENCE).
     sentence: `${OPENING_SENTENCE} `,
     cursor: 0,
     wordStartedAt: 0,
     lastWordAt: 0,
-    playerHealth: MAX_HEALTH,
-    opponentHealth: MAX_HEALTH,
     playerCombo: 0,
-    opponentCombo: 0,
-    opponentProgress: 0,
     powers: {},
     wordOffset: 0,
     ward: false,
@@ -129,6 +186,17 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     winner: null,
   };
 }
+
+/** Replace one fighter without touching the others. */
+function withSlot(fighters: Fighter[], slot: number, change: Partial<Fighter>): Fighter[] {
+  if (slot < 0 || slot >= fighters.length) return fighters;
+  return fighters.map((f, i) => (i === slot ? { ...f, ...change } : f));
+}
+
+const healSlot = (fighters: Fighter[], slot: number): Fighter[] =>
+  withSlot(fighters, slot, {
+    health: Math.min(MAX_HEALTH, fighters[slot].health + MEND_AMOUNT),
+  });
 
 export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   switch (action.type) {
@@ -149,7 +217,10 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         multiplayer: true,
         script: action.script,
         scriptIndex: 0,
-        opponentName: action.opponentName,
+        // Slot order comes from the server and never shifts, even as fighters
+        // are knocked out — every later message addresses players by index.
+        fighters: action.roster.map((name) => newFighter(name)),
+        mySlot: action.mySlot,
         // The server decides which words are charged; we only render them.
         powers: action.powers,
         // Both players type the same words in the same order — the server sent
@@ -258,13 +329,15 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         // `setPowers` overwrites this with the authoritative state.
         ward: granted === 'ward' ? true : state.ward,
         surge: granted === 'surge' ? true : spendSurge ? false : state.surge,
-        playerHealth: granted === 'mend'
-          ? Math.min(MAX_HEALTH, state.playerHealth + MEND_AMOUNT)
-          : state.playerHealth,
         lastPower: granted ? { kind: granted, tick: action.now } : state.lastPower,
+        fighters: granted === 'mend'
+          ? healSlot(state.fighters, state.mySlot)
+          : state.fighters,
         lastHit: {
           id: state.hitSeq + 1,
-          side: 'player',
+          fromSlot: state.mySlot,
+          // Whoever you are currently aimed at. In solo that is always the bot.
+          toSlot: you(state).target,
           damage,
           wpm: result.wpm,
           tier: result.tier,
@@ -280,16 +353,24 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
     case 'botWord': {
       if (state.phase !== 'playing') return state;
-      const combo = action.fumbled ? 0 : state.opponentCombo;
+      // Solo only: the bot is always slot 1, throwing at slot 0.
+      const botSlot = 1;
+      const bot = state.fighters[botSlot];
+      if (!bot) return state;
+
+      const combo = action.fumbled ? 0 : bot.combo;
       const result = scoreWord({ characters: action.characters, elapsedMs: action.elapsedMs, combo });
       return {
         ...state,
-        opponentCombo: result.combo,
-        opponentProgress: action.progress,
+        fighters: withSlot(state.fighters, botSlot, {
+          combo: result.combo,
+          progress: action.progress,
+        }),
         hitSeq: state.hitSeq + 1,
         lastHit: {
           id: state.hitSeq + 1,
-          side: 'opponent',
+          fromSlot: botSlot,
+          toSlot: state.mySlot,
           damage: result.damage,
           wpm: result.wpm,
           tier: result.tier,
@@ -301,46 +382,59 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       if (state.phase !== 'playing') return state;
 
       // A ward absorbs the blade entirely and is consumed doing so.
-      if (action.target === 'player' && state.ward) {
+      if (action.toSlot === state.mySlot && state.ward) {
         return { ...state, ward: false, blockTick: state.blockTick + 1 };
       }
 
-      const playerHealth = action.target === 'player'
-        ? applyDamage(state.playerHealth, action.damage)
-        : state.playerHealth;
-      const opponentHealth = action.target === 'opponent'
-        ? applyDamage(state.opponentHealth, action.damage)
-        : state.opponentHealth;
+      const target = state.fighters[action.toSlot];
+      if (!target) return state;
 
-      const winner: Side | null =
-        opponentHealth <= 0 ? 'player' : playerHealth <= 0 ? 'opponent' : null;
+      const fighters = withSlot(state.fighters, action.toSlot, {
+        health: applyDamage(target.health, action.damage),
+      });
+
+      // Last one standing, not "the other one dropped". In a duel these are the
+      // same moment; in a four-way the first knockout decides nothing.
+      const standing = fighters.filter((f) => !isOut(f));
+      const winner = standing.length === 1 ? fighters.indexOf(standing[0]) : null;
 
       return {
         ...state,
-        playerHealth,
-        opponentHealth,
-        phase: winner ? 'finishing' : state.phase,
+        fighters,
+        phase: winner !== null ? 'finishing' : state.phase,
         winner,
         // Freeze the clock on the blow, not when the banner appears — the
         // cinematic that follows must never be counted as typing time.
-        stats: winner ? { ...state.stats, endedAt: action.now } : state.stats,
+        stats: winner !== null ? { ...state.stats, endedAt: action.now } : state.stats,
       };
     }
 
     case 'setHealths': {
       // Once decided, health is frozen. Keyed on the winner rather than the
       // phase so a server update arriving during the finishing beat cannot
-      // quietly heal the fallen fighter mid-collapse.
-      if (state.winner) return state;
+      // quietly heal a fallen fighter mid-collapse.
+      if (state.winner !== null) return state;
       return {
         ...state,
-        playerHealth: action.playerHealth,
-        opponentHealth: action.opponentHealth,
+        fighters: state.fighters.map((f, slot) => (
+          action.healths[slot] === undefined ? f : { ...f, health: action.healths[slot] }
+        )),
       };
     }
 
-    case 'setOpponentProgress':
-      return { ...state, opponentProgress: action.progress };
+    case 'setTargets':
+      return {
+        ...state,
+        fighters: state.fighters.map((f, slot) => (
+          action.targets[slot] === undefined ? f : { ...f, target: action.targets[slot] }
+        )),
+      };
+
+    case 'setProgress':
+      return {
+        ...state,
+        fighters: withSlot(state.fighters, action.slot, { progress: action.progress }),
+      };
 
     case 'setPowers':
       return {
@@ -356,11 +450,11 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
     case 'finish':
       // Already decided — a resign arriving after the killing blow must not
       // restart the sequence or overwrite the winner.
-      if (state.winner) return state;
+      if (state.winner !== null) return state;
       return {
         ...state,
         phase: 'finishing',
-        winner: action.winner,
+        winner: action.winnerSlot,
         stats: { ...state.stats, endedAt: state.stats.endedAt || action.now },
       };
 

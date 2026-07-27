@@ -77,3 +77,22 @@
   letter-spacing: 0.06em;
 }
 .plate[data-align='right'] .caption { text-align: right; }
+
+/* ---------- Four-way marking -------------------------------------------------
+ *
+ * With one opponent there is nothing to distinguish. With three, the plate that
+ * matters is whoever your blade is currently flying at — and because the target
+ * is chosen for you (always whoever is furthest ahead), this marking is how
+ * that rule gets taught without a tutorial. It moves as the lead changes.
+ * -------------------------------------------------------------------------- */
+.plate[data-targeted] {
+  border-color: var(--gold);
+  /* Lifted and lit rather than merely outlined: at a glance during a duel, a
+     border change alone does not register. */
+  box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(255, 214, 110, 0.35);
+}
+
+.plate[data-defeated] {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+}

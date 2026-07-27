@@ -64,7 +64,7 @@ describe('SPACE commits the word', () => {
     expect(state.cursor).toBe(4);
     expect(state.playerCombo).toBe(1);
     expect(state.lastHit).not.toBeNull();
-    expect(state.lastHit?.side).toBe('player');
+    expect(state.lastHit?.fromSlot).toBe(0);
     expect(state.lastHit!.damage).toBeGreaterThan(0);
     expect(state.stats.wordsTyped).toBe(1);
   });
@@ -87,23 +87,23 @@ describe('SPACE commits the word', () => {
 describe('damage and victory', () => {
   it('applies damage only when a blade lands', () => {
     const thrown = type(playing(), 'the ');
-    expect(thrown.opponentHealth).toBe(100);
-    const landed = duelReducer(thrown, { type: 'land', target: 'opponent', damage: 4, now: 1 });
-    expect(landed.opponentHealth).toBe(96);
+    expect(thrown.fighters[1].health).toBe(100);
+    const landed = duelReducer(thrown, { type: 'land', toSlot: 1, damage: 4, now: 1 });
+    expect(landed.fighters[1].health).toBe(96);
   });
 
   it('decides the duel when a fighter is emptied', () => {
-    const state = duelReducer(playing(), { type: 'land', target: 'opponent', damage: 999, now: 1 });
+    const state = duelReducer(playing(), { type: 'land', toSlot: 1, damage: 999, now: 1 });
     // Not 'over': the arena holds while the loser falls. See Phase.
     expect(state.phase).toBe('finishing');
-    expect(state.winner).toBe('player');
+    expect(state.winner).toBe(0);
   });
 
   it('ignores further hits once the duel is decided', () => {
-    const over = duelReducer(playing(), { type: 'land', target: 'player', damage: 999, now: 1 });
-    const after = duelReducer(over, { type: 'land', target: 'opponent', damage: 50, now: 1 });
-    expect(after.opponentHealth).toBe(100);
-    expect(after.winner).toBe('opponent');
+    const over = duelReducer(playing(), { type: 'land', toSlot: 0, damage: 999, now: 1 });
+    const after = duelReducer(over, { type: 'land', toSlot: 1, damage: 50, now: 1 });
+    expect(after.fighters[1].health).toBe(100);
+    expect(after.winner).toBe(1);
   });
 });
 
@@ -116,7 +116,7 @@ describe('damage and victory', () => {
  */
 describe('the finishing beat', () => {
   const decided = () =>
-    duelReducer(playing(), { type: 'land', target: 'opponent', damage: 999, now: 5000 });
+    duelReducer(playing(), { type: 'land', toSlot: 1, damage: 999, now: 5000 });
 
   it('settles into the result screen', () => {
     expect(duelReducer(decided(), { type: 'settle' }).phase).toBe('over');
@@ -136,21 +136,21 @@ describe('the finishing beat', () => {
   it('keeps the winner when a late resign arrives', () => {
     // The opponent's resign can land after the killing blow: the server sends
     // it, and the socket does not care that the duel is already decided.
-    const after = duelReducer(decided(), { type: 'finish', winner: 'opponent', now: 9000 });
-    expect(after.winner).toBe('player');
+    const after = duelReducer(decided(), { type: 'finish', winnerSlot: 1, now: 9000 });
+    expect(after.winner).toBe(0);
     expect(after.stats.endedAt).toBe(5000);
   });
 
   it('does not let a late server update heal the fallen fighter', () => {
     const after = duelReducer(decided(), {
-      type: 'setHealths', playerHealth: 90, opponentHealth: 90,
+      type: 'setHealths', healths: [90, 90],
     });
-    expect(after.opponentHealth).toBe(0);
+    expect(after.fighters[1].health).toBe(0);
     expect(after.phase).toBe('finishing');
   });
 
   it('a resign goes through the same beat rather than cutting straight to the result', () => {
-    const resigned = duelReducer(playing(), { type: 'finish', winner: 'player', now: 5000 });
+    const resigned = duelReducer(playing(), { type: 'finish', winnerSlot: 0, now: 5000 });
     expect(resigned.phase).toBe('finishing');
   });
 });

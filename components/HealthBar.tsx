@@ -12,18 +12,35 @@ interface HealthBarProps {
   align: 'left' | 'right';
   /** Optional caption under the name, e.g. live WPM or the bot's speed. */
   caption?: string;
+  /**
+   * This is the fighter your blade is currently flying at.
+   *
+   * Only meaningful past two players, where the target is chosen for you and
+   * moves as the lead changes — the marking is how that rule is taught.
+   */
+  targeted?: boolean;
+  /** Knocked out. Stays on the board so the slot order never shifts. */
+  defeated?: boolean;
 }
 
 /**
  * A fighter's status plate: portrait, name and a chunky segmented health bar.
  * The two plates mirror each other so the player's side is unmistakable.
  */
-export default function HealthBar({ name, value, team, align, caption }: HealthBarProps) {
+export default function HealthBar({
+  name, value, team, align, caption, targeted, defeated,
+}: HealthBarProps) {
   const pct = Math.max(0, Math.min(100, (value / MAX_HEALTH) * 100));
   const state = pct > 55 ? 'high' : pct > 25 ? 'mid' : 'low';
 
   return (
-    <div className={styles.plate} data-align={align} data-team={team}>
+    <div
+      className={styles.plate}
+      data-align={align}
+      data-team={team}
+      data-targeted={targeted || undefined}
+      data-defeated={defeated || undefined}
+    >
       <div className={styles.portrait} data-team={team}>
         <PixelSprite name={team === 'blue' ? 'fighter-blue' : 'fighter-red'} height={44} />
       </div>

@@ -24,7 +24,8 @@ type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
 
 interface Match {
   script: string[];
-  opponentName: string;
+  /** Every player's name in slot order, including yours. */
+  roster: string[];
   mySlot: number;
   powers: Record<number, PowerKind>;
 }
@@ -61,7 +62,9 @@ export default function Game() {
           setWaiting(null);
           setMatch({
             script: message.script,
-            opponentName: message.opponent,
+            // Falls back to the legacy single-opponent field so an older
+            // server release still produces a usable roster.
+            roster: message.roster ?? ['You', message.opponent ?? 'Rival'],
             mySlot: message.slot,
             powers: message.powers ?? {},
           });
@@ -138,7 +141,7 @@ export default function Game() {
       match
         ? {
             script: match.script,
-            opponentName: match.opponentName,
+            roster: match.roster,
             mySlot: match.mySlot,
             powers: match.powers,
             subscribe,

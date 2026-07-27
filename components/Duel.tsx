@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import EffectsCanvas, { type EffectsHandle } from '@/render/EffectsCanvas';
 import {
-  accuracy, currentTier, duelReducer, finalWpm, initialState, overallWpm,
+  accuracy, currentTier, duelReducer, finalWpm, initialState, isOut, overallWpm,
+  rivals, you, type Fighter as FighterState,
 } from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
@@ -23,7 +24,8 @@ import styles from './Duel.module.css';
 
 export interface MultiplayerConfig {
   script: string[];
-  opponentName: string;
+  /** Every player's name in the server's slot order, including yours. */
+  roster: string[];
   mySlot: number;
   /** Charged words, decided by the server. */
   powers: Record<number, PowerKind>;
@@ -95,7 +97,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     dispatch({
       type: 'startMulti',
       script: multiplayer.script,
-      opponentName: multiplayer.opponentName,
+      roster: multiplayer.roster,
+      mySlot: multiplayer.mySlot,
       powers: multiplayer.powers,
     });
     // Only re-arm when a genuinely new match arrives.
@@ -173,16 +176,16 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
   /** Fold the finished duel into the player's record, exactly once. */
   useEffect(() => {
-    if (!state.winner) return;
+    if (state.winner === null) return;
     // The low swell under the collapse. The fanfare waits for the banner —
     // playing both at once turns the whole beat into noise.
-    audio.finishSwell(state.winner === 'player');
+    audio.finishSwell(state.winner === state.mySlot);
 
     const stats = stateRef.current.stats;
     if (stats.endedAt) {
       saveResult({
         stats,
-        won: state.winner === 'player',
+        won: state.winner === state.mySlot,
         wpm: finalWpm(stats),
         accuracy: accuracy(stats),
         signedIn: account.signedIn,
@@ -221,8 +224,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
   /** The fanfare belongs to the banner, not to the killing blow. */
   useEffect(() => {
-    if (state.phase !== 'over' || !state.winner) return;
-    if (state.winner === 'player') audio.victory();
+    if (state.phase !== 'over' || state.winner === null) return;
+    if (state.winner === state.mySlot) audio.victory();
     else audio.defeat();
   }, [state.phase, state.winner]);
 
@@ -270,16 +273,21 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     if (!hit || hit.id === handledHit.current) return;
     handledHit.current = hit.id;
 
-    const target: Side = hit.side === 'player' ? 'opponent' : 'player';
-    effects.current?.launch(hit.side, hit.tier);
-    setAttack({ side: hit.side, tick: Date.now() });
-    if (hit.side === 'player') audio.throwBlade(hit.tier);
+    // The arena still has two sides — yours and everyone else's — so a slot is
+    // mapped onto a side for the visuals, while damage stays addressed by slot.
+    const fromSide: Side = hit.fromSlot === state.mySlot ? 'player' : 'opponent';
+    effects.current?.launch(fromSide, hit.tier);
+    setAttack({ side: fromSide, tick: Date.now() });
+    if (fromSide === 'player') audio.throwBlade(hit.tier);
     if (isMulti) return;
 
     track(setTimeout(() => {
-      land(target, hit.damage, hit.tier);
-      dispatch({ type: 'land', target, damage: hit.damage, now: Date.now() });
+      land(hit.toSlot === state.mySlot ? 'player' : 'opponent', hit.damage, hit.tier);
+      dispatch({ type: 'land', toSlot: hit.toSlot, damage: hit.damage, now: Date.now() });
     }, PROJECTILE_FLIGHT_MS));
+    // mySlot is fixed for the life of a duel, so reading it here cannot go
+    // stale; adding it would only retrigger the effect on unrelated renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.lastHit, isMulti, land]);
 
   /**
@@ -300,19 +308,23 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           effects.current?.launch('opponent', tier);
           setAttack({ side: 'opponent', tick: Date.now() });
         }
+        // Progress for whoever actually threw, addressed by their own slot.
+        // This used to read `progress[1 - mySlot]`, which is slot -1 for the
+        // third player in a four-way.
         dispatch({
-          type: 'setOpponentProgress',
-          progress: (message.progress[1 - mySlot] % 8) / 8,
+          type: 'setProgress',
+          slot: message.fromSlot,
+          progress: (message.progress[message.fromSlot] % 8) / 8,
         });
 
         track(setTimeout(() => {
-          // A warded blade lands with a block rather than damage.
-          if (!mine && !message.blocked) land('player', message.damage, tier);
-          dispatch({
-            type: 'setHealths',
-            playerHealth: message.healths[mySlot],
-            opponentHealth: message.healths[1 - mySlot],
-          });
+          // A warded blade lands with a block rather than damage. Only animate
+          // the hit when it was aimed at you — in a four-way most are not.
+          const atMe = message.toSlot === mySlot;
+          if (!mine && atMe && !message.blocked) land('player', message.damage, tier);
+          // The whole board at once, so no index has to be derived.
+          dispatch({ type: 'setHealths', healths: message.healths });
+          if (message.targets) dispatch({ type: 'setTargets', targets: message.targets });
           // The server owns power state; overwrite whatever we predicted.
           dispatch({
             type: 'setPowers',
@@ -331,16 +343,24 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         }
         // A forfeit ends things immediately; a knockout waits for the blade to land.
         track(setTimeout(
-          () => dispatch({ type: 'finish', winner: iWon ? 'player' : 'opponent', now: Date.now() }),
+          () => dispatch({ type: 'finish', winnerSlot: message.winnerSlot, now: Date.now() }),
           message.reason === 'resign' ? 0 : PROJECTILE_FLIGHT_MS + 120,
         ));
       }
 
+      // Somebody is out but the duel continues — only meaningful past two.
+      if (message.type === 'eliminated') {
+        dispatch({ type: 'setHealths', healths: message.healths });
+        if (message.targets) dispatch({ type: 'setTargets', targets: message.targets });
+        if (message.slot === mySlot) setNotice('You are out. Watching the rest.');
+      }
+
       if (message.type === 'opponentLeft') {
         setNotice('Your opponent left the duel.');
-        dispatch({ type: 'finish', winner: 'player', now: Date.now() });
+        dispatch({ type: 'finish', winnerSlot: mySlot, now: Date.now() });
       }
     });
+
   }, [multiplayer, land]);
 
   const toggleMute = () => {
@@ -361,10 +381,13 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     else onExit();
   };
 
-  const opponentLabel = isMulti
-    ? (multiplayer!.opponentName || 'RIVAL').toUpperCase()
-    : BOT_PROFILES[state.difficulty].label.toUpperCase();
-  const playerLow = state.playerHealth <= 25 && state.phase === 'playing';
+  const me = you(state);
+  const foes = rivals(state);
+  const myTarget = me.target;
+  const playerLow = me.health <= 25 && state.phase === 'playing';
+
+  const labelFor = (fighter: FighterState) =>
+    (isMulti ? fighter.name || 'RIVAL' : BOT_PROFILES[state.difficulty].label).toUpperCase();
 
   return (
     <main
@@ -379,7 +402,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         </button>
         {/* Hidden once decided: there is nothing left to forfeit, and offering
             to quit over the top of the collapse undercuts it. */}
-        {!state.winner && state.phase !== 'over' && (
+        {state.winner === null && state.phase !== 'over' && (
           <button
             className={styles.iconBtn}
             onClick={() => setConfirmQuit(true)}
@@ -394,19 +417,39 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       <header className={styles.hud}>
         <HealthBar
           name="YOU"
-          value={state.playerHealth}
+          value={me.health}
           team="blue"
           align="left"
           caption={state.phase === 'playing' ? `${liveWpm} wpm` : undefined}
         />
         <span className={`${styles.vs} pixel-font`}>VS</span>
-        <HealthBar
-          name={opponentLabel}
-          value={state.opponentHealth}
-          team="red"
-          align="right"
-          caption={isMulti ? 'human' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`}
-        />
+        {/* One bar per opponent. In a duel this is a single bar and reads
+            exactly as before; in a four-way it is the scoreboard, and the one
+            marked is whoever your blade is currently flying at. */}
+        <div className={styles.foes} data-many={foes.length > 1 || undefined}>
+          {foes.map(({ slot, fighter }) => {
+            // Targeting is only worth pointing out when there is a choice to
+            // be made. With one opponent, "your target" states the obvious.
+            const marked = foes.length > 1 && slot === myTarget;
+            return (
+              <HealthBar
+                key={slot}
+                name={labelFor(fighter)}
+                value={fighter.health}
+                team="red"
+                align="right"
+                targeted={marked}
+                defeated={isOut(fighter)}
+                caption={
+                  isOut(fighter) ? 'out'
+                    : marked ? 'your target'
+                    : isMulti ? 'human'
+                    : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
+                }
+              />
+            );
+          })}
+        </div>
       </header>
 
       <ArenaScene className={styles.arena}>
@@ -416,7 +459,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             facing="right"
             hitTick={impact?.side === 'player' ? impact.tick : 0}
             attackTick={attack?.side === 'player' ? attack.tick : 0}
-            defeated={state.winner === 'opponent'}
+            defeated={(state.winner !== null && state.winner !== state.mySlot)}
           />
         </div>
 
@@ -428,7 +471,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             facing="left"
             hitTick={impact?.side === 'opponent' ? impact.tick : 0}
             attackTick={attack?.side === 'opponent' ? attack.tick : 0}
-            defeated={state.winner === 'player'}
+            defeated={state.winner === state.mySlot}
           />
         </div>
 
@@ -510,7 +553,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       {state.phase === 'finishing' && (
         <div
           className={styles.finishing}
-          data-win={state.winner === 'player' || undefined}
+          data-win={state.winner === state.mySlot || undefined}
           aria-hidden="true"
         >
           <div className={styles.drain} />
@@ -523,15 +566,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           {/* Expanding ring behind the banner — the release the hold builds to. */}
           <div
             className={styles.shockwave}
-            data-win={state.winner === 'player' || undefined}
+            data-win={state.winner === state.mySlot || undefined}
             aria-hidden="true"
           />
           <div className={`panel ${styles.dialog}`}>
             <h2
               className={`${styles.result} pixel-font`}
-              data-win={state.winner === 'player' || undefined}
+              data-win={state.winner === state.mySlot || undefined}
             >
-              {state.winner === 'player' ? 'VICTORY' : 'DEFEATED'}
+              {state.winner === state.mySlot ? 'VICTORY' : 'DEFEATED'}
             </h2>
             {notice && <p className={styles.blurb}>{notice}</p>}
 
