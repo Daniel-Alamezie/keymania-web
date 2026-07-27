@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import styles from './WpmChart.module.css';
 
 export interface ChartPoint {
@@ -31,8 +31,33 @@ const MIN_RANGE = 10;
  */
 const HIT = 14;
 
+/**
+ * How many duels are plotted at once.
+ *
+ * Applied *after* filtering, which is the whole reason the toggle earns its
+ * place: on "both", twenty duels of a mixed record can easily be twenty
+ * practice runs and no ranked line at all, because the window is chronological
+ * rather than per-series. Narrowing to one kind gives that kind the full twenty
+ * and a history worth reading.
+ */
+const WINDOW = 20;
+
+const VIEWS = [
+  { key: 'all', label: 'Both' },
+  { key: 'ranked', label: 'Players' },
+  { key: 'practice', label: 'Bots' },
+] as const;
+
+type View = (typeof VIEWS)[number]['key'];
+
 interface Props {
-  /** Oldest first. */
+  /**
+   * Every duel worth charting, oldest first.
+   *
+   * The whole history rather than a pre-cut window: the chart decides what to
+   * show, and it cannot honour a filter over points that were discarded before
+   * they arrived.
+   */
   points: ChartPoint[];
   className?: string;
 }
@@ -63,16 +88,52 @@ interface Placed extends ChartPoint {
  */
 export default function WpmChart({ points, className }: Props) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [view, setView] = useState<View>('all');
 
-  if (points.length === 0) {
+  const visible = useMemo(() => {
+    const kept = view === 'all'
+      ? points
+      : points.filter((p) => p.ranked === (view === 'ranked'));
+    // slice(-n), not slice(0, n): the input is oldest first, and the window is
+    // the most recent duels.
+    return kept.slice(-WINDOW);
+  }, [points, view]);
+
+  const chooser = (
+    <div className={styles.views} role="group" aria-label="Which duels to chart">
+      {VIEWS.map(({ key, label }) => (
+        <button
+          key={key}
+          type="button"
+          className={styles.view}
+          data-active={view === key || undefined}
+          aria-pressed={view === key}
+          // The hover reading is an index into the visible set, so it means
+          // something different the moment that set changes.
+          onClick={() => { setView(key); setHovered(null); }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (visible.length === 0) {
     return (
-      <p className={styles.empty}>
-        No duels recorded yet. Your speed over time will chart here.
-      </p>
+      <div className={`${styles.wrap} ${className ?? ''}`}>
+        {chooser}
+        <p className={styles.empty}>
+          {points.length === 0
+            ? 'No duels recorded yet. Your speed over time will chart here.'
+            : view === 'ranked'
+              ? 'No duels against other players yet. Beat someone and this fills in.'
+              : 'No practice against bots yet.'}
+        </p>
+      </div>
     );
   }
 
-  const values = points.map((p) => p.wpm);
+  const values = visible.map((p) => p.wpm);
   const rawLo = Math.min(...values);
   const rawHi = Math.max(...values);
 
@@ -83,10 +144,10 @@ export default function WpmChart({ points, className }: Props) {
   const hi = Math.ceil(mid + span * 0.75);
 
   const xFor = (i: number) =>
-    points.length === 1 ? PAD.left + PLOT_W / 2 : PAD.left + (i * PLOT_W) / (points.length - 1);
+    visible.length === 1 ? PAD.left + PLOT_W / 2 : PAD.left + (i * PLOT_W) / (visible.length - 1);
   const yFor = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * PLOT_H;
 
-  const placed: Placed[] = points.map((p, index) => ({
+  const placed: Placed[] = visible.map((p, index) => ({
     ...p, index, x: xFor(index), y: yFor(p.wpm),
   }));
 
@@ -103,13 +164,14 @@ export default function WpmChart({ points, className }: Props) {
 
   return (
     <figure className={`${styles.wrap} ${className ?? ''}`}>
+      {chooser}
       <div className={styles.plot}>
         <svg
           className={styles.svg}
           viewBox={`0 0 ${W} ${H}`}
           role="img"
           aria-label={
-            `Speed across the last ${points.length} duels, ` +
+            `Speed across the last ${visible.length} duels, ` +
             `from ${rawLo} to ${rawHi} words per minute, averaging ${Math.round(average)}.`
           }
           onMouseLeave={() => setHovered(null)}
@@ -201,9 +263,17 @@ export default function WpmChart({ points, className }: Props) {
         {placed.map((p) => <li key={`read-${p.at}`}>{describe(p)}</li>)}
       </ul>
 
+      {/* Only the series actually on screen. The legend used to name both
+          whatever was drawn, so a chart showing nothing but practice still
+          claimed a "versus players" line — which is precisely how a missing
+          line reads as a broken chart rather than as a gap in the record. */}
       <figcaption className={styles.legend}>
-        <span className={styles.key} data-series="ranked">Versus players</span>
-        <span className={styles.key} data-series="practice">Versus bots</span>
+        {placed.some((p) => p.ranked) && (
+          <span className={styles.key} data-series="ranked">Versus players</span>
+        )}
+        {placed.some((p) => !p.ranked) && (
+          <span className={styles.key} data-series="practice">Versus bots</span>
+        )}
         <span className={styles.avgKey}>Average {Math.round(average)} wpm</span>
       </figcaption>
     </figure>

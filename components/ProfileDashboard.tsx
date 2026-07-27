@@ -50,9 +50,15 @@ export default function ProfileDashboard() {
     );
   }
 
-  // The API stores newest-first; a chart reads left-to-right through time.
+  /**
+   * The API stores newest-first; a chart reads left-to-right through time.
+   *
+   * Passed whole rather than cut to twenty here. The chart lets you filter to
+   * ranked or practice, and it cannot honour that over points thrown away
+   * before they reached it — cutting the most recent twenty of *any* kind is
+   * exactly what made a run of bot practice hide the ranked line.
+   */
   const points: ChartPoint[] = [...profile.history]
-    .slice(0, 20)
     .reverse()
     .map(({ wpm, at, ranked, won }) => ({ wpm, at, ranked, won }));
 

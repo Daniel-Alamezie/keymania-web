@@ -175,3 +175,35 @@
   font-style: italic;
   color: var(--faint);
 }
+
+/* ---- series chooser ----
+ *
+ * Three states rather than a checkbox per series: the useful readings are all
+ * of it, or one kind on its own with the full window to itself. "Neither" is
+ * not a view anybody wants, and a pair of checkboxes offers it.
+ */
+.views {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.view {
+  font-family: var(--font-pixel), var(--font-body), monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.view:hover { color: var(--ink); }
+
+.view[data-active] {
+  color: var(--bg-deep);
+  background: var(--gold);
+  border-color: var(--gold);
+}
