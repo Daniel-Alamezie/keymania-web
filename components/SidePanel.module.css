@@ -147,3 +147,19 @@
   color: var(--faint);
   text-align: center;
 }
+
+/* The board name, when it links to a profile.
+ *
+ * Anchors bring their own colour and underline, neither of which belongs on a
+ * leaderboard row — the row already says what it is. The affordance is the
+ * hover, which is also where the gold appears. */
+.rankName[data-link] {
+  color: inherit;
+  text-decoration: none;
+  transition: color 140ms ease;
+}
+
+.rankName[data-link]:hover,
+.rankName[data-link]:focus-visible {
+  color: var(--gold);
+}

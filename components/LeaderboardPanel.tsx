@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useDisplayName } from '@/game/serverProfile';
 import type { BoardEntry, LeaderboardResponse } from '@/models/leaderboard';
 import RankFlame, { type Podium } from './RankFlame';
@@ -76,7 +77,10 @@ export default function LeaderboardPanel() {
             const podium = entry.position <= 3 ? (entry.position as Podium) : null;
             return (
               <li
-                key={`${entry.position}-${entry.name}`}
+                // Keyed on the handle where there is one: display names are not
+                // unique, so two players called the same thing shared a key and
+                // React had no way to tell their rows apart.
+                key={entry.handle ?? `${entry.position}-${entry.name}`}
                 className={styles.rank}
                 // Only marked when we actually know the name — before the
                 // profile loads, myName is null and nothing is highlighted.
@@ -89,7 +93,17 @@ export default function LeaderboardPanel() {
                 <span className={styles.rankFlame}>
                   {podium && <RankFlame rank={podium} height={19} />}
                 </span>
-                <span className={styles.rankName}>{entry.name}</span>
+                {/* Only a link once a player has a handle. Accounts that
+                    reached the board before handles existed have nothing to
+                    link to, and are rendered as plain text rather than as a
+                    control that goes nowhere. */}
+                {entry.handle ? (
+                  <Link href={`/u/${entry.handle}`} className={styles.rankName} data-link>
+                    {entry.name}
+                  </Link>
+                ) : (
+                  <span className={styles.rankName}>{entry.name}</span>
+                )}
                 <span className={styles.rankSub}>{entry.accuracy}%</span>
                 <span className={`${styles.rankScore} pixel-font`}>{entry.wpm}</span>
               </li>

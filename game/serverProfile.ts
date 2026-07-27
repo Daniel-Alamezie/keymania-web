@@ -17,6 +17,8 @@ export function winRate(tally: Tally): number | null {
 }
 
 export const NAME_MAX = 16;
+/** Mirrors HANDLE_MAX in keymania-api/src/lib/handles.ts. */
+export const HANDLE_MAX = 16;
 
 export interface ProfileState {
   profile: ServerProfile | null;
@@ -26,6 +28,7 @@ export interface ProfileState {
   /** True when the caller is not signed in. */
   anonymous: boolean;
   saveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
+  saveHandle: (handle: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -217,25 +220,37 @@ export function forgetProfile(): void {
   listeners.forEach((notify) => notify());
 }
 
-/** Module-level, so the identity is stable and no caller needs to memoise it. */
-async function saveName(name: string): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Write one or both names and fold the server's answer back into the cache.
+ *
+ * Module-level, so the identity is stable and no caller needs to memoise it.
+ *
+ * The fields are sent independently rather than as a whole profile: the two are
+ * rationed differently upstream, and posting a handle that has not changed
+ * alongside a new display name would spend a cooldown nobody asked to spend.
+ */
+async function savePatch(
+  patch: { displayName?: string; handle?: string },
+  fallback: string,
+): Promise<{ ok: boolean; error?: string }> {
   const response = await fetch('/api/me/profile', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ displayName: name }),
+    body: JSON.stringify(patch),
   });
 
   if (!response.ok) {
-    return { ok: false, error: await readError(response, 'Could not save that name.') };
+    return { ok: false, error: await readError(response, fallback) };
   }
 
-  const { displayName } = (await response.json()) as { displayName: string };
+  const saved = (await response.json()) as { displayName: string; handle?: string };
 
-  // Trust the server's version: it sanitises, so what came back may differ from
-  // what was typed. Writing it straight into the cache updates the account chip
-  // and the leaderboard immediately, with no refetch.
+  // Trust the server's version: it sanitises and canonicalises, so what came
+  // back may differ from what was typed — a handle especially, since it is
+  // lowercased and stripped. Writing it straight into the cache updates the
+  // account chip and the dashboard immediately, with no refetch.
   if (snapshot.profile) {
-    const profile = { ...snapshot.profile, displayName };
+    const profile = { ...snapshot.profile, displayName: saved.displayName, handle: saved.handle };
     fetchedAt = Date.now();
     persist(profile);
     publish({ profile });
@@ -246,9 +261,15 @@ async function saveName(name: string): Promise<{ ok: boolean; error?: string }> 
   return { ok: true };
 }
 
+const saveName = (name: string) =>
+  savePatch({ displayName: name }, 'Could not save that name.');
+
+const saveHandle = (handle: string) =>
+  savePatch({ handle }, 'Could not save that handle.');
+
 export function useServerProfile(): ProfileState {
   const state = useSyncExternalStore(subscribeToStore, readSnapshot, () => EMPTY);
-  return { ...state, saveName };
+  return { ...state, saveName, saveHandle };
 }
 
 /**

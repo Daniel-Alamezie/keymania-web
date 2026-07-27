@@ -1,0 +1,96 @@
+/* A cap rather than a floor: min-height never creates a scrollport, so a long
+   card would run off the bottom of the viewport with no way to reach it. */
+.page {
+  height: 100dvh;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: var(--gap-lg);
+}
+
+.card {
+  width: min(560px, 100%);
+  height: fit-content;
+}
+
+.back {
+  display: inline-block;
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration: none;
+  margin-bottom: var(--gap-lg);
+}
+
+.back:hover { color: var(--gold); }
+
+.header { margin-bottom: var(--gap-lg); }
+
+.name {
+  font-size: 20px;
+  margin: 0 0 var(--gap-xs);
+  /* Free text, so it is allowed to be awkward — wrap rather than overflow. */
+  overflow-wrap: anywhere;
+}
+
+.handle {
+  color: var(--faint);
+  font-size: 12px;
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--gap-sm);
+  margin: 0 0 var(--gap-lg);
+}
+
+.stat {
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+  padding: 13px;
+}
+
+.stat[data-highlight] { border-color: var(--gold); }
+
+.statLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+  margin-bottom: 7px;
+}
+
+.statValue {
+  font-size: 17px;
+  margin: 0;
+}
+
+.statUnit {
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 3px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--gap-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.settled {
+  color: var(--good);
+  font-size: 12px;
+}
+
+.muted { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.error { color: var(--bad); font-size: 13px; }
+.cta { margin-top: var(--gap-md); }
+
+.footnote {
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.6;
+  margin: var(--gap-lg) 0 0;
+}

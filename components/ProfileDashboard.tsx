@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import {
-  currentSpeed, EMPTY_TALLY, NAME_MAX, trend, useServerProfile, winRate, type DuelResult,
+  currentSpeed, EMPTY_TALLY, HANDLE_MAX, NAME_MAX, trend, useServerProfile, winRate,
+  type DuelResult,
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
+import FriendsPanel from './FriendsPanel';
 import { useUiSounds } from './SoundToggle';
 import WpmChart, { type ChartPoint } from './WpmChart';
 import styles from './ProfileDashboard.module.css';
@@ -19,7 +21,7 @@ export default function ProfileDashboard() {
   // Its own route, so it never mounts Game and would otherwise be the one
   // silent screen in the app.
   useUiSounds();
-  const { profile, loading, error, anonymous, saveName } = useServerProfile();
+  const { profile, loading, error, anonymous, saveName, saveHandle } = useServerProfile();
   const account = useAccount();
 
   if (loading) return <Shell><p className={styles.muted}>Loading your record…</p></Shell>;
@@ -60,6 +62,10 @@ export default function ProfileDashboard() {
         suggestion={account.displayName}
         onSave={saveName}
       />
+
+      <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
+
+      <FriendsPanel />
 
       <section className={styles.section}>
         <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
@@ -219,6 +225,95 @@ function NameEditor({ current, suggestion, onSave }: {
         {problem ? <span className={styles.error}>{problem}</span>
           : status === 'saved' ? <span className={styles.ok}>Saved.</span>
           : `${draft.length}/${NAME_MAX} characters`}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * The handle.
+ *
+ * Sits next to the display name and behaves almost nothing like it, which is
+ * the point of showing them together: one is free and changeable, the other is
+ * unique and rationed. The copy has to carry that, because the field looks
+ * identical and the consequences are not.
+ *
+ * The input is canonicalised as you type rather than on submit. A handle is
+ * lowercase ASCII with underscores for separators, and letting somebody type
+ * "Daniel Alamezie" only to be handed "daniel_alamezie" after saving would make
+ * the rule look like a bug. Showing the transformation live makes it a rule.
+ */
+function HandleEditor({ current, onSave }: {
+  current: string;
+  onSave: (handle: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [draft, setDraft] = useState(current);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const dirty = draft !== current;
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setStatus('saving');
+    setProblem(null);
+
+    const result = await onSave(draft);
+    if (result.ok) {
+      setStatus('saved');
+    } else {
+      setStatus('idle');
+      setProblem(result.error ?? 'Could not save that handle.');
+    }
+  }
+
+  return (
+    <section className={styles.section}>
+      <h2 className={`${styles.heading} pixel-font`}>Handle</h2>
+      <p className={styles.muted}>
+        How other players find you, and the only name that is yours alone. You can
+        change it about once a month — unlike your display name, which you can
+        change whenever you like.
+      </p>
+
+      <form className={styles.nameRow} onSubmit={submit}>
+        <input
+          className={`field ${styles.input}`}
+          value={draft}
+          maxLength={HANDLE_MAX}
+          placeholder="typist"
+          aria-label="Handle"
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+          onChange={(event) => {
+            // Mirrors sanitiseHandle upstream. The server is still the
+            // authority — this only stops the field showing something it will
+            // never accept.
+            setDraft(event.target.value
+              .toLowerCase()
+              .replace(/[\s.\-]+/g, '_')
+              .replace(/[^a-z0-9_]/g, '')
+              .replace(/_{2,}/g, '_')
+              .slice(0, HANDLE_MAX));
+            setStatus('idle');
+            setProblem(null);
+          }}
+        />
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={!dirty || draft.length < 3 || status === 'saving'}
+        >
+          {status === 'saving' ? 'Saving' : 'Save'}
+        </button>
+      </form>
+
+      <p className={styles.hint} aria-live="polite">
+        {problem ? <span className={styles.error}>{problem}</span>
+          : status === 'saved' ? <span className={styles.ok}>Saved.</span>
+          : current ? `Players add you as @${current}`
+          : 'Letters, numbers and underscores.'}
       </p>
     </section>
   );

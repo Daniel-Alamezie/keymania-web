@@ -1,0 +1,114 @@
+.section {
+  border-top: 2px solid var(--edge-soft);
+  padding-top: var(--gap-lg);
+  margin-top: var(--gap-lg);
+}
+
+.heading {
+  font-size: 13px;
+  margin: 0 0 var(--gap-sm);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 var(--gap-md);
+}
+
+.addRow {
+  display: flex;
+  gap: var(--gap-sm);
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Height is held even when empty so accepting a request does not shunt the
+   list up and down under the cursor. */
+.hint {
+  font-size: 11px;
+  min-height: 1.4em;
+  margin: var(--gap-xs) 0 0;
+}
+
+.error { color: var(--bad); }
+.ok { color: var(--good); }
+
+.group {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+  margin: var(--gap-lg) 0 var(--gap-xs);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border: 2px solid transparent;
+  flex-wrap: wrap;
+}
+
+.row:hover { border-color: var(--edge-soft); }
+
+.who {
+  flex: 1 1 140px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.who:hover .name { color: var(--gold); }
+
+.name {
+  font-size: 13px;
+  /* A display name is free text and not unique, so it is allowed to be long and
+     is truncated rather than being allowed to push the actions off the row. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 140ms ease;
+}
+
+.handle {
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.actions {
+  display: flex;
+  gap: var(--gap-xs);
+  margin-left: auto;
+}
+
+.empty {
+  color: var(--faint);
+  font-size: 12px;
+  padding: 9px 0;
+}
+
+.footnote {
+  color: var(--faint);
+  font-size: 10px;
+  margin: var(--gap-md) 0 0;
+}

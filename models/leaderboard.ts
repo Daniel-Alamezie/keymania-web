@@ -13,6 +13,15 @@
 export interface BoardEntry {
   position: number;
   name: string;
+  /**
+   * Present only once a player has claimed one, which is what decides whether
+   * their row is a link.
+   *
+   * Accounts that reached the board before handles existed have none until they
+   * next open their own profile — nobody is assigned a public name they never
+   * asked for just so a column can be filled.
+   */
+  handle?: string;
   /** Best sustained speed across a whole refereed duel. */
   wpm: number;
   /**

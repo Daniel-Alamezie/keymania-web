@@ -48,6 +48,15 @@ export interface Tally {
 /** `GET /api/me/profile`. */
 export interface ServerProfile {
   displayName: string;
+  /**
+   * The unique name other players find you by.
+   *
+   * Optional only for the moment between an account existing and the server
+   * seeding one, which it does on the first read of this endpoint. Anything
+   * that links to a player needs this — a display name is not unique and can
+   * never be used to address anybody.
+   */
+  handle?: string;
   /** Duels against humans, refereed by the server. The record that counts. */
   ranked: Tally;
   /** Bot practice. Real progress, but the client reported it about itself. */
@@ -58,14 +67,39 @@ export interface ServerProfile {
   history: DuelResult[];
 }
 
-/** `PUT /api/me/profile`. */
+/**
+ * `PUT /api/me/profile`.
+ *
+ * Both fields are optional and independent: sending one leaves the other
+ * untouched. They are rationed very differently — a display name can change as
+ * often as you like, a handle roughly once a month.
+ */
 export interface UpdateProfileRequest {
-  displayName: string;
+  displayName?: string;
+  handle?: string;
 }
 
 export interface UpdateProfileResponse {
   displayName: string;
+  handle?: string;
   maxLength?: number;
+  handleMaxLength?: number;
+}
+
+/**
+ * `GET /api/players/{handle}` — somebody else's profile.
+ *
+ * A strict subset of ServerProfile, and the difference is the point. There is
+ * no `history` here: it carries fifty duels tagged with opponent names, which
+ * would tell a visitor who somebody plays with and when they were last at a
+ * keyboard. `practice` is absent for the same reason — bot duels reveal
+ * activity and interest nobody else.
+ */
+export interface PublicProfile {
+  handle: string;
+  displayName: string;
+  ranked: Tally;
+  bestRankedWpm: number;
 }
 
 /** `POST /api/me/duels` — a bot practice result, stored unranked. */
