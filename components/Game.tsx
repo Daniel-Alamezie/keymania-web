@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { BOT_PROFILES } from '@/game/constants';
-import type { RoomSize, RoomSummary } from '@/models/room';
+import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
 import Duel, { type MultiplayerConfig } from './Duel';
@@ -46,7 +46,7 @@ export default function Game() {
   const [screen, setScreen] = useState<Screen>('menu');
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
-  const [waiting, setWaiting] = useState<{ code: string; visibility: 'public' | 'private' } | null>(null);
+  const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const account = useAccount();
@@ -60,7 +60,34 @@ export default function Game() {
         if (message.type === 'error') setError(message.message);
         if (message.type === 'roomCreated') {
           setError(null);
-          setWaiting({ code: message.roomId, visibility: message.visibility });
+          setWaiting({
+            code: message.roomId,
+            visibility: message.visibility,
+            // You are the only one in it, and always slot 0.
+            players: [message.you],
+            // Absent from an older server release, where every room was a duel.
+            capacity: message.capacity ?? 2,
+          });
+        }
+        /**
+         * Somebody arrived, and the room is not full yet.
+         *
+         * The server has always broadcast this and the client has always
+         * dropped it, which is why a four-player room gave no sign of filling
+         * up: the host watched a static code until the duel simply began, and a
+         * joiner never left the lobby form at all.
+         */
+        if (message.type === 'roomFilling') {
+          setError(null);
+          setWaiting((previous) => ({
+            code: message.roomId,
+            // Carried over rather than re-derived: this message says who is in
+            // the room, not how the room was listed, and only the host was ever
+            // told that.
+            visibility: previous?.visibility ?? null,
+            players: message.players,
+            capacity: message.capacity,
+          }));
         }
         if (message.type === 'matchStart') {
           setError(null);
@@ -176,8 +203,7 @@ export default function Game() {
           status={status}
           configured={configured}
           rooms={rooms}
-          waitingCode={waiting?.code ?? null}
-          waitingVisibility={waiting?.visibility ?? null}
+          waiting={waiting}
           error={error}
           onCreate={(name, visibility, capacity) => void hostRoom(name, visibility, capacity)}
           onJoin={(roomId, name) => { setError(null); void enterRoom(roomId, name); }}

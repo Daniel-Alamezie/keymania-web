@@ -156,3 +156,69 @@
   border: 1px solid var(--bad);
   text-align: center;
 }
+
+/* ---- the waiting room ----
+ *
+ * Named roster* rather than seat*: `.seats` is already the "2 / 4" caption on a
+ * room row in the list below, and reusing it here would have quietly restyled
+ * both.
+ */
+
+.tally {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tally strong {
+  color: var(--gold);
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.rosterSeat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: var(--panel-2);
+  /* Dashed while empty, solid once taken — the room reads at a glance without
+     anybody having to count rows. */
+  border: 2px dashed var(--edge-soft);
+  color: var(--faint);
+}
+
+.rosterSeat[data-taken] {
+  border-style: solid;
+  border-color: var(--player);
+  color: var(--ink);
+}
+
+.rosterName {
+  flex: 1;
+  min-width: 0;
+  /* A display name is free text, so it truncates rather than widening the seat. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rosterTag {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+/* Only meaningful on a seat somebody is actually in. */
+.rosterSeat:not([data-taken]) .rosterTag { visibility: hidden; }

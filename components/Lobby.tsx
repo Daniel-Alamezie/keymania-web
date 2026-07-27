@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import type { SocketStatus } from '@/models/protocol';
 // ROOM_SIZES is a value, not a type — it is mapped over to render the picker.
-import { ROOM_SIZES, type RoomSize, type RoomSummary } from '@/models/room';
+import { ROOM_SIZES, type RoomSize, type RoomSummary, type WaitingRoom } from '@/models/room';
 import styles from './Lobby.module.css';
 
 interface LobbyProps {
   status: SocketStatus;
   configured: boolean;
   rooms: RoomSummary[];
-  /** Set once we have created a room and are waiting for an opponent. */
-  waitingCode: string | null;
-  waitingVisibility: 'public' | 'private' | null;
+  /** Set once you are in a room — hosting it or having joined it. */
+  waiting: WaitingRoom | null;
   error: string | null;
   onCreate: (name: string, visibility: 'public' | 'private', capacity: RoomSize) => void;
   onJoin: (roomId: string, name: string) => void;
@@ -38,7 +37,7 @@ const NAME_KEY = 'keymania.name';
 const FOUR_PLAYER_READY = true;
 
 export default function Lobby({
-  status, configured, rooms, waitingCode, waitingVisibility, error,
+  status, configured, rooms, waiting, error,
   onCreate, onJoin, onRefresh, onBack, accountName,
 }: LobbyProps) {
   // Read the remembered name once, during initialisation rather than from an
@@ -74,23 +73,65 @@ export default function Lobby({
     );
   }
 
-  if (waitingCode) {
+  if (waiting) {
+    const here = waiting.players.length;
+    const room = waiting.capacity;
+    const spare = room - here;
+    // A joiner was never told how the room was listed, so it is not claimed.
+    const hosting = waiting.visibility !== null;
+
     return (
       <div className={`panel ${styles.lobby}`}>
-        <h2 className={`${styles.heading} pixel-font`}>Waiting for a challenger</h2>
-        <p className={styles.note}>
-          {waitingVisibility === 'public'
-            ? 'Your duel is listed in the lobby. Share the code to skip the queue.'
-            : 'Private duel — share this code with a friend.'}
+        <h2 className={`${styles.heading} pixel-font`}>
+          {room > 2 ? 'Free-for-all' : 'Waiting for a challenger'}
+        </h2>
+
+        {/*
+          * The count first, because it is the only question anybody in here has.
+          *
+          * The old screen showed a code and nothing else — no tally, no names —
+          * so a four-player room gave no sign of filling up. It simply sat
+          * there until the duel began, which reads as broken rather than as
+          * waiting.
+          */}
+        <p className={styles.tally}>
+          <strong className="pixel-font">{here} of {room}</strong>
+          {spare > 0
+            ? ` — waiting for ${spare} more ${spare === 1 ? 'player' : 'players'}`
+            : ' — starting'}
         </p>
-        <div className={`${styles.code} pixel-font`}>{waitingCode}</div>
+
+        {/* Empty seats are drawn rather than left out, so the room has a visible
+            size and each arrival fills a slot you were already looking at. */}
+        <ul className={styles.roster}>
+          {Array.from({ length: room }, (_, slot) => (
+            <li key={slot} className={styles.rosterSeat} data-taken={slot < here || undefined}>
+              <span className={styles.rosterName}>{waiting.players[slot] ?? 'Empty'}</span>
+              {slot === 0 && <span className={styles.rosterTag}>host</span>}
+            </li>
+          ))}
+        </ul>
+
+        <p className={styles.note}>
+          {hosting
+            ? waiting.visibility === 'public'
+              ? 'Listed in the lobby. Share the code to pull someone in faster.'
+              : 'Private — the code is the only way in.'
+            : 'You are in. It starts the moment the room fills.'}
+        </p>
+
+        <div className={`${styles.code} pixel-font`}>{waiting.code}</div>
         <button
           className="btn"
-          onClick={() => navigator.clipboard?.writeText(waitingCode)}
+          onClick={() => navigator.clipboard?.writeText(waiting.code)}
         >
           Copy code
         </button>
-        <button className="btn btn-ghost" onClick={onBack}>Cancel</button>
+        {/* "Leave", not "Cancel": a joiner is not cancelling anything, and the
+            host's room disappears with them either way. */}
+        <button className="btn btn-ghost" onClick={onBack}>
+          {hosting ? 'Cancel' : 'Leave'}
+        </button>
       </div>
     );
   }
@@ -193,7 +234,7 @@ export default function Lobby({
               <span className={styles.host}>{room.host}</span>
               {/* Occupancy matters now: joining a four-way may still mean
                   waiting, where joining a duel never does. */}
-              <span className={styles.seats} title={size === 2 ? 'Duel' : 'Free-for-all'}>
+              <span className={styles.roster} title={size === 2 ? 'Duel' : 'Free-for-all'}>
                 {here}/{size}
               </span>
               <span className={`${styles.roomCode} pixel-font`}>{room.roomId}</span>
