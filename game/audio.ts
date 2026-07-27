@@ -14,6 +14,26 @@ import type { PowerKind } from '@/models/powers';
 
 type Wave = OscillatorType;
 
+/** One oscillator's worth of a layered sound. See voice(). */
+interface Voice {
+  /** When to start, on the audio clock — shared between layers so they strike together. */
+  at: number;
+  freq: number;
+  /** Slide to this by the end. Omit for a steady pitch. */
+  to?: number;
+  duration: number;
+  type?: Wave;
+  gain?: number;
+  /**
+   * Fade-in, in seconds.
+   *
+   * Zero means the sound starts at full volume on its first sample, which the
+   * ear hears as a click. That transient is the entire character of a clack or
+   * an impact, and the entire thing a thock or a hover note has to avoid.
+   */
+  attack?: number;
+}
+
 const MUTE_KEY = 'keymania.muted';
 const MASTER_GAIN = 0.32;
 /** Shortest gap between two hover blips, in seconds. */
@@ -107,6 +127,40 @@ class GameAudio {
     osc.stop(ctx.currentTime + duration);
   }
 
+  /**
+   * One oscillator with an envelope, startable at a chosen moment.
+   *
+   * tone() reads ctx.currentTime itself, which is fine for a sound made of a
+   * single voice but useless for layering — two calls a microsecond apart start
+   * at measurably different times, and the smear is audible on a sharp
+   * transient. Everything built from stacked partials goes through here so the
+   * layers share one `at` and strike together.
+   */
+  private voice({ at, freq, to, duration, type = 'square', gain = 0.5, attack = 0 }: Voice) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, at);
+    if (to) osc.frequency.exponentialRampToValueAtTime(to, at + duration);
+
+    if (attack > 0) {
+      env.gain.setValueAtTime(0.0001, at);
+      env.gain.exponentialRampToValueAtTime(gain, at + attack);
+    } else {
+      // No fade at all: the onset is the sound. This is the difference between
+      // a clack and a thock more than any frequency is.
+      env.gain.setValueAtTime(gain, at);
+    }
+    env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+
+    osc.connect(env).connect(this.master);
+    osc.start(at);
+    osc.stop(at + duration + 0.01);
+  }
+
   /** White noise, generated once and reused by every noise-based effect. */
   private noiseBuffer(ctx: AudioContext): AudioBuffer {
     if (!this.noise) {
@@ -127,18 +181,26 @@ class GameAudio {
    * that energy damped away, leaving the body of the sound and none of the
    * spike. Everything tactile in this game is shaped by where this cutoff sits.
    */
-  private tick(at: number, duration: number, cutoff: number, gain: number) {
+  private tick(
+    at: number,
+    duration: number,
+    cutoff: number,
+    gain: number,
+    // Highpass keeps everything above the cutoff instead of everything below,
+    // turning the same burst from a thock into a clack.
+    type: BiquadFilterType = 'lowpass',
+  ) {
     const ctx = this.ctx;
     if (!ctx || !this.master) return;
     const src = ctx.createBufferSource();
     src.buffer = this.noiseBuffer(ctx);
-    const lowpass = ctx.createBiquadFilter();
-    lowpass.type = 'lowpass';
-    lowpass.frequency.setValueAtTime(cutoff, at);
+    const shape = ctx.createBiquadFilter();
+    shape.type = type;
+    shape.frequency.setValueAtTime(cutoff, at);
     const env = ctx.createGain();
     env.gain.setValueAtTime(gain, at);
     env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
-    src.connect(lowpass).connect(env).connect(this.master);
+    src.connect(shape).connect(env).connect(this.master);
     src.start(at);
     src.stop(at + duration);
   }
@@ -244,21 +306,20 @@ class GameAudio {
     if (!ctx || !this.master || !this.enabled) return;
     const at = ctx.currentTime;
 
-    this.tick(at, 0.014, 2400, 0.1);
+    // The same three ingredients as a keystroke, inverted at every step. A
+    // clack is not a louder thock — it is the sound a thock is made by
+    // removing. Highpass instead of lowpass, so only the bright end survives.
+    this.tick(at, 0.013, 2600, 0.3, 'highpass');
 
-    const body = ctx.createOscillator();
-    const env = ctx.createGain();
-    body.type = 'triangle';
-    body.frequency.setValueAtTime(520, at);
-    body.frequency.exponentialRampToValueAtTime(300, at + 0.06);
+    // No attack. The keystroke fades in over 4ms to lose its transient; this
+    // wants that transient, so the envelope starts at full and falls away.
+    // Square rather than triangle for the same reason: more harmonics, more
+    // edge, the hard plastic of a clicky switch rather than a damped case.
+    this.voice({ at, freq: 1150, to: 760, duration: 0.035, type: 'square', gain: 0.14 });
 
-    env.gain.setValueAtTime(0.0001, at);
-    env.gain.exponentialRampToValueAtTime(0.13, at + 0.005);
-    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.075);
-
-    body.connect(env).connect(this.master);
-    body.start(at);
-    body.stop(at + 0.08);
+    // Enough low end to land as a press rather than a tick. Without it the
+    // sound is all treble and reads as cheap on anything but a laptop speaker.
+    this.voice({ at, freq: 250, to: 150, duration: 0.055, type: 'triangle', gain: 0.1 });
   }
 
   /**
@@ -308,16 +369,78 @@ class GameAudio {
     osc.stop(at + 0.1);
   }
 
-  /** SPACE committing a word — the blade is forged and thrown. */
+  /**
+   * SPACE committing a word — the blade is forged and thrown.
+   *
+   * This was a rising sawtooth, which buzzes rather than rings. Steel sounds
+   * the way it does because a struck metal object's partials are *inharmonic* —
+   * they sit at fractional multiples of the root instead of whole ones. Whole
+   * multiples are what make a violin sound like a note; fractional ones are
+   * what make a bell sound like a bell. 2.76 is the classic first ratio, and
+   * two partials at that spacing is all it takes to stop reading as a
+   * synthesiser and start reading as metal.
+   *
+   * Everything rises, because the blade is leaving.
+   */
   throwBlade(tier: number) {
-    this.tone(300 + tier * 60, 0.09, 'sawtooth', 0.2, 780 + tier * 90);
-    this.hiss(0.18, 900, 2600, 0.22);
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    const at = ctx.currentTime;
+
+    // Heavier blades sit lower and ring for longer — the tier is audible before
+    // you see what was thrown.
+    const root = 470 - tier * 42;
+    const ring = 0.15 + tier * 0.035;
+
+    this.voice({
+      at, freq: root, to: root * 1.85, duration: ring, type: 'triangle', gain: 0.2, attack: 0.004,
+    });
+    this.voice({
+      at,
+      freq: root * 2.76,
+      to: root * 2.76 * 1.85,
+      duration: ring * 0.68,
+      type: 'sine',
+      gain: 0.13,
+      attack: 0.004,
+    });
+
+    // The air it drags with it.
+    this.hiss(0.19, 750, 3100, 0.2);
   }
 
-  /** A blade landing. Heavier blades hit lower and longer. */
+  /**
+   * A blade landing. Heavier blades hit lower and longer.
+   *
+   * The punch is almost entirely the *speed* of the pitch drop. A tone falling
+   * from 300Hz to 48Hz inside 90ms is read by the ear as force rather than as a
+   * change of note, which is why a hit lands harder than a low tone of the same
+   * volume ever does. Slow that ramp down and it stops being an impact and
+   * starts being a sad trombone.
+   *
+   * Three layers: the crack of contact, the punch, and a tail underneath it so
+   * the hit has somewhere to fall rather than simply stopping.
+   */
   impact(tier: number) {
-    this.tone(150 - tier * 8, 0.16 + tier * 0.02, 'square', 0.42, 46);
-    this.hiss(0.14, 1800, 260, 0.36);
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    const at = ctx.currentTime;
+
+    // Heavier blades land duller — the bright end of the crack is rolled off
+    // further the bigger the hit, which reads as mass.
+    this.tick(at, 0.035, 2700 - tier * 240, 0.32);
+
+    this.voice({
+      at, freq: 300 - tier * 22, to: 48, duration: 0.09 + tier * 0.012, type: 'triangle', gain: 0.5,
+    });
+
+    // Started a beat late and pitched below the punch, so the hit decays into
+    // something instead of leaving a hole.
+    this.voice({
+      at: at + 0.012, freq: 124, to: 52, duration: 0.2 + tier * 0.035, type: 'sine', gain: 0.28,
+    });
+
+    this.hiss(0.15, 1700, 240, 0.3);
   }
 
   /** Forging a bigger blade — a short rising arpeggio. */
