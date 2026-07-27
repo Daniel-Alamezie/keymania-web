@@ -28,6 +28,9 @@
 .input {
   flex: 1 1 200px;
   min-width: 0;
+  /* Capped so a full-width column does not stretch one short field across the
+     whole page — a handle is at most sixteen characters. */
+  max-width: 340px;
 }
 
 /* Height is held even when empty so accepting a request does not shunt the
@@ -53,9 +56,17 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 2px;
+}
+
+/* Two people per row once the column is wide enough to hold a name, a handle
+   and two buttons twice over. A friends list is the one thing on this page that
+   grows without limit, so it is the one thing worth making denser. */
+@media (min-width: 720px) {
+  .list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
 }
 
 .row {
@@ -65,6 +76,9 @@
   padding: 9px 11px;
   background: var(--panel-2);
   border: 2px solid transparent;
+  /* Only wraps when it genuinely has to. In the narrow rail this component used
+     to live in, every row wrapped its buttons onto a second line and the list
+     read as a stack of blocks rather than a list of people. */
   flex-wrap: wrap;
 }
 
@@ -111,6 +125,7 @@
 
 /* ---- empty state ---- */
 .blank {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;

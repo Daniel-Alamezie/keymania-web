@@ -78,12 +78,16 @@ export default function ProfileDashboard() {
         *
         * Every section used to be stacked full width in a 720px column, which
         * on any desktop meant a page of empty space either side and a scroll
-        * long enough to lose the bottom of. The split is by *kind*: what you
-        * have done on the left, who you are and who you know on the right.
+        * long enough to lose the bottom of.
+        *
+        * The split is by what you do with a thing rather than by what it is.
+        * The left is everything you read or act on — your record, and your
+        * people. The right is the two fields you change, which you touch once
+        * and then leave alone for months.
         *
         * Ordered main-then-side in the DOM so that collapsing to one column on
         * a phone leaves the stats first, where somebody opening their profile
-        * is looking, and settings last, where settings belong.
+        * is looking, and the settings last, where settings belong.
         */}
       <div className={styles.body}>
         <div className={styles.main}>
@@ -157,14 +161,16 @@ export default function ProfileDashboard() {
         </section>
       )}
 
-        </div>
-
-        {/* Sticky on tall screens: the friends list is the one thing here you
-            act on rather than read, so it stays reachable while the stats
-            scroll past it. */}
-        <aside className={styles.side}>
+          {/* Full width of the main column, because a list of people needs
+              room for a name, a handle and two buttons on one line — squeezed
+              into a 300px rail every row wrapped. */}
           <FriendsPanel />
 
+        </div>
+
+        {/* Sticky on tall screens, so the fields you might be typing into stay
+            put while the record scrolls past them. */}
+        <aside className={styles.side}>
           <NameEditor
             current={profile.displayName}
             suggestion={account.displayName}
