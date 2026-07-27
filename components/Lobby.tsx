@@ -18,6 +18,14 @@ interface LobbyProps {
   onJoin: (roomId: string, name: string) => void;
   onRefresh: () => void;
   onBack: () => void;
+  /**
+   * The name from their account, used when they have not typed one.
+   *
+   * This field used to fall back to the literal word "Challenger", which the
+   * server then adopted as their name — so the leaderboard filled up with
+   * Challengers who had simply never opened the dashboard.
+   */
+  accountName?: string;
 }
 
 const NAME_KEY = 'keymania.name';
@@ -31,7 +39,7 @@ const FOUR_PLAYER_READY = true;
 
 export default function Lobby({
   status, configured, rooms, waitingCode, waitingVisibility, error,
-  onCreate, onJoin, onRefresh, onBack,
+  onCreate, onJoin, onRefresh, onBack, accountName,
 }: LobbyProps) {
   // Read the remembered name once, during initialisation rather than from an
   // effect: this component only ever mounts after the player opens the lobby,
@@ -50,7 +58,9 @@ export default function Lobby({
     try { localStorage.setItem(NAME_KEY, value); } catch { /* private mode */ }
   };
 
-  const displayName = name.trim() || 'Challenger';
+  // Typed name first, then the one their login already gives us. Only a
+  // player with neither is a Challenger.
+  const displayName = name.trim() || accountName?.trim() || 'Challenger';
 
   if (!configured) {
     return (
@@ -95,7 +105,7 @@ export default function Lobby({
           className="field"
           value={name}
           maxLength={16}
-          placeholder="Challenger"
+          placeholder={accountName || 'Challenger'}
           onChange={(e) => remember(e.target.value)}
         />
       </label>

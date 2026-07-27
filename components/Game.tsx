@@ -177,6 +177,7 @@ export default function Game() {
           onJoin={(roomId, name) => { setError(null); void enterRoom(roomId, name); }}
           onRefresh={() => send({ action: 'listRooms' })}
           onBack={leave}
+          accountName={account.displayName}
         />
       </main>
     );
