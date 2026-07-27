@@ -73,15 +73,20 @@ export default function ProfileDashboard() {
         {profile.handle && <p className={styles.identityHandle}>@{profile.handle}</p>}
       </header>
 
-      <NameEditor
-        current={profile.displayName}
-        suggestion={account.displayName}
-        onSave={saveName}
-      />
-
-      <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
-
-      <FriendsPanel />
+      {/*
+        * Two columns rather than one long strip.
+        *
+        * Every section used to be stacked full width in a 720px column, which
+        * on any desktop meant a page of empty space either side and a scroll
+        * long enough to lose the bottom of. The split is by *kind*: what you
+        * have done on the left, who you are and who you know on the right.
+        *
+        * Ordered main-then-side in the DOM so that collapsing to one column on
+        * a phone leaves the stats first, where somebody opening their profile
+        * is looking, and settings last, where settings belong.
+        */}
+      <div className={styles.body}>
+        <div className={styles.main}>
 
       <section className={styles.section}>
         <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
@@ -151,6 +156,24 @@ export default function ProfileDashboard() {
           </ul>
         </section>
       )}
+
+        </div>
+
+        {/* Sticky on tall screens: the friends list is the one thing here you
+            act on rather than read, so it stays reachable while the stats
+            scroll past it. */}
+        <aside className={styles.side}>
+          <FriendsPanel />
+
+          <NameEditor
+            current={profile.displayName}
+            suggestion={account.displayName}
+            onSave={saveName}
+          />
+
+          <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
+        </aside>
+      </div>
     </Shell>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useFriends } from '@/game/friends';
+import { useHandle } from '@/game/serverProfile';
 import type { Friend } from '@/models/friends';
 import styles from './FriendsPanel.module.css';
 
@@ -15,6 +16,7 @@ import styles from './FriendsPanel.module.css';
  */
 export default function FriendsPanel() {
   const { data, loading, error, busy, add, accept, remove, block } = useFriends(true);
+  const myHandle = useHandle();
   const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -101,8 +103,28 @@ export default function FriendsPanel() {
 
           <Group title={`Friends${data.friends.length ? ` (${data.friends.length})` : ''}`}>
             {data.friends.length === 0 && (
-              <li className={styles.empty}>
-                Nobody yet. Share your handle and someone can add you.
+              <li className={styles.blank}>
+                {/*
+                  * An empty state that can be acted on, not just read.
+                  *
+                  * "Share your handle" is useless on its own — the player would
+                  * have to go and find out what theirs is. Showing it, and
+                  * making it one click to copy, turns the message into the
+                  * thing it is asking them to do.
+                  */}
+                <p className={styles.blankTitle}>No friends yet</p>
+                {myHandle ? (
+                  <>
+                    <p className={styles.blankBody}>
+                      Give someone your handle and they can add you.
+                    </p>
+                    <CopyHandle handle={myHandle} />
+                  </>
+                ) : (
+                  <p className={styles.blankBody}>
+                    Pick a handle below and people can start adding you.
+                  </p>
+                )}
               </li>
             )}
             {data.friends.map((person) => (
@@ -153,6 +175,37 @@ export default function FriendsPanel() {
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * The player's own handle, with a copy button.
+ *
+ * The clipboard API needs a secure context, so it is absent over plain HTTP on
+ * anything but localhost. Failure is silent and the handle stays selectable by
+ * hand — an error message about clipboard permissions would be noise about
+ * something the player can trivially do themselves.
+ */
+function CopyHandle({ handle }: { handle: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      type="button"
+      className={styles.copy}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(`@${handle}`);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1600);
+        } catch {
+          /* no clipboard here — the handle is still on screen to read */
+        }
+      }}
+    >
+      <span className={styles.copyHandle}>@{handle}</span>
+      <span className={styles.copyHint}>{copied ? 'Copied' : 'Copy'}</span>
+    </button>
   );
 }
 

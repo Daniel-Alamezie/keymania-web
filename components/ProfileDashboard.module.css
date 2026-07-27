@@ -16,17 +16,74 @@
   height: 100dvh;
   padding: 32px 20px 60px;
   overflow-y: auto;
+  /*
+   * Explicit, and not redundant.
+   *
+   * CSS resolves `visible` to `auto` on the other axis as soon as one axis is
+   * not visible — so `overflow-y: auto` alone silently made this scroll
+   * horizontally too. The chart draws with `overflow: visible` so its points
+   * and labels sit slightly outside their box, which was enough to push the
+   * scrollable width past the viewport and put a horizontal bar on a page that
+   * has nothing to see sideways.
+   */
+  overflow-x: hidden;
   /* Momentum scrolling on iOS, and it keeps the arena from rubber-banding
      behind this when the list ends. */
   overscroll-behavior: contain;
 }
 
 .card {
-  max-width: 720px;
+  /* Wide enough for two real columns. At 720 this was a strip down the middle
+     of any desktop with the rest of the screen doing nothing. */
+  max-width: 1160px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 26px;
+}
+
+/* ---- two-column body ----
+ *
+ * One column until there is genuinely room for two. The breakpoint is set by
+ * the narrower column: below roughly 980px the sidebar would be squeezed under
+ * its 300px minimum and the stat grids in the main column would drop to a
+ * single tile per row, which is worse than stacking honestly.
+ */
+.body {
+  display: grid;
+  gap: 26px;
+}
+
+@media (min-width: 980px) {
+  .body {
+    grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+    /* start, not stretch: the sidebar is shorter than the stats and should sit
+       at the top rather than stretching its children down the page. */
+    align-items: start;
+  }
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  /* minmax(0,…) above stops a wide chart forcing the column open; this stops
+     a long unbroken word doing the same from inside. */
+  min-width: 0;
+}
+
+@media (min-width: 980px) {
+  .side {
+    position: sticky;
+    /* Clears the scroll container's own top padding. */
+    top: 8px;
+    /* Its own scroll container, so a long friends list cannot grow taller than
+       the viewport and take its own sticky positioning away. */
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .header {
