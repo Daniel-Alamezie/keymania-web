@@ -128,3 +128,12 @@
 
 /* LoginLink renders an anchor, so it needs the button's text treatment. */
 .loginBtn { text-decoration: none; }
+
+/* Sound sits opposite the account chip, reachable before a duel starts rather
+   than only from inside one — muting used to mean starting a match first. */
+.sound {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  z-index: 6;
+}

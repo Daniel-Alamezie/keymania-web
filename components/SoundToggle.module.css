@@ -1,0 +1,23 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  cursor: pointer;
+  line-height: 0;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.toggle:hover {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+/* Muted is a state worth seeing at a glance, not just a swapped glyph — a
+   player who cannot hear anything should be able to tell why without hunting
+   for the icon. */
+.toggle[aria-pressed='true'] {
+  border-color: var(--opponent-deep);
+}

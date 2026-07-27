@@ -15,6 +15,7 @@ import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
 import AccountBar from './AccountBar';
+import SoundToggle, { useSoundHotkey } from './SoundToggle';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
 import { duelToken } from '@/game/duelToken';
@@ -37,6 +38,9 @@ interface Match {
  * share one connection — reconnecting mid-match would drop the room.
  */
 export default function Game() {
+  // Mounted for the whole session — Game renders the duel rather than
+  // unmounting, so one listener covers the menu, the lobby and a match.
+  useSoundHotkey();
   const { status, subscribe, connect, disconnect, send, configured } = useDuelSocket();
   const [screen, setScreen] = useState<Screen>('menu');
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
@@ -165,6 +169,7 @@ export default function Game() {
     return (
       <main className={styles.screen}>
         <Backdrop />
+        <SoundToggle className={styles.sound} />
         <AccountBar />
         <Lobby
           status={status}
@@ -186,6 +191,7 @@ export default function Game() {
   return (
     <main className={styles.screen}>
       <Backdrop />
+      <SoundToggle className={styles.sound} />
       <AccountBar />
       {/* Three columns on a wide screen, stacking down to one on narrow. The
           arena is a big room; leaving the menu alone in the middle of it wasted

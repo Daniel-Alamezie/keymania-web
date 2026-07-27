@@ -16,6 +16,7 @@ import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
 import type { Side } from '@/models/duel';
 import type { BladeTier } from '@/models/scoring';
+import SoundToggle from './SoundToggle';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
 import ArenaScene from './ArenaScene';
@@ -76,7 +77,6 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const flashRef = useRef<HTMLDivElement>(null);
   const [impact, setImpact] = useState<Impact | null>(null);
   const [attack, setAttack] = useState<{ side: Side; tick: number } | null>(null);
-  const [muted, setMuted] = useState(false);
   const [liveWpm, setLiveWpm] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmQuit, setConfirmQuit] = useState(false);
@@ -97,7 +97,6 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   /** A human duel begins the moment the server hands over the script. */
   useEffect(() => {
     if (!multiplayer) return;
-    audio.setEnabled(!muted);
     dispatch({
       type: 'startMulti',
       script: multiplayer.script,
@@ -375,13 +374,6 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
   }, [multiplayer, land]);
 
-  const toggleMute = () => {
-    setMuted((m) => {
-      audio.setEnabled(m);
-      return !m;
-    });
-  };
-
   /**
    * Leaving mid-duel. Against a human this is a resignation — the server
    * awards them the win — so it is confirmed first. Against the bot there is
@@ -409,9 +401,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       data-danger={playerLow || undefined}
     >
       <div className={styles.controls}>
-        <button className={styles.iconBtn} onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
-          {muted ? '🔇' : '🔊'}
-        </button>
+        <SoundToggle className={styles.iconBtn} />
         {/* Hidden once decided: there is nothing left to forfeit, and offering
             to quit over the top of the collapse undercuts it. */}
         {state.winner === null && state.phase !== 'over' && (
@@ -543,9 +533,12 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             <p className={styles.blurb}>
               Type each word, then hit <kbd className="kbd">SPACE</kbd> to throw.
             </p>
+            {/* Starting a duel no longer re-asserts the sound preference — the
+                store already holds it, and re-applying it here is what used to
+                undo a mute the moment the next duel began. */}
             <button
               className="btn btn-primary"
-              onClick={() => { audio.setEnabled(!muted); dispatch({ type: 'start', difficulty }); }}
+              onClick={() => dispatch({ type: 'start', difficulty })}
             >
               Fight {BOT_PROFILES[difficulty].label}
             </button>

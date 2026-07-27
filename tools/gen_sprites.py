@@ -646,6 +646,52 @@ def make_marker(frame: int) -> list[list[tuple]]:
 
 
 # --------------------------------------------------------------------------
+# sound toggle — a speaker, with waves or a cross
+#
+# Emoji were standing in for these, which meant the control looked like a
+# different piece of software depending on the operating system rendering it.
+# --------------------------------------------------------------------------
+SPEAKER_W, SPEAKER_H = 15, 13
+
+SPEAKER_BODY = (243, 238, 255, 255)
+SPEAKER_WAVE = (255, 214, 110, 255)
+SPEAKER_OFF = (239, 68, 68, 255)
+
+
+def make_speaker(muted: bool) -> list[list[tuple]]:
+    canvas = new_canvas(SPEAKER_W, SPEAKER_H)
+    cy = SPEAKER_H // 2
+
+    # The driver: a small box at the narrow end.
+    for y in range(cy - 1, cy + 2):
+        for x in range(1, 4):
+            put(canvas, x, y, SPEAKER_BODY)
+
+    # The cone, opening away from it.
+    for i in range(5):
+        half = i + 1
+        for dy in range(-half, half + 1):
+            put(canvas, 4 + i, cy + dy, SPEAKER_BODY)
+
+    if muted:
+        # A cross rather than a slash through the speaker: at this size a slash
+        # reads as part of the cone.
+        for i in range(5):
+            put(canvas, 10 + i, cy - 2 + i, SPEAKER_OFF)
+            put(canvas, 14 - i, cy - 2 + i, SPEAKER_OFF)
+    else:
+        # Two arcs. Drawn by hand rather than swept, because at 15px across, a
+        # circle rounds to something lumpy.
+        for x, y in ((10, cy - 1), (11, cy), (10, cy + 1)):
+            put(canvas, x, y, SPEAKER_WAVE)
+        for x, y in ((12, cy - 2), (13, cy - 1), (13, cy), (13, cy + 1), (12, cy + 2)):
+            put(canvas, x, y, SPEAKER_WAVE)
+
+    outline(canvas, OUTLINE)
+    return canvas
+
+
+# --------------------------------------------------------------------------
 def main() -> None:
     print("blades:")
     for i, (length, thick, steel, glow) in enumerate(BLADE_TIERS, start=1):
@@ -668,6 +714,10 @@ def main() -> None:
     for name, palette in FLAME_PALETTES.items():
         for f in range(3):
             save(make_flame(f, palette), f"flame-{name}-{f + 1}.png")
+
+    print("sound toggle:")
+    save(make_speaker(muted=False), "sound-on.png")
+    save(make_speaker(muted=True), "sound-off.png")
 
     print("chart marker:")
     for f in range(3):
