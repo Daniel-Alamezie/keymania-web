@@ -30,11 +30,3 @@
   align-items: center;
 }
 
-.gear {
-  font-size: 15px;
-  line-height: 1;
-  /* The glyph is a font character rather than a sprite, so it needs nudging to
-     sit on the same optical line as the pixel speaker beside it. */
-  display: block;
-  transform: translateY(-1px);
-}

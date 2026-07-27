@@ -692,6 +692,49 @@ def make_speaker(muted: bool) -> list[list[tuple]]:
 
 
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# settings — a cog
+#
+# Sits beside the speaker, so it follows the same rules: a 13px box, the same
+# ink, the same outline. It replaced a "⚙" text glyph, which had exactly the
+# problem the speaker was drawn to solve — every operating system renders that
+# character as different art, so the control looked borrowed from elsewhere.
+#
+# Hand-placed rather than procedural, and that was the second attempt. Generating
+# it from distances gave a clean cog on paper and a diamond with four corner
+# blobs at this size: with a body nine pixels across, teeth defined by radius
+# protrude barely more than a pixel and the outline swallows them. Teeth have to
+# be *drawn* to read as teeth here — three across, two out.
+# --------------------------------------------------------------------------
+COG_BODY = (243, 238, 255, 255)
+
+COG_MAP = [
+    ".....###.....",
+    ".....###.....",
+    "...#######...",
+    "..#########..",
+    "..##.....##..",
+    "####.....####",
+    "####.....####",
+    "####.....####",
+    "..##.....##..",
+    "..#########..",
+    "...#######...",
+    ".....###.....",
+    ".....###.....",
+]
+
+
+def make_cog() -> list[list[tuple]]:
+    canvas = new_canvas(len(COG_MAP[0]), len(COG_MAP))
+    for y, row in enumerate(COG_MAP):
+        for x, cell in enumerate(row):
+            if cell == "#":
+                put(canvas, x, y, COG_BODY)
+    outline(canvas, OUTLINE)
+    return canvas
+
+
 def main() -> None:
     print("blades:")
     for i, (length, thick, steel, glow) in enumerate(BLADE_TIERS, start=1):
@@ -718,6 +761,7 @@ def main() -> None:
     print("sound toggle:")
     save(make_speaker(muted=False), "sound-on.png")
     save(make_speaker(muted=True), "sound-off.png")
+    save(make_cog(), "settings.png")
 
     print("chart marker:")
     for f in range(3):

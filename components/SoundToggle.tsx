@@ -152,7 +152,7 @@ export default function SoundToggle({ className, onSettings }: {
           aria-label="Sound settings"
           title="Choose a keyboard sound"
         >
-          <span aria-hidden="true" className={styles.gear}>⚙</span>
+          <PixelSprite name="settings" height={16} />
         </button>
       )}
     </div>

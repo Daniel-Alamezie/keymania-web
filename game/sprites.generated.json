@@ -107,6 +107,10 @@
     "width": 64,
     "height": 64
   },
+  "settings": {
+    "width": 52,
+    "height": 52
+  },
   "sound-off": {
     "width": 60,
     "height": 52
