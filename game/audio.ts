@@ -14,6 +14,34 @@ import type { PowerKind } from '@/models/powers';
 
 type Wave = OscillatorType;
 
+/**
+ * One noise burst, confined to a band. See burst().
+ *
+ * Both edges are named rather than implied by a single cutoff, because the
+ * character of a keyswitch is defined as much by what is *absent* as by what is
+ * there — a creamy board is one with the sub-300Hz boom and the 5kHz-and-up
+ * spike both taken away.
+ */
+interface Burst {
+  at: number;
+  duration: number;
+  /** Rolled off below this. Deep thock lives under here. */
+  low: number;
+  /** Rolled off above this. Harsh clack lives over here. */
+  high: number;
+  /** Where the energy concentrates, between the two edges. */
+  centre: number;
+  /**
+   * How tightly it concentrates there.
+   *
+   * Around 0.7 the band is wide enough to span roughly an octave and a half;
+   * push it up and the sound narrows towards a single ringing note.
+   */
+  q?: number;
+  gain: number;
+  attack?: number;
+}
+
 /** One oscillator's worth of a layered sound. See voice(). */
 interface Voice {
   /** When to start, on the audio clock — shared between layers so they strike together. */
@@ -161,6 +189,49 @@ class GameAudio {
     osc.stop(at + duration + 0.01);
   }
 
+  /**
+   * A noise burst with both edges named and a centre of mass between them.
+   *
+   * `tick` is a single filter, which can shape one side of a sound or ring at a
+   * point, but cannot say "energy here, nothing outside". That is exactly what a
+   * creamy switch is: a tightly concentrated band with the deep thock rolled
+   * off below and the harsh clack rolled off above. Three stages in series say
+   * it directly — a floor, a peak, and a ceiling.
+   */
+  private burst({ at, duration, low, high, centre, q = 0.7, gain, attack = 0 }: Burst) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer(ctx);
+
+    const floor = ctx.createBiquadFilter();
+    floor.type = 'highpass';
+    floor.frequency.setValueAtTime(low, at);
+
+    const peak = ctx.createBiquadFilter();
+    peak.type = 'bandpass';
+    peak.frequency.setValueAtTime(centre, at);
+    peak.Q.setValueAtTime(q, at);
+
+    const ceiling = ctx.createBiquadFilter();
+    ceiling.type = 'lowpass';
+    ceiling.frequency.setValueAtTime(high, at);
+
+    const env = ctx.createGain();
+    if (attack > 0) {
+      env.gain.setValueAtTime(0.0001, at);
+      env.gain.exponentialRampToValueAtTime(gain, at + attack);
+    } else {
+      env.gain.setValueAtTime(gain, at);
+    }
+    env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+
+    src.connect(floor).connect(peak).connect(ceiling).connect(env).connect(this.master);
+    src.start(at);
+    src.stop(at + duration);
+  }
+
   /** White noise, generated once and reused by every noise-based effect. */
   private noiseBuffer(ctx: AudioContext): AudioBuffer {
     if (!this.noise) {
@@ -276,32 +347,26 @@ class GameAudio {
   }
 
   /**
-   * Every correct keystroke: a switch bottoming out in a filled case.
+   * Every correct keystroke: a lubed switch in a well-damped case.
    *
    * The one sound a player hears thousands of times a session, so it is the one
-   * worth the most care. It began as a 520Hz square — a chiptune blip — then
-   * became a contact plus a pitched body, which read as thock. Creamy is a
-   * further step, and it is a subtractive one: creamy boards are not louder or
-   * deeper, they are boards with things *removed*. No high-frequency ping off
-   * the plate, no spike on the attack, no ring in the tail. What is left is
-   * body.
+   * worth the most care — and the one this file has got wrong twice.
    *
-   * Three layers, in the order the ear notices them:
+   * It began as a 520Hz square, a chiptune blip. That became a dull contact
+   * over a pitched body falling from 210Hz to 132Hz, which was a genuine
+   * improvement and still the wrong target: that is a *deep thock*, the boom of
+   * a heavy case, and it is a different character entirely from creamy. Chasing
+   * "creamier" by going lower and softer was walking away from the answer.
    *
-   *   1. The contact — plastic meeting plastic. Dull and quiet, because in a
-   *      lubed switch this is felt more than heard. Leaving the highs in is
-   *      what makes a board clacky.
-   *   2. The case — a resonant bandpass down at 300Hz. This is the layer that
-   *      was missing. A filled case does not just pass sound through, it rings
-   *      briefly at its own frequency, and a moderate Q gives that hollowness
-   *      without ever settling on a note. It is the same trick the typewriter
-   *      click uses, tuned two octaves down.
-   *   3. The body — pitched, falling, and rounded rather than punched.
+   * Creamy is a band, and a narrow one. Energy concentrated between roughly
+   * 1kHz and 4kHz — the "tac" a lubed switch makes — with the deep thock below
+   * 300Hz and the harsh clack above 5kHz both rolled off. It is defined as much
+   * by what is filtered out as by what is left in, which is why the two edges
+   * are named explicitly rather than implied by a single cutoff.
    *
-   * There is deliberately no sub layer. Anything under about 120Hz is inaudible
-   * on the laptop speakers most of this is played through, so it would cost a
-   * node per keystroke to be heard by almost nobody; that energy goes into the
-   * case resonance instead, which carries on any hardware.
+   * Two layers now, both noise. No oscillator at all: a keyswitch has no pitch,
+   * and every time this file has reached for one the result read as electronic.
+   * The character comes from where the energy sits, not from a note.
    */
   key(combo: number) {
     const ctx = this.ensure();
@@ -315,47 +380,52 @@ class GameAudio {
     const vary = this.jitter(0.07);
 
     /**
-     * The contact, damped hard.
+     * The body of the sound, and almost all of it.
      *
-     * The cutoff came down from 1500 to 950 and the level from 0.15 to 0.10,
-     * which is most of the creaminess on its own: the previous version still
-     * had enough top end to read as plastic-on-plastic rather than as a switch
-     * in a case that absorbs it.
+     * Held between 300Hz and 5kHz on purpose. Below 300 is deep thock — the
+     * boom of a heavy case, which is a different and darker character; above
+     * 5kHz is the bright spike of a clacky board. Creamy is what is left when
+     * both are taken away, so both are filtered rather than merely avoided.
      *
-     * The combo still opens the filter — brightness reads as typing harder,
-     * where pitch climbing with a streak would be unlike any keyboard ever
-     * made — but by half as much as before, so a long streak can no longer
-     * brighten its way back out of the character this is going for.
+     * The centre sits at 2kHz, the geometric middle of the 1–4kHz band where
+     * the "tac" of a lubed switch lives, and a Q of 0.75 spreads it across
+     * roughly that whole range rather than ringing on one note.
      */
-    this.tick(at, 0.015, (950 + Math.min(combo, 12) * 45) * vary, 0.1);
-
-    // The case, two milliseconds late. The delay is small enough to read as one
-    // event and large enough that the sound arrives rather than simply starting.
-    this.tick(at + 0.002, 0.06, 300 * vary, 0.2, 'bandpass', 2.4);
+    this.burst({
+      at,
+      duration: 0.055,
+      low: 300,
+      high: 5000,
+      centre: 2000 * vary,
+      q: 0.75,
+      gain: 0.3,
+      // Short, but not zero. A hard onset is a click whatever sits under it;
+      // three milliseconds keeps the press percussive without the spike.
+      attack: 0.003,
+    });
 
     /**
-     * The body.
+     * A tighter peak riding on the band, for the marbly part.
      *
-     * Triangle rather than sine: a pure sine here is a featureless thud, and
-     * the odd harmonics are what make it read as a case rather than a
-     * subwoofer.
+     * The wide burst above gives the right *range*; this gives it a focus
+     * inside that range, which is what stops a band of noise sounding like a
+     * puff of air. Narrow enough to have character, never so narrow that it
+     * acquires a pitch — the mistake that made the button click sound like a
+     * beep.
      *
-     * Lower and gentler than before — 210 down to 132 rather than 230 down to
-     * 140. A steep pitch drop reads as *punch*, which is right for a blade
-     * landing and wrong for a keystroke; softening it trades impact for weight.
-     * The attack is 7ms rather than 4ms for the same reason: still percussive,
-     * but with the edge taken off the onset, which is what separates creamy
-     * from merely deep.
+     * The combo nudges it upward within the band rather than opening a filter
+     * outward. Typing harder brightens the tac; it does not summon back the
+     * 5kHz clack this is built to exclude, and the cap keeps it inside the
+     * range no matter how long a streak runs.
      */
-    this.voice({
+    this.tick(
       at,
-      freq: 210 * vary,
-      to: 132 * vary,
-      duration: 0.1,
-      type: 'triangle',
-      gain: 0.22,
-      attack: 0.007,
-    });
+      0.028,
+      Math.min(2600, 1850 + Math.min(combo, 12) * 45) * vary,
+      0.13,
+      'bandpass',
+      3.4,
+    );
   }
 
   /**
