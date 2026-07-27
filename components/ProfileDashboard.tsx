@@ -7,7 +7,7 @@ import {
   currentSpeed, EMPTY_TALLY, NAME_MAX, trend, useServerProfile, winRate, type DuelResult,
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
-import { useHoverSound } from './SoundToggle';
+import { useUiSounds } from './SoundToggle';
 import WpmChart, { type ChartPoint } from './WpmChart';
 import styles from './ProfileDashboard.module.css';
 
@@ -18,7 +18,7 @@ import styles from './ProfileDashboard.module.css';
 export default function ProfileDashboard() {
   // Its own route, so it never mounts Game and would otherwise be the one
   // silent screen in the app.
-  useHoverSound();
+  useUiSounds();
   const { profile, loading, error, anonymous, saveName } = useServerProfile();
   const account = useAccount();
 

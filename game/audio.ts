@@ -107,16 +107,47 @@ class GameAudio {
     osc.stop(ctx.currentTime + duration);
   }
 
-  /** Filtered white noise — the basis of whooshes and impacts. */
-  private hiss(duration: number, filterFrom: number, filterTo: number, gain = 0.5) {
-    const ctx = this.ensure();
-    if (!ctx || !this.master || !this.enabled) return;
+  /** White noise, generated once and reused by every noise-based effect. */
+  private noiseBuffer(ctx: AudioContext): AudioBuffer {
     if (!this.noise) {
       const length = ctx.sampleRate * 0.6;
       this.noise = ctx.createBuffer(1, length, ctx.sampleRate);
       const data = this.noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
     }
+    return this.noise;
+  }
+
+  /**
+   * A brief noise burst with the highs rolled off — the sound of two pieces of
+   * plastic meeting.
+   *
+   * Lowpass, where hiss() is bandpass, and that is the whole difference between
+   * a thock and a clack. Clacky boards are loud from 3kHz up; thocky ones have
+   * that energy damped away, leaving the body of the sound and none of the
+   * spike. Everything tactile in this game is shaped by where this cutoff sits.
+   */
+  private tick(at: number, duration: number, cutoff: number, gain: number) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer(ctx);
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.setValueAtTime(cutoff, at);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(gain, at);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+    src.connect(lowpass).connect(env).connect(this.master);
+    src.start(at);
+    src.stop(at + duration);
+  }
+
+  /** Filtered white noise — the basis of whooshes and impacts. */
+  private hiss(duration: number, filterFrom: number, filterTo: number, gain = 0.5) {
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    this.noiseBuffer(ctx);
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
     const filter = ctx.createBiquadFilter();
@@ -145,9 +176,89 @@ class GameAudio {
     this.ensure();
   }
 
-  /** Every correct keystroke: a short, dry click. Pitch rises with the combo. */
+  /**
+   * Every correct keystroke: a switch bottoming out.
+   *
+   * This was a 520Hz square wave — a chiptune blip, thin and buzzy, and the one
+   * sound in the game a player hears thousands of times a session. A keypress in
+   * the physical world is two events layered, so this is too:
+   *
+   *   1. The contact. Plastic meeting plastic, broadband and almost instant,
+   *      with the highs rolled off. Leave those highs in and you get the clack
+   *      of a cheap board; damp them and you get thock.
+   *   2. The body. The case resonating and dying away fast — low, pitched, and
+   *      falling, the way any struck object does.
+   *
+   * Creamy is mostly the envelope. A hard onset reads as a click no matter what
+   * frequency sits under it, so the body fades in over 4ms: still percussive,
+   * no spike. The whole thing is done in 90ms, because at 100wpm these overlap
+   * and anything longer turns into mud.
+   */
   key(combo: number) {
-    this.tone(520 + Math.min(combo, 12) * 22, 0.035, 'square', 0.18);
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    const at = ctx.currentTime;
+
+    // No two presses on a real board are identical — different keys, different
+    // positions on the plate. Without this jitter the ear picks up on a single
+    // sample looping within a few words, which is what made the old blip feel
+    // synthetic more than its waveform did.
+    const vary = 0.93 + Math.random() * 0.14;
+
+    // The combo opens the filter instead of raising the pitch. Pitch climbing
+    // with a streak was legible but unlike any keyboard ever made; brightness
+    // reads as typing harder, which is what is actually happening.
+    this.tick(at, 0.022, (1500 + Math.min(combo, 12) * 85) * vary, 0.15);
+
+    const body = ctx.createOscillator();
+    const env = ctx.createGain();
+    // Triangle, not sine: a pure sine at this pitch is a featureless thud, and
+    // the odd harmonics are what make it read as a case rather than a subwoofer.
+    body.type = 'triangle';
+    body.frequency.setValueAtTime(230 * vary, at);
+    body.frequency.exponentialRampToValueAtTime(140 * vary, at + 0.07);
+
+    env.gain.setValueAtTime(0.0001, at);
+    env.gain.exponentialRampToValueAtTime(0.26, at + 0.004);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.085);
+
+    body.connect(env).connect(this.master);
+    body.start(at);
+    body.stop(at + 0.09);
+  }
+
+  /**
+   * Pressing a button.
+   *
+   * The same construction as a keystroke, lighter and higher — the UI should
+   * feel like it belongs to the same object as the keyboard without pretending
+   * a menu button is a switch.
+   *
+   * It falls where the hover note rises. That pairing is the point: rising
+   * reads as an invitation, falling reads as something settling into place, so
+   * moving over a control and pressing it form a phrase rather than two
+   * unrelated noises.
+   */
+  click() {
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    const at = ctx.currentTime;
+
+    this.tick(at, 0.014, 2400, 0.1);
+
+    const body = ctx.createOscillator();
+    const env = ctx.createGain();
+    body.type = 'triangle';
+    body.frequency.setValueAtTime(520, at);
+    body.frequency.exponentialRampToValueAtTime(300, at + 0.06);
+
+    env.gain.setValueAtTime(0.0001, at);
+    env.gain.exponentialRampToValueAtTime(0.13, at + 0.005);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.075);
+
+    body.connect(env).connect(this.master);
+    body.start(at);
+    body.stop(at + 0.08);
   }
 
   /**

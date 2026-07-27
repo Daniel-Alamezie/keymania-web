@@ -15,7 +15,7 @@ import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
 import AccountBar from './AccountBar';
-import SoundToggle, { useHoverSound, useSoundHotkey } from './SoundToggle';
+import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
 import { duelToken } from '@/game/duelToken';
@@ -41,7 +41,7 @@ export default function Game() {
   // Mounted for the whole session — Game renders the duel rather than
   // unmounting, so one listener covers the menu, the lobby and a match.
   useSoundHotkey();
-  useHoverSound();
+  useUiSounds();
   const { status, subscribe, connect, disconnect, send, configured } = useDuelSocket();
   const [screen, setScreen] = useState<Screen>('menu');
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
