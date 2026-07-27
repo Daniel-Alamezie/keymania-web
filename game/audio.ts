@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { PowerKind } from '@/models/powers';
 
 /**
  * Procedural sound effects, synthesised with the Web Audio API.
@@ -153,6 +154,40 @@ class GameAudio {
   /** A typo: a flat, ugly buzz that breaks the rhythm on purpose. */
   miss() {
     this.tone(150, 0.14, 'sawtooth', 0.28, 88);
+  }
+
+  /**
+   * Claiming a charged word.
+   *
+   * Two layers. A rising sparkle plays for all three, so the moment reads as
+   * "claimed" instantly whichever power it was — during a duel the ear needs to
+   * know something good happened before it needs to know what. Underneath it,
+   * each power has its own voice, so a player who has heard them a few times
+   * knows what they picked up without looking away from the text.
+   *
+   * Deliberately the loudest thing in the stream. Keystrokes sit at 0.18 and a
+   * blade landing at 0.42; this has to beat both, or the payoff for taking a
+   * risk is quieter than the routine.
+   */
+  claimPower(kind: PowerKind) {
+    [880, 1175, 1568].forEach((f, i) =>
+      setTimeout(() => this.tone(f, 0.09, 'square', 0.17), i * 42),
+    );
+
+    if (kind === 'ward') {
+      // Something closing over you: low, round, settling rather than spiking.
+      this.tone(220, 0.34, 'triangle', 0.3, 330);
+      this.hiss(0.3, 400, 1500, 0.14);
+    } else if (kind === 'surge') {
+      // The zap it looks like — a hard upward sweep with bright air on top.
+      this.tone(180, 0.24, 'sawtooth', 0.28, 1500);
+      this.hiss(0.16, 2200, 5200, 0.2);
+    } else {
+      // Mend is warm and unhurried: a major triad on sines, no edge to it.
+      [392, 523, 659].forEach((f, i) =>
+        setTimeout(() => this.tone(f, 0.22, 'sine', 0.32), i * 72),
+      );
+    }
   }
 
   /**

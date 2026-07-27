@@ -2,6 +2,8 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
+import { audio } from '@/game/audio';
+import { burst } from '@/game/burst';
 import { step } from '@/game/glide';
 import { POWER_META } from '@/game/powers';
 import type { PowerKind } from '@/models/powers';
@@ -262,6 +264,19 @@ export default function SentenceView({
      * with the power's own colour, so the payoff confirms what the word promised.
      */
     const { tint } = POWER_META[charge];
+
+    /**
+     * Fired from here rather than from the authoritative grant the server sends
+     * back. In multiplayer that grant is a round trip, and putting the sound and
+     * the confetti behind it would delay the most satisfying moment in the game
+     * by the length of the player's ping. The split is deliberate: the server
+     * stays the only authority on what a power *does* to anyone's health, while
+     * the client owns what claiming one looks and sounds like.
+     */
+    audio.claimPower(charge);
+    const box = finished.getBoundingClientRect();
+    burst(box.left + box.width / 2, box.top + box.height / 2, tint);
+
     finished.animate(
       [
         { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
