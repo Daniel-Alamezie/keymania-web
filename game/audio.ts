@@ -1,5 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import type { PowerKind } from '@/models/powers';
+import {
+  DEFAULT_KEY_SOUND, keySoundById, type KeySound, type KeySoundId,
+} from './keyProfiles';
 
 /**
  * Procedural sound effects, synthesised with the Web Audio API.
@@ -63,6 +66,8 @@ interface Voice {
 }
 
 const MUTE_KEY = 'keymania.muted';
+/** Which keyboard the player types on. Their choice, remembered. */
+const SOUND_KEY = 'keymania.keysound';
 const MASTER_GAIN = 0.32;
 /** Shortest gap between two hover blips, in seconds. */
 const HOVER_GAP = 0.07;
@@ -73,6 +78,7 @@ class GameAudio {
   private noise: AudioBuffer | null = null;
   /** On the audio clock, not Date.now() — see hover(). */
   private lastHoverAt = -1;
+  private keySound: KeySoundId = DEFAULT_KEY_SOUND;
   private enabled = true;
 
   private ensure(): AudioContext | null {
@@ -106,6 +112,10 @@ class GameAudio {
     try {
       // Absent means on: a game should make noise until told otherwise.
       this.enabled = localStorage.getItem(MUTE_KEY) !== 'muted';
+      const saved = localStorage.getItem(SOUND_KEY);
+      // Validated rather than trusted: a profile removed in a later release
+      // would otherwise leave somebody with a keyboard that makes no sound.
+      if (saved) this.keySound = keySoundById(saved).id;
     } catch {
       /* private mode — the preference simply will not survive the visit */
     }
@@ -368,7 +378,7 @@ class GameAudio {
    * and every time this file has reached for one the result read as electronic.
    * The character comes from where the energy sits, not from a note.
    */
-  key(combo: number) {
+  key(combo: number, sound: KeySound = this.profile()) {
     const ctx = this.ensure();
     if (!ctx || !this.master || !this.enabled) return;
     const at = ctx.currentTime;
@@ -380,52 +390,87 @@ class GameAudio {
     const vary = this.jitter(0.07);
 
     /**
-     * The body of the sound, and almost all of it.
+     * One path, whichever keyboard is chosen.
      *
-     * Held between 300Hz and 5kHz on purpose. Below 300 is deep thock — the
-     * boom of a heavy case, which is a different and darker character; above
-     * 5kHz is the bright spike of a clacky board. Creamy is what is left when
-     * both are taken away, so both are filtered rather than merely avoided.
-     *
-     * The centre sits at 2kHz, the geometric middle of the 1–4kHz band where
-     * the "tac" of a lubed switch lives, and a Q of 0.75 spreads it across
-     * roughly that whole range rather than ringing on one note.
+     * The profiles differ only in numbers — where the band sits, how hard its
+     * edges are cut, whether there is any weight underneath. Branching per
+     * character would let them drift apart; this way a change to how a
+     * keystroke is *built* reaches all of them at once.
      */
+    const { body, tac, thump } = sound;
+
     this.burst({
       at,
-      duration: 0.055,
-      low: 300,
-      high: 5000,
-      centre: 2000 * vary,
-      q: 0.75,
-      gain: 0.3,
-      // Short, but not zero. A hard onset is a click whatever sits under it;
-      // three milliseconds keeps the press percussive without the spike.
-      attack: 0.003,
+      duration: body.duration,
+      low: body.low,
+      high: body.high,
+      centre: body.centre * vary,
+      q: body.q,
+      gain: body.gain,
+      attack: body.attack,
     });
 
-    /**
-     * A tighter peak riding on the band, for the marbly part.
-     *
-     * The wide burst above gives the right *range*; this gives it a focus
-     * inside that range, which is what stops a band of noise sounding like a
-     * puff of air. Narrow enough to have character, never so narrow that it
-     * acquires a pitch — the mistake that made the button click sound like a
-     * beep.
-     *
-     * The combo nudges it upward within the band rather than opening a filter
-     * outward. Typing harder brightens the tac; it does not summon back the
-     * 5kHz clack this is built to exclude, and the cap keeps it inside the
-     * range no matter how long a streak runs.
-     */
-    this.tick(
-      at,
-      0.028,
-      Math.min(2600, 1850 + Math.min(combo, 12) * 45) * vary,
-      0.13,
-      'bandpass',
-      3.4,
-    );
+    // The combo nudges the tac upward *inside* the band rather than opening a
+    // filter outward, and is capped: typing harder brightens the sound without
+    // summoning back the top end a profile was built to exclude.
+    if (tac) {
+      this.tick(
+        at,
+        tac.duration,
+        Math.min(tac.cap, tac.centre + Math.min(combo, 12) * tac.lift) * vary,
+        tac.gain,
+        'bandpass',
+        tac.q,
+      );
+    }
+
+    // The only pitched layer any profile has, and only where the character
+    // genuinely wants a case under it.
+    if (thump) {
+      this.voice({
+        at,
+        freq: thump.freq * vary,
+        to: thump.to * vary,
+        duration: thump.duration,
+        type: 'triangle',
+        gain: thump.gain,
+        attack: thump.attack,
+      });
+    }
+  }
+
+  /** The keyboard the player has chosen. */
+  profile(): KeySound {
+    this.hydrate();
+    return keySoundById(this.keySound);
+  }
+
+  setKeySound(id: KeySoundId) {
+    this.hydrated = true;
+    this.keySound = id;
+    try {
+      localStorage.setItem(SOUND_KEY, id);
+    } catch {
+      /* nothing to persist to */
+    }
+    this.listeners.forEach((notify) => notify());
+  }
+
+  /**
+   * A few presses, for auditioning a keyboard.
+   *
+   * More than one because a single press hides the two things worth hearing:
+   * the per-press jitter, and how the tac brightens as a combo builds. Scheduled
+   * on the audio clock rather than with setTimeout so the run is evenly spaced
+   * however busy the main thread is.
+   */
+  demo(id: KeySoundId) {
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    const sound = keySoundById(id);
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => this.key(i * 2, sound), i * 105);
+    }
   }
 
   /**
@@ -743,4 +788,20 @@ export const audio = new GameAudio();
  */
 export function useSoundEnabled(): boolean {
   return useSyncExternalStore(audio.subscribe, () => audio.isEnabled(), () => true);
+}
+
+/**
+ * The chosen keyboard, for React.
+ *
+ * Same store and the same reasoning as useSoundEnabled: the preference lives in
+ * localStorage, which does not exist during a server render, so the server
+ * snapshot is the default and a player who picked something else sees it
+ * correct itself on the first client render rather than failing to hydrate.
+ */
+export function useKeySound(): KeySoundId {
+  return useSyncExternalStore(
+    audio.subscribe,
+    () => audio.profile().id,
+    () => DEFAULT_KEY_SOUND,
+  );
 }

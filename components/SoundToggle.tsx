@@ -121,19 +121,40 @@ export function useUiSounds() {
  * used to mean starting a match first, which is the wrong order for someone
  * sitting down in a quiet room.
  */
-export default function SoundToggle({ className }: { className?: string }) {
+export default function SoundToggle({ className, onSettings }: {
+  className?: string;
+  /**
+   * Opens the keyboard picker. Omitted where there is nowhere to put a dialog —
+   * mid-duel, the last thing anybody needs is a modal over the arena.
+   */
+  onSettings?: () => void;
+}) {
   const on = useSoundEnabled();
 
   return (
-    <button
-      type="button"
-      className={`${styles.toggle} ${className ?? ''}`}
-      onClick={() => audio.toggle()}
-      aria-pressed={!on}
-      aria-label={on ? 'Mute sound' : 'Unmute sound'}
-      title={`${on ? 'Mute' : 'Unmute'} sound (Ctrl+M)`}
-    >
-      <PixelSprite name={on ? 'sound-on' : 'sound-off'} height={16} />
-    </button>
+    <div className={`${styles.cluster} ${className ?? ''}`}>
+      <button
+        type="button"
+        className={styles.toggle}
+        onClick={() => audio.toggle()}
+        aria-pressed={!on}
+        aria-label={on ? 'Mute sound' : 'Unmute sound'}
+        title={`${on ? 'Mute' : 'Unmute'} sound (Ctrl+M)`}
+      >
+        <PixelSprite name={on ? 'sound-on' : 'sound-off'} height={16} />
+      </button>
+
+      {onSettings && (
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={onSettings}
+          aria-label="Sound settings"
+          title="Choose a keyboard sound"
+        >
+          <span aria-hidden="true" className={styles.gear}>⚙</span>
+        </button>
+      )}
+    </div>
   );
 }

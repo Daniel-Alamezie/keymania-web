@@ -21,3 +21,20 @@
 .toggle[aria-pressed='true'] {
   border-color: var(--opponent-deep);
 }
+
+/* The mute button and the settings gear travel together — both are "sound", and
+   splitting them would put two lone icons in opposite corners. */
+.cluster {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.gear {
+  font-size: 15px;
+  line-height: 1;
+  /* The glyph is a font character rather than a sprite, so it needs nudging to
+     sit on the same optical line as the pixel speaker beside it. */
+  display: block;
+  transform: translateY(-1px);
+}

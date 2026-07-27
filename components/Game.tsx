@@ -16,6 +16,7 @@ import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
+import SoundSettings from './SoundSettings';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
 import { duelToken } from '@/game/duelToken';
@@ -49,6 +50,7 @@ export default function Game() {
   const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [showSound, setShowSound] = useState(false);
   const account = useAccount();
   const [match, setMatch] = useState<Match | null>(null);
 
@@ -197,7 +199,8 @@ export default function Game() {
     return (
       <main className={styles.screen}>
         <Backdrop />
-        <SoundToggle className={styles.sound} />
+        <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
+        {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
         <AccountBar />
         <Lobby
           status={status}
@@ -218,7 +221,7 @@ export default function Game() {
   return (
     <main className={styles.screen}>
       <Backdrop />
-      <SoundToggle className={styles.sound} />
+      <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
       <AccountBar />
       {/* Three columns on a wide screen, stacking down to one on narrow. The
           arena is a big room; leaving the menu alone in the middle of it wasted
@@ -271,6 +274,7 @@ export default function Game() {
       </div>
 
       {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
+      {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
     </main>
   );
 }
