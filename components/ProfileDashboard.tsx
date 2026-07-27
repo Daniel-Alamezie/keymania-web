@@ -161,11 +161,19 @@ export default function ProfileDashboard() {
         </section>
       )}
 
-          {/* Full width of the main column, because a list of people needs
-              room for a name, a handle and two buttons on one line — squeezed
-              into a 300px rail every row wrapped. */}
-          <FriendsPanel />
+        </div>
 
+        {/*
+          * Its own column, to the left of the record on a wide screen.
+          *
+          * Ordered after the record in the DOM and placed by grid area rather
+          * than by source order, so the two do not have to agree: on a phone
+          * the record comes first, because that is what someone opening their
+          * profile came to see, while on a desktop friends sits in what was
+          * otherwise empty margin.
+          */}
+        <div className={styles.friends}>
+          <FriendsPanel />
         </div>
 
         {/* Sticky on tall screens, so the fields you might be typing into stay

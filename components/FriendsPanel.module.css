@@ -65,7 +65,12 @@
    grows without limit, so it is the one thing worth making denser. */
 @media (min-width: 720px) {
   .list {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    /* min(100%, 300px), not a bare 300px. The media query asks about the
+       viewport, but this grid lives in a column that may be narrower than its
+       own minimum — a bare minmax(300px, …) would then build a track wider than
+       the container and push the list out of it. Clamping to 100% collapses to
+       a single column instead of overflowing. */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   }
 }
 

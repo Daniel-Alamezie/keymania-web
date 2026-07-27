@@ -33,37 +33,69 @@
 }
 
 .card {
-  /* Wide enough for two real columns. At 720 this was a strip down the middle
-     of any desktop with the rest of the screen doing nothing. */
-  max-width: 1160px;
+  /* Wide enough for three real columns. At 720 this was a strip down the middle
+     of any desktop with the rest of the screen doing nothing, and 1160 still
+     left a margin either side wide enough to hold a column. */
+  max-width: 1520px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 26px;
 }
 
-/* ---- two-column body ----
+/* ---- multi-column body ----
  *
- * One column until there is genuinely room for two. The breakpoint is set by
- * the narrower column: below roughly 980px the sidebar would be squeezed under
- * its 300px minimum and the stat grids in the main column would drop to a
- * single tile per row, which is worse than stacking honestly.
+ * Three named areas placed by grid rather than by source order, which is what
+ * lets the DOM stay in the order that makes sense on a phone — record, then
+ * friends, then settings — while a desktop puts friends in the left margin the
+ * record was never going to use.
+ *
+ * The ladder is driven by what each column needs to hold, not by device names:
+ * settings needs ~300px for a field and a button, friends needs ~280px for a
+ * name and two buttons, and the record needs whatever is left to keep four
+ * stat tiles on a row.
  */
 .body {
   display: grid;
   gap: 26px;
+  grid-template-areas:
+    "main"
+    "friends"
+    "side";
 }
 
+/* Two columns: the record with friends beneath it, settings alongside. */
 @media (min-width: 980px) {
   .body {
     grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
-    /* start, not stretch: the sidebar is shorter than the stats and should sit
-       at the top rather than stretching its children down the page. */
+    grid-template-areas:
+      "main    side"
+      "friends side";
+    /* start, not stretch: the side columns are shorter than the record and
+       should sit at the top rather than stretching their children down. */
     align-items: start;
   }
 }
 
+/* Three columns, once there is genuinely room for one either side. Below this
+   the record drops to two stat tiles per row, which is a worse trade than
+   leaving friends underneath it. */
+@media (min-width: 1300px) {
+  .body {
+    grid-template-columns:
+      minmax(280px, 0.95fr)
+      minmax(0, 2.1fr)
+      minmax(300px, 1fr);
+    grid-template-areas: "friends main side";
+  }
+}
+
+.main { grid-area: main; }
+.friends { grid-area: friends; }
+.side { grid-area: side; }
+
 .main,
+.friends,
 .side {
   display: flex;
   flex-direction: column;
@@ -73,13 +105,25 @@
   min-width: 0;
 }
 
+/* Both flanking columns stay put while the record scrolls past — the fields you
+   might be typing into, and the list you act on, are the two things here worth
+   keeping reachable. Each gets its own scroll container so a long friends list
+   cannot grow past the viewport and destroy its own sticky positioning. */
 @media (min-width: 980px) {
   .side {
     position: sticky;
     /* Clears the scroll container's own top padding. */
     top: 8px;
-    /* Its own scroll container, so a long friends list cannot grow taller than
-       the viewport and take its own sticky positioning away. */
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (min-width: 1300px) {
+  .friends {
+    position: sticky;
+    top: 8px;
     max-height: calc(100dvh - 40px);
     overflow-y: auto;
     overscroll-behavior: contain;
