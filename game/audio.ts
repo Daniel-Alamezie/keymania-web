@@ -397,26 +397,35 @@ class GameAudio {
     if (!ctx || !this.master || !this.enabled) return;
     const at = ctx.currentTime;
 
-    // Heavier blades sit lower and ring for longer — the tier is audible before
-    // you see what was thrown.
-    const root = 470 - tier * 42;
-    const ring = 0.15 + tier * 0.035;
+    /**
+     * Fixed pitch, for the life of the sound.
+     *
+     * The previous version swept these partials upward and it came out a
+     * cartoon jump, because a rising pitched tone *is* a cartoon jump. A struck
+     * object's note is set by its dimensions and nothing else — a bell, a bar,
+     * a blade all ring at their own pitch and simply decay. The things that
+     * sweep are springs and sirens. Getting the partial ratios right bought
+     * nothing while the sweep was still there.
+     *
+     * Heavier blades ring lower, so the tier is audible before it is visible.
+     */
+    const root = 1320 - tier * 105;
+    const ring = 0.16 + tier * 0.03;
 
-    this.voice({
-      at, freq: root, to: root * 1.85, duration: ring, type: 'triangle', gain: 0.2, attack: 0.004,
-    });
-    this.voice({
-      at,
-      freq: root * 2.76,
-      to: root * 2.76 * 1.85,
-      duration: ring * 0.68,
-      type: 'sine',
-      gain: 0.13,
-      attack: 0.004,
-    });
+    // 1 : 2.76 : 5.40 — the mode ratios of a struck circular plate. Each
+    // partial decays faster than the one below it, which is what stops a stack
+    // of sines sounding like an organ chord and makes it sound like metal.
+    this.voice({ at, freq: root, duration: ring, type: 'triangle', gain: 0.15 });
+    this.voice({ at, freq: root * 2.76, duration: ring * 0.6, type: 'sine', gain: 0.085 });
+    this.voice({ at, freq: root * 5.4, duration: ring * 0.3, type: 'sine', gain: 0.045 });
 
-    // The air it drags with it.
-    this.hiss(0.19, 750, 3100, 0.2);
+    // The effort behind the throw, low and gone quickly. Without it the sound
+    // is a ting with nothing pushing it.
+    this.voice({ at, freq: 170, to: 95, duration: 0.075, type: 'triangle', gain: 0.22 });
+
+    // Every bit of movement lives here now. The tone is the blade; the noise is
+    // the blade leaving.
+    this.hiss(0.17, 620, 2900, 0.17);
   }
 
   /**
@@ -436,21 +445,34 @@ class GameAudio {
     if (!ctx || !this.master || !this.enabled) return;
     const at = ctx.currentTime;
 
-    // Heavier blades land duller — the bright end of the crack is rolled off
-    // further the bigger the hit, which reads as mass.
-    this.tick(at, 0.035, 2700 - tier * 240, 0.32);
+    /**
+     * The contact: short, and resonant rather than broadband.
+     *
+     * This is where the old version went wrong. It ran a 35ms noise burst at
+     * 0.32 *and* a 150ms hiss at 0.3 — more energy in noise than in everything
+     * pitched, and a tail three times longer than the punch it was supposed to
+     * be decorating. Two overlapping washes of static do not add up to an
+     * impact; they add up to static. A resonant bandpass rings like something
+     * being hit, where broadband noise just hisses.
+     */
+    this.tick(at, 0.018, 1700 - tier * 130, 0.24, 'bandpass', 2.2);
 
+    // The punch, and it should dominate everything else here. A hit is a
+    // low-frequency event with a bright edge, not a bright event with a low one.
     this.voice({
-      at, freq: 300 - tier * 22, to: 48, duration: 0.09 + tier * 0.012, type: 'triangle', gain: 0.5,
+      at, freq: 340 - tier * 26, to: 44, duration: 0.085 + tier * 0.01, type: 'triangle', gain: 0.55,
     });
 
     // Started a beat late and pitched below the punch, so the hit decays into
-    // something instead of leaving a hole.
+    // something instead of leaving a hole. Long enough to feel like the room
+    // absorbed it.
     this.voice({
-      at: at + 0.012, freq: 124, to: 52, duration: 0.2 + tier * 0.035, type: 'sine', gain: 0.28,
+      at: at + 0.008, freq: 110, to: 46, duration: 0.24 + tier * 0.04, type: 'sine', gain: 0.34,
     });
 
-    this.hiss(0.15, 1700, 240, 0.3);
+    // A breath of air, a quarter of its old length and less than half its old
+    // level. Enough to sit under the hit; not enough to become the hit.
+    this.hiss(0.06, 1200, 300, 0.12);
   }
 
   /** Forging a bigger blade — a short rising arpeggio. */
