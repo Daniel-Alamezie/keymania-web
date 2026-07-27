@@ -17,16 +17,18 @@
   transition: opacity 200ms ease, filter 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
+/* --pw is set inline from POWER_META, the single place a power's colour lives,
+   so a slot glows the same hue as the word that filled it. */
 .slot[data-active] {
   opacity: 1;
   filter: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 16px rgba(255, 214, 110, 0.45);
+  border-color: var(--pw);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--pw) 45%, transparent);
   animation: ready 1.8s ease-in-out infinite;
 }
 
 @keyframes ready {
-  50% { box-shadow: 0 0 26px rgba(255, 214, 110, 0.75); }
+  50% { box-shadow: 0 0 26px color-mix(in srgb, var(--pw) 75%, transparent); }
 }
 
 /* Flashes as a ward is spent, so the block is visible rather than silent. */

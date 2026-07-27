@@ -10,10 +10,30 @@ const CHARGE_EVERY = 9;
 /** Charged words must be worth the risk — very short words are skipped. */
 const MIN_CHARGED_LENGTH = 4;
 
-export const POWER_META: Record<PowerKind, { icon: string; label: string; blurb: string }> = {
-  ward: { icon: '🛡', label: 'Ward', blurb: 'absorbs the next blade' },
-  surge: { icon: '⚡', label: 'Surge', blurb: 'next blade hits double' },
-  mend: { icon: '✚', label: 'Mend', blurb: `restores ${MEND_AMOUNT} health` },
+/**
+ * How each power presents itself.
+ *
+ * `tint` is the one place a power's colour is written down. The stylesheet does
+ * not name these hues at all — the token sets `--pw` from here and every rule
+ * reads that variable, so a power cannot end up gold in the text and green in
+ * the HUD.
+ *
+ * The three hues are far apart on purpose, and deliberately not the player blue
+ * or opponent red: a charged word appears in the middle of a fight where both of
+ * those are already on screen. Colour is never the only signal though — the icon
+ * carries the same information, so the pairing still reads for anyone who cannot
+ * separate green from gold.
+ */
+export const POWER_META: Record<
+  PowerKind,
+  { icon: string; label: string; blurb: string; tint: string }
+> = {
+  // Cyan: cold, defensive, the colour of a barrier.
+  ward: { icon: '🛡', label: 'Ward', blurb: 'absorbs the next blade', tint: '#4fe3ff' },
+  // Gold: the lightning it is named for, and the only offensive power.
+  surge: { icon: '⚡', label: 'Surge', blurb: 'next blade hits double', tint: '#ffd66e' },
+  // Green: health, borrowed straight from --good so healing reads the same everywhere.
+  mend: { icon: '✚', label: 'Mend', blurb: `restores ${MEND_AMOUNT} health`, tint: '#5ee08a' },
 };
 
 /** Charge words across a script, keyed by flat word index. */

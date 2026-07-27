@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import { step } from '@/game/glide';
 import { POWER_META } from '@/game/powers';
 import type { PowerKind } from '@/models/powers';
@@ -48,7 +49,19 @@ function tokenise(sentence: string, phase: Phase, firstWord: number): Token[] {
 
   const push = () => {
     out.push({
-      key: `${phase}-${word}`,
+      /**
+       * The flat script index, not the position within this sentence.
+       *
+       * A phase-relative key like `current-3` names a different word after
+       * every roll, so React reuses that DOM node for whatever word lands in
+       * that slot next. The claimed-power animation fills forwards — it leaves
+       * the icon hidden, because the power has been taken — and a reused node
+       * carries that animation with it, so a later charged word would render
+       * with no icon at all. Keying by flat index gives each word one node for
+       * as long as it is on screen, so effects stay attached to the word that
+       * earned them.
+       */
+      key: String(firstWord + word),
       phase,
       wordIndex: firstWord + word,
       localIndex: phase === 'current' ? word : -1,
@@ -96,8 +109,8 @@ export default function SentenceView({
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
-  const activeWordRef = useRef<HTMLSpanElement>(null);
-  const lastWord = useRef(-1);
+  /** Flat index of the last word finished, so its flare can be aimed at it. */
+  const lastWord = useRef<number | null>(null);
   /** Where the strip is now, and where it is heading. */
   const position = useRef(0);
   const target = useRef(0);
@@ -112,6 +125,9 @@ export default function SentenceView({
     const found = current.findIndex((t) => cursor <= t.chars[t.chars.length - 1].index);
     return found === -1 ? current.length - 1 : found;
   }, [tokens, cursor]);
+
+  /** The same word as a flat script index — stable across sentence rolls. */
+  const activeIndex = wordOffset + activeWord;
 
   /**
    * Slide the strip so the cursor stays put.
@@ -203,20 +219,71 @@ export default function SentenceView({
     );
   }, [missTick]);
 
-  /** A committed word is consumed — it flares as it goes. */
+  /**
+   * A committed word is consumed — it flares as it goes.
+   *
+   * The element is looked up by index rather than held in a ref. A ref attached
+   * to whichever word is *currently* active is assigned during commit, so by the
+   * time an effect runs it already points at the word you have just moved onto —
+   * which is what this used to animate, despite the variable being called
+   * `finished`. The flare fired on the wrong word every time, which is a large
+   * part of why finishing one felt like nothing happened. Addressing the element
+   * explicitly means the question "which word is this animating?" has an answer
+   * you can read, rather than one that depends on React's ref timing.
+   */
   useEffect(() => {
-    if (activeWord === lastWord.current) return;
-    const finished = activeWordRef.current;
-    lastWord.current = activeWord;
-    finished?.animate(
+    const finishedIndex = lastWord.current;
+    lastWord.current = activeIndex;
+
+    // Nothing has been finished on the first render, and a backspace walking the
+    // cursor into the previous word is a correction, not an accomplishment.
+    if (finishedIndex === null || activeIndex <= finishedIndex) return;
+
+    const finished = stripRef.current?.querySelector<HTMLElement>(`[data-wi="${finishedIndex}"]`);
+    if (!finished) return;
+
+    const charge = powers[finishedIndex];
+    if (!charge) {
+      finished.animate(
+        [
+          { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
+          { transform: 'translateY(-7px) scale(1.16)', filter: 'brightness(2.6)', offset: 0.35 },
+          { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
+        ],
+        { duration: 380, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
+      );
+      return;
+    }
+
+    /**
+     * Claiming a power is the one moment in the stream worth making a fuss of.
+     * It is bigger, slower and overshoots — landing past its resting size before
+     * settling is what separates a reward from a state change — and it is tinted
+     * with the power's own colour, so the payoff confirms what the word promised.
+     */
+    const { tint } = POWER_META[charge];
+    finished.animate(
       [
         { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
-        { transform: 'translateY(-7px) scale(1.16)', filter: 'brightness(2.6)', offset: 0.35 },
+        {
+          transform: 'translateY(-14px) scale(1.4)',
+          filter: `brightness(2.8) drop-shadow(0 0 26px ${tint})`,
+          offset: 0.28,
+        },
         { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
       ],
-      { duration: 380, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
+      { duration: 620, easing: 'cubic-bezier(0.2, 1.5, 0.35, 1)' },
     );
-  }, [activeWord]);
+
+    // The icon breaks away and rises: the power has left the word and is yours.
+    finished.querySelector<HTMLElement>('[data-charge-icon]')?.animate(
+      [
+        { transform: 'translateX(-50%) translateY(0) scale(1)', opacity: 1 },
+        { transform: 'translateX(-50%) translateY(-46px) scale(2.1)', opacity: 0 },
+      ],
+      { duration: 620, easing: 'cubic-bezier(0.15, 0.85, 0.3, 1)', fill: 'forwards' },
+    );
+  }, [activeIndex, powers]);
 
   return (
     <div ref={viewportRef} className={styles.viewport}>
@@ -232,13 +299,20 @@ export default function SentenceView({
           return (
             <span
               key={token.key}
-              ref={state === 'active' ? activeWordRef : undefined}
               className={styles.token}
               data-word={state}
               data-charge={charge}
+              data-wi={token.wordIndex}
+              // Set here rather than in the stylesheet so POWER_META stays the
+              // only place a power's colour is written down.
+              style={charge ? ({ '--pw': POWER_META[charge].tint } as CSSProperties) : undefined}
               title={charge ? `${POWER_META[charge].label} — ${POWER_META[charge].blurb}` : undefined}
             >
-              {charge && <span className={styles.charge} aria-hidden="true">{POWER_META[charge].icon}</span>}
+              {charge && (
+                <span className={styles.charge} data-charge-icon aria-hidden="true">
+                  {POWER_META[charge].icon}
+                </span>
+              )}
               {token.chars.map(({ ch, index }) => {
                 const isCurrent = token.phase === 'current' && index === cursor;
                 const charState =
