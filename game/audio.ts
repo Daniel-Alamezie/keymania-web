@@ -276,22 +276,32 @@ class GameAudio {
   }
 
   /**
-   * Every correct keystroke: a switch bottoming out.
+   * Every correct keystroke: a switch bottoming out in a filled case.
    *
-   * This was a 520Hz square wave — a chiptune blip, thin and buzzy, and the one
-   * sound in the game a player hears thousands of times a session. A keypress in
-   * the physical world is two events layered, so this is too:
+   * The one sound a player hears thousands of times a session, so it is the one
+   * worth the most care. It began as a 520Hz square — a chiptune blip — then
+   * became a contact plus a pitched body, which read as thock. Creamy is a
+   * further step, and it is a subtractive one: creamy boards are not louder or
+   * deeper, they are boards with things *removed*. No high-frequency ping off
+   * the plate, no spike on the attack, no ring in the tail. What is left is
+   * body.
    *
-   *   1. The contact. Plastic meeting plastic, broadband and almost instant,
-   *      with the highs rolled off. Leave those highs in and you get the clack
-   *      of a cheap board; damp them and you get thock.
-   *   2. The body. The case resonating and dying away fast — low, pitched, and
-   *      falling, the way any struck object does.
+   * Three layers, in the order the ear notices them:
    *
-   * Creamy is mostly the envelope. A hard onset reads as a click no matter what
-   * frequency sits under it, so the body fades in over 4ms: still percussive,
-   * no spike. The whole thing is done in 90ms, because at 100wpm these overlap
-   * and anything longer turns into mud.
+   *   1. The contact — plastic meeting plastic. Dull and quiet, because in a
+   *      lubed switch this is felt more than heard. Leaving the highs in is
+   *      what makes a board clacky.
+   *   2. The case — a resonant bandpass down at 300Hz. This is the layer that
+   *      was missing. A filled case does not just pass sound through, it rings
+   *      briefly at its own frequency, and a moderate Q gives that hollowness
+   *      without ever settling on a note. It is the same trick the typewriter
+   *      click uses, tuned two octaves down.
+   *   3. The body — pitched, falling, and rounded rather than punched.
+   *
+   * There is deliberately no sub layer. Anything under about 120Hz is inaudible
+   * on the laptop speakers most of this is played through, so it would cost a
+   * node per keystroke to be heard by almost nobody; that energy goes into the
+   * case resonance instead, which carries on any hardware.
    */
   key(combo: number) {
     const ctx = this.ensure();
@@ -304,26 +314,48 @@ class GameAudio {
     // synthetic more than its waveform did.
     const vary = this.jitter(0.07);
 
-    // The combo opens the filter instead of raising the pitch. Pitch climbing
-    // with a streak was legible but unlike any keyboard ever made; brightness
-    // reads as typing harder, which is what is actually happening.
-    this.tick(at, 0.022, (1500 + Math.min(combo, 12) * 85) * vary, 0.15);
+    /**
+     * The contact, damped hard.
+     *
+     * The cutoff came down from 1500 to 950 and the level from 0.15 to 0.10,
+     * which is most of the creaminess on its own: the previous version still
+     * had enough top end to read as plastic-on-plastic rather than as a switch
+     * in a case that absorbs it.
+     *
+     * The combo still opens the filter — brightness reads as typing harder,
+     * where pitch climbing with a streak would be unlike any keyboard ever
+     * made — but by half as much as before, so a long streak can no longer
+     * brighten its way back out of the character this is going for.
+     */
+    this.tick(at, 0.015, (950 + Math.min(combo, 12) * 45) * vary, 0.1);
 
-    const body = ctx.createOscillator();
-    const env = ctx.createGain();
-    // Triangle, not sine: a pure sine at this pitch is a featureless thud, and
-    // the odd harmonics are what make it read as a case rather than a subwoofer.
-    body.type = 'triangle';
-    body.frequency.setValueAtTime(230 * vary, at);
-    body.frequency.exponentialRampToValueAtTime(140 * vary, at + 0.07);
+    // The case, two milliseconds late. The delay is small enough to read as one
+    // event and large enough that the sound arrives rather than simply starting.
+    this.tick(at + 0.002, 0.06, 300 * vary, 0.2, 'bandpass', 2.4);
 
-    env.gain.setValueAtTime(0.0001, at);
-    env.gain.exponentialRampToValueAtTime(0.26, at + 0.004);
-    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.085);
-
-    body.connect(env).connect(this.master);
-    body.start(at);
-    body.stop(at + 0.09);
+    /**
+     * The body.
+     *
+     * Triangle rather than sine: a pure sine here is a featureless thud, and
+     * the odd harmonics are what make it read as a case rather than a
+     * subwoofer.
+     *
+     * Lower and gentler than before — 210 down to 132 rather than 230 down to
+     * 140. A steep pitch drop reads as *punch*, which is right for a blade
+     * landing and wrong for a keystroke; softening it trades impact for weight.
+     * The attack is 7ms rather than 4ms for the same reason: still percussive,
+     * but with the edge taken off the onset, which is what separates creamy
+     * from merely deep.
+     */
+    this.voice({
+      at,
+      freq: 210 * vary,
+      to: 132 * vary,
+      duration: 0.1,
+      type: 'triangle',
+      gain: 0.22,
+      attack: 0.007,
+    });
   }
 
   /**
