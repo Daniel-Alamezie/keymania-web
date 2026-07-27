@@ -16,11 +16,15 @@ type Wave = OscillatorType;
 
 const MUTE_KEY = 'keymania.muted';
 const MASTER_GAIN = 0.32;
+/** Shortest gap between two hover blips, in seconds. */
+const HOVER_GAP = 0.07;
 
 class GameAudio {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
+  /** On the audio clock, not Date.now() — see hover(). */
+  private lastHoverAt = -1;
   private enabled = true;
 
   private ensure(): AudioContext | null {
@@ -127,9 +131,70 @@ class GameAudio {
     src.stop(ctx.currentTime + duration);
   }
 
+  /**
+   * Wake the audio engine on a real user gesture.
+   *
+   * Browsers only allow an AudioContext to start from a genuine interaction,
+   * and hovering is explicitly not one — the spec grants activation for clicks,
+   * keys and taps, never for mouse movement. Without this, hover sounds would
+   * stay silent until the player's first *duel*, since nothing else on the menu
+   * makes a noise. One cheap pointerdown gets the engine running so the rest of
+   * the session has sound.
+   */
+  unlock() {
+    this.ensure();
+  }
+
   /** Every correct keystroke: a short, dry click. Pitch rises with the combo. */
   key(combo: number) {
     this.tone(520 + Math.min(combo, 12) * 22, 0.035, 'square', 0.18);
+  }
+
+  /**
+   * Passing over something you can click.
+   *
+   * Built by hand rather than through tone() because tone() starts at full
+   * volume on the first sample. That instant onset is a percussive click — it
+   * is exactly what a keystroke and an impact want, and exactly what "soft"
+   * cannot have. A 14ms fade-in removes the transient while staying far too
+   * short to feel laggy.
+   *
+   * The design test for a hover sound is not whether it is pleasant once. It is
+   * whether it is still pleasant the four hundredth time, so this is restrained
+   * on purpose: a pure sine with no harmonics to fatigue the ear, a small rise
+   * to read as inviting rather than as a confirmation, and a gain of 0.07 —
+   * under half a keystroke, a fifth of a blade landing. It should sit under the
+   * game rather than in it.
+   */
+  hover() {
+    // Never the thing that boots the engine. An ambient sound has no business
+    // constructing an AudioContext, and one made outside a gesture would only
+    // sit there suspended and log a warning.
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ensure();
+    if (!ctx || !this.master) return;
+
+    // Sweeping across a row of buttons fires one of these per button. Without a
+    // floor between them a flick of the wrist becomes a machine gun, while a
+    // gap this short still sounds every control you move to deliberately.
+    const at = ctx.currentTime;
+    if (at - this.lastHoverAt < HOVER_GAP) return;
+    this.lastHoverAt = at;
+
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620, at);
+    osc.frequency.exponentialRampToValueAtTime(840, at + 0.07);
+
+    env.gain.setValueAtTime(0.0001, at);
+    env.gain.exponentialRampToValueAtTime(0.07, at + 0.014);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+
+    osc.connect(env).connect(this.master);
+    osc.start(at);
+    osc.stop(at + 0.1);
   }
 
   /** SPACE committing a word — the blade is forged and thrown. */

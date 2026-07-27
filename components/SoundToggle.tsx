@@ -25,6 +25,61 @@ export function useSoundHotkey() {
   }, []);
 }
 
+/** What counts as clickable enough to answer the cursor. */
+const INTERACTIVE = 'button, a[href], [role="button"]';
+
+/**
+ * A soft note under the cursor, everywhere.
+ *
+ * One delegated listener rather than an onMouseEnter on every control. There
+ * are buttons in the menu, the lobby, the guide, the account bar and the result
+ * screen, and wiring each one by hand would mean every future button silently
+ * arriving without a sound — the kind of gap nobody notices until the polish
+ * looks uneven.
+ *
+ * Delegation is why this listens for mouseover rather than mouseenter, which
+ * does not bubble and so cannot be delegated at all.
+ */
+export function useHoverSound() {
+  useEffect(() => {
+    // Pointer devices only. A touch browser fires a synthetic mouseover
+    // immediately before the click, so on a phone every tap would answer twice.
+    if (!window.matchMedia?.('(hover: hover)').matches) return;
+
+    let previous: Element | null = null;
+
+    const onOver = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const control = target?.closest?.(INTERACTIVE) ?? null;
+
+      // mouseover fires again for every child element, so the icon and the
+      // label inside a button would each retrigger it as the cursor crosses
+      // them. Only a change of control is a new hover.
+      if (control === previous) return;
+      previous = control;
+
+      if (!control) return;
+      // A control you cannot press should not sound like one you can.
+      if ((control as HTMLButtonElement).disabled) return;
+      if (control.getAttribute('aria-disabled') === 'true') return;
+
+      audio.hover();
+    };
+
+    // Hovering cannot start an AudioContext — browsers grant that only to real
+    // gestures — so the first press of anything wakes the engine and every
+    // hover after it is audible.
+    const onDown = () => audio.unlock();
+
+    document.addEventListener('mouseover', onOver);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('mouseover', onOver);
+      document.removeEventListener('pointerdown', onDown);
+    };
+  }, []);
+}
+
 /**
  * Sound on or off.
  *
