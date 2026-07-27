@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { step } from '@/game/glide';
 import { POWER_META } from '@/game/powers';
 import type { PowerKind } from '@/models/powers';
 import styles from './SentenceView.module.css';
@@ -97,6 +98,13 @@ export default function SentenceView({
   const stripRef = useRef<HTMLDivElement>(null);
   const activeWordRef = useRef<HTMLSpanElement>(null);
   const lastWord = useRef(-1);
+  /** Where the strip is now, and where it is heading. */
+  const position = useRef(0);
+  const target = useRef(0);
+  // null rather than the first sentence, so the very first measurement counts as
+  // a roll and the strip starts already in place instead of sliding in from the
+  // left edge on mount.
+  const lastSentence = useRef<string | null>(null);
 
   /** Which word of the current sentence the cursor is in. */
   const activeWord = useMemo(() => {
@@ -135,9 +143,49 @@ export default function SentenceView({
       node = node.offsetParent as HTMLElement | null;
     }
 
-    const pin = viewport.clientWidth * PIN;
-    strip.style.transform = `translate3d(${Math.round(pin - x)}px, 0, 0)`;
+    target.current = viewport.clientWidth * PIN - x;
+
+    /**
+     * A finished sentence leaves the strip, so everything shifts left by its
+     * whole width and the target shifts by exactly the same amount. Glide
+     * through that and you get a hard lurch once per sentence — which is what
+     * the snap was. Jumping instead makes it invisible, because the content
+     * moving one way and the strip moving the other cancel out in one frame.
+     */
+    if (sentence !== lastSentence.current) {
+      lastSentence.current = sentence;
+      position.current = target.current;
+      strip.style.transform = `translate3d(${Math.round(target.current)}px, 0, 0)`;
+    }
   }, [cursor, sentence, previous, upcoming]);
+
+  /**
+   * The glide.
+   *
+   * Driven by the display rather than by keystrokes. A CSS transition restarts
+   * on every character, so the motion was really a series of small lurches
+   * timed by the player's fingers — fine at a steady pace, visibly uneven at
+   * any other. Easing toward a target every frame decouples the two: the text
+   * drifts at its own rate however erratically you type, which gives the screen
+   * one calm thing to look at while everything else shakes.
+   */
+  useEffect(() => {
+    let frame = 0;
+    let last = performance.now();
+
+    const tick = (now: number) => {
+      const strip = stripRef.current;
+      if (strip && position.current !== target.current) {
+        position.current = step(position.current, target.current, now - last);
+        strip.style.transform = `translate3d(${position.current.toFixed(2)}px, 0, 0)`;
+      }
+      last = now;
+      frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   /** Typo shake. */
   useEffect(() => {
