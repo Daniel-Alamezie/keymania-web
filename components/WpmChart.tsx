@@ -22,6 +22,15 @@ const PLOT_H = H - PAD.top - PAD.bottom;
 /** Never let the band collapse when every duel came out the same speed. */
 const MIN_RANGE = 10;
 
+/**
+ * Pointer target around each node, in chart units.
+ *
+ * Bigger than the 5px marker so it can actually be hit, small enough that it
+ * stays *on* the node — the reading should appear because you pointed at a
+ * duel, not because you were vaguely near one.
+ */
+const HIT = 14;
+
 interface Props {
   /** Oldest first. */
   points: ChartPoint[];
@@ -147,22 +156,20 @@ export default function WpmChart({ points, className }: Props) {
             ))}
           </g>
 
-          {/* Generous invisible hit areas — a 5px square is not a pointer
-              target, and on the shared axis the columns never overlap. */}
+          {/* Hit areas sit on the nodes themselves, not their whole column.
+              Column-wide targets meant hovering empty space anywhere above or
+              below a point popped its reading up, which reads as the chart
+              guessing at what you meant. Still larger than the 5px square, so
+              it is a real pointer target. */}
           {placed.map((p) => (
             <rect
               key={`hit-${p.at}`}
               className={styles.hit}
-              x={p.x - PLOT_W / (points.length * 2) - 2}
-              y={PAD.top}
-              width={PLOT_W / points.length + 4}
-              height={PLOT_H}
-              tabIndex={0}
-              role="button"
-              aria-label={describe(p)}
+              x={p.x - HIT / 2}
+              y={p.y - HIT / 2}
+              width={HIT}
+              height={HIT}
               onMouseEnter={() => setHovered(p.index)}
-              onFocus={() => setHovered(p.index)}
-              onBlur={() => setHovered(null)}
             />
           ))}
         </svg>
@@ -184,6 +191,15 @@ export default function WpmChart({ points, className }: Props) {
           </div>
         )}
       </div>
+
+      {/* The readings, for anyone not using a pointer.
+          These used to hang off the hit areas as aria-labels, which meant they
+          only existed while those were focusable — and an SVG rect fires no
+          focus events even when the browser reports it focused, so that was a
+          promise the chart could not keep. A plain list always can. */}
+      <ul className={styles.srOnly}>
+        {placed.map((p) => <li key={`read-${p.at}`}>{describe(p)}</li>)}
+      </ul>
 
       <figcaption className={styles.legend}>
         <span className={styles.key} data-series="ranked">Versus players</span>
