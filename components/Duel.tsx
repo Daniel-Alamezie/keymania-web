@@ -45,6 +45,8 @@ interface DuelProps {
 
 interface Impact {
   side: Side;
+  /** Which fighter wore it, so only they flinch in a crowd. */
+  slot: number;
   damage: number;
   tick: number;
 }
@@ -257,11 +259,16 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     );
   }, [impact]);
 
-  /** Land a blade: burst, sound and damage popup. */
-  const land = useCallback((target: Side, damage: number, tier: BladeTier) => {
+  /**
+   * Land a blade: burst, sound and damage popup.
+   *
+   * `slot` is who wore it. The side alone was enough when there was only one
+   * opponent; with three, it decides which of them flinches.
+   */
+  const land = useCallback((target: Side, slot: number, damage: number, tier: BladeTier) => {
     effects.current?.burst(target, tier);
     audio.impact(tier);
-    setImpact({ side: target, damage, tick: Date.now() });
+    setImpact({ side: target, slot, damage, tick: Date.now() });
   }, []);
 
   /**
@@ -282,7 +289,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     if (isMulti) return;
 
     track(setTimeout(() => {
-      land(hit.toSlot === state.mySlot ? 'player' : 'opponent', hit.damage, hit.tier);
+      land(hit.toSlot === state.mySlot ? 'player' : 'opponent', hit.toSlot, hit.damage, hit.tier);
       dispatch({ type: 'land', toSlot: hit.toSlot, damage: hit.damage, now: Date.now() });
     }, PROJECTILE_FLIGHT_MS));
     // mySlot is fixed for the life of a duel, so reading it here cannot go
@@ -321,7 +328,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           // A warded blade lands with a block rather than damage. Only animate
           // the hit when it was aimed at you — in a four-way most are not.
           const atMe = message.toSlot === mySlot;
-          if (!mine && atMe && !message.blocked) land('player', message.damage, tier);
+          if (!mine && atMe && !message.blocked) land('player', message.toSlot, message.damage, tier);
           // The whole board at once, so no index has to be derived.
           dispatch({ type: 'setHealths', healths: message.healths });
           if (message.targets) dispatch({ type: 'setTargets', targets: message.targets });
@@ -465,14 +472,40 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
         <EffectsCanvas ref={effects} className={styles.canvas} />
 
-        <div className={styles.lane} data-lane="opponent">
-          <Fighter
-            team="red"
-            facing="left"
-            hitTick={impact?.side === 'opponent' ? impact.tick : 0}
-            attackTick={attack?.side === 'opponent' ? attack.tick : 0}
-            defeated={state.winner === state.mySlot}
-          />
+        {/* One fighter per opponent. A duel renders a single figure exactly as
+            before; a four-way stands them in a row, with the one you are
+            currently throwing at stepped forward and lit.
+
+            Slots keep their place even after a knockout — a fallen fighter
+            stays where they fell rather than the survivors sliding along, so
+            the row you learned at the start is the row you keep reading. */}
+        <div className={styles.lane} data-lane="opponent" data-many={foes.length > 1 || undefined}>
+          {foes.map(({ slot, fighter }) => {
+            const out = isOut(fighter);
+            const marked = foes.length > 1 && slot === myTarget;
+            return (
+              <div
+                key={slot}
+                className={styles.foe}
+                data-targeted={marked || undefined}
+                data-out={out || undefined}
+              >
+                <Fighter
+                  team="red"
+                  facing="left"
+                  // Only the fighter that actually took the blade flinches.
+                  hitTick={impact?.side === 'opponent' && impact.slot === slot ? impact.tick : 0}
+                  attackTick={attack?.side === 'opponent' ? attack.tick : 0}
+                  defeated={out || state.winner === state.mySlot}
+                />
+                {foes.length > 1 && (
+                  <span className={`${styles.foeName} pixel-font`}>
+                    {labelFor(fighter)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {impact && (

@@ -21,15 +21,11 @@ interface LobbyProps {
 const NAME_KEY = 'keymania.name';
 
 /**
- * Four-way rooms can be created by the server already, but the duel view still
- * shows exactly one opponent: it reads `healths[1 - mySlot]`, which for slot 2
- * of four is `healths[-1]` — undefined, and a broken duel on the first hit.
- *
- * So the option is visible but not selectable. Flip this to true once the
- * reducer holds a roster instead of two health scalars and the arena renders
- * more than one opponent; nothing else here needs to change.
+ * Kept as a named constant rather than deleted: if a four-way turns out to have
+ * a problem in the wild, this is one line to switch off, and it does not need a
+ * revert of the reducer or the arena to do it.
  */
-const FOUR_PLAYER_READY = false;
+const FOUR_PLAYER_READY = true;
 
 export default function Lobby({
   status, configured, rooms, waitingCode, waitingVisibility, error,

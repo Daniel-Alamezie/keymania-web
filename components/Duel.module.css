@@ -101,6 +101,69 @@
 .lane[data-lane='player'] { left: 17%; }
 .lane[data-lane='opponent'] { left: 83%; }
 
+/* ---------- The field --------------------------------------------------------
+ *
+ * One opponent renders exactly as it always did. Three stand in a row, and the
+ * lane shifts left to make room for them without crowding the effects canvas.
+ *
+ * `align-items: flex-end` keeps every fighter on the same floor line however
+ * they are scaled — otherwise the stepped-forward one would appear to hover.
+ * -------------------------------------------------------------------------- */
+.lane[data-many] {
+  left: 68%;
+  display: flex;
+  align-items: flex-end;
+  gap: 4%;
+}
+
+.foe {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Pushed back by default. The one you are aimed at comes forward, which is
+     the entire explanation of how targeting works — no tutorial needed. */
+  transform: scale(0.82);
+  opacity: 0.72;
+  transition: transform 260ms cubic-bezier(0.2, 1.1, 0.4, 1), opacity 260ms ease;
+}
+
+.foe[data-targeted] {
+  transform: scale(1);
+  opacity: 1;
+  z-index: 1;
+  /* A pool of light under the target, so it reads even at a glance mid-word. */
+  filter: drop-shadow(0 0 14px rgba(255, 214, 110, 0.55));
+}
+
+.foe[data-out] {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.foeName {
+  margin-top: 4px;
+  font-size: 8px;
+  color: var(--faint);
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.foe[data-targeted] .foeName { color: var(--gold); }
+.foe[data-out] .foeName { text-decoration: line-through; }
+
+/* ---------- HUD: a bar per opponent ---------- */
+.foes {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+/* Three plates need to share the width the single one had. */
+.foes[data-many] > * { flex: 1; min-width: 0; }
+
 /* Single-frame white flash on contact — the hit-stop cue. */
 .flash {
   position: absolute;

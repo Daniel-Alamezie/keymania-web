@@ -155,6 +155,84 @@ describe('the finishing beat', () => {
   });
 });
 
+/**
+ * Four fighters.
+ *
+ * The rules that only exist past two players: a knockout does not end the
+ * duel, slots never shift under the survivors, and the winner is a slot rather
+ * than a side. Slot 0 gets its own test because it is the falsy one — three
+ * separate `if (!winner)` checks were quietly skipping it before.
+ */
+describe('a four-way free-for-all', () => {
+  const fourWay = (): DuelState => ({
+    ...playing(),
+    multiplayer: true,
+    mySlot: 2,
+    fighters: [
+      { name: 'A', health: 100, combo: 0, progress: 0, target: 2 },
+      { name: 'B', health: 100, combo: 0, progress: 0, target: 0 },
+      { name: 'You', health: 100, combo: 0, progress: 0, target: 0 },
+      { name: 'D', health: 100, combo: 0, progress: 0, target: 0 },
+    ],
+  });
+
+  it('does not end the duel on the first knockout', () => {
+    const state = duelReducer(fourWay(), { type: 'land', toSlot: 1, damage: 999, now: 1 });
+    expect(state.winner).toBeNull();
+    expect(state.phase).toBe('playing');
+    expect(state.fighters[1].health).toBe(0);
+  });
+
+  it('ends only when one fighter is left standing', () => {
+    let state = fourWay();
+    for (const slot of [0, 1]) {
+      state = duelReducer(state, { type: 'land', toSlot: slot, damage: 999, now: 1 });
+      expect(state.winner).toBeNull();
+    }
+    state = duelReducer(state, { type: 'land', toSlot: 3, damage: 999, now: 1 });
+    expect(state.winner).toBe(2);
+    expect(state.phase).toBe('finishing');
+  });
+
+  it('can be won from slot 0, which is falsy', () => {
+    // The whole class of bug this migration invited: `if (!winner)` treats a
+    // win by slot 0 as no win at all.
+    let state = { ...fourWay(), mySlot: 0 };
+    for (const slot of [1, 2, 3]) {
+      state = duelReducer(state, { type: 'land', toSlot: slot, damage: 999, now: 1 });
+    }
+    expect(state.winner).toBe(0);
+    expect(state.winner).not.toBeNull();
+  });
+
+  it('keeps fallen fighters in their slots so indices never shift', () => {
+    // Every later message addresses players by index. Compacting the roster
+    // would silently repoint every one of them.
+    const state = duelReducer(fourWay(), { type: 'land', toSlot: 0, damage: 999, now: 1 });
+    expect(state.fighters).toHaveLength(4);
+    expect(state.fighters[2].name).toBe('You');
+  });
+
+  it('takes the whole board from the server at once', () => {
+    const state = duelReducer(fourWay(), { type: 'setHealths', healths: [10, 0, 55, 80] });
+    expect(state.fighters.map((f) => f.health)).toEqual([10, 0, 55, 80]);
+  });
+
+  it('re-points targets as the lead changes hands', () => {
+    const state = duelReducer(fourWay(), { type: 'setTargets', targets: [3, 3, 3, 0] });
+    expect(state.fighters.map((f) => f.target)).toEqual([3, 3, 3, 0]);
+  });
+
+  it('ignores a health update once the duel is decided', () => {
+    let state = fourWay();
+    for (const slot of [0, 1, 3]) {
+      state = duelReducer(state, { type: 'land', toSlot: slot, damage: 999, now: 1 });
+    }
+    const after = duelReducer(state, { type: 'setHealths', healths: [90, 90, 90, 90] });
+    expect(after.fighters[0].health).toBe(0);
+  });
+});
+
 describe('accuracy', () => {
   it('is 100% with no keystrokes and drops with mistakes', () => {
     expect(accuracy({ wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0, endedAt: 0 })).toBe(100);
