@@ -249,6 +249,33 @@ class GameAudio {
   }
 
   /**
+   * The note a blade of this tier rings at.
+   *
+   * Shared by the throw and the landing on purpose: it is one object, and an
+   * object does not change pitch between leaving your hand and arriving. Having
+   * both read it from here is what makes a hit sound like the arrival of the
+   * thing you heard thrown, rather than an unrelated noise that happens after
+   * it. Heavier blades ring lower, so the tier is audible at both ends.
+   */
+  private bladeRoot(tier: number): number {
+    return 1320 - tier * 105;
+  }
+
+  /**
+   * A few percent either side of nominal, different on every call.
+   *
+   * Any sound a player hears hundreds of times in a session needs this. Two
+   * identical playbacks are something the ear notices and starts to file as
+   * artificial — not consciously, but it is the difference between a sound
+   * wearing well over an hour and grating after ten minutes. The keystroke got
+   * this treatment and the combat sounds did not, which was an oversight: a
+   * duel is nothing but throws and landings.
+   */
+  private jitter(spread = 0.06): number {
+    return 1 - spread + Math.random() * spread * 2;
+  }
+
+  /**
    * Every correct keystroke: a switch bottoming out.
    *
    * This was a 520Hz square wave — a chiptune blip, thin and buzzy, and the one
@@ -275,7 +302,7 @@ class GameAudio {
     // positions on the plate. Without this jitter the ear picks up on a single
     // sample looping within a few words, which is what made the old blip feel
     // synthetic more than its waveform did.
-    const vary = 0.93 + Math.random() * 0.14;
+    const vary = this.jitter(0.07);
 
     // The combo opens the filter instead of raising the pitch. Pitch climbing
     // with a streak was legible but unlike any keyboard ever made; brightness
@@ -409,7 +436,8 @@ class GameAudio {
      *
      * Heavier blades ring lower, so the tier is audible before it is visible.
      */
-    const root = 1320 - tier * 105;
+    const vary = this.jitter();
+    const root = this.bladeRoot(tier) * vary;
     const ring = 0.16 + tier * 0.03;
 
     // 1 : 2.76 : 5.40 — the mode ratios of a struck circular plate. Each
@@ -421,7 +449,7 @@ class GameAudio {
 
     // The effort behind the throw, low and gone quickly. Without it the sound
     // is a ting with nothing pushing it.
-    this.voice({ at, freq: 170, to: 95, duration: 0.075, type: 'triangle', gain: 0.22 });
+    this.voice({ at, freq: 170 * vary, to: 95, duration: 0.075, type: 'triangle', gain: 0.22 });
 
     // Every bit of movement lives here now. The tone is the blade; the noise is
     // the blade leaving.
@@ -455,24 +483,56 @@ class GameAudio {
      * impact; they add up to static. A resonant bandpass rings like something
      * being hit, where broadband noise just hisses.
      */
-    this.tick(at, 0.018, 1700 - tier * 130, 0.24, 'bandpass', 2.2);
+    const vary = this.jitter();
 
-    // The punch, and it should dominate everything else here. A hit is a
-    // low-frequency event with a bright edge, not a bright event with a low one.
+    this.tick(at, 0.019, (1700 - tier * 130) * vary, 0.24, 'bandpass', 2.2);
+
+    /**
+     * The blade, arriving.
+     *
+     * The same root the throw rang at, so the hit is audibly the landing of
+     * that specific object rather than a drum that happens to follow it. Much
+     * shorter and quieter than in flight, because this one is being stopped by
+     * something rather than ringing freely — a blade that sang as loudly on
+     * arrival would sound like it had hit a bell.
+     */
+    const blade = this.bladeRoot(tier) * vary;
+    this.voice({ at, freq: blade, duration: 0.045, type: 'sine', gain: 0.075 });
+    this.voice({ at, freq: blade * 2.76, duration: 0.022, type: 'sine', gain: 0.036 });
+
+    /**
+     * The punch, which should dominate everything else here.
+     *
+     * It lands on 62Hz rather than the 44 it used to. Below about 60Hz there is
+     * nothing left on a laptop or a phone — the end of every hit was being
+     * thrown away on most of the hardware this is played on. Triangle rather
+     * than sine for the same reason: its odd harmonics put audible energy at
+     * 186 and 310Hz, so a small speaker still conveys the drop even when it
+     * cannot reproduce the fundamental at all.
+     */
     this.voice({
-      at, freq: 340 - tier * 26, to: 44, duration: 0.085 + tier * 0.01, type: 'triangle', gain: 0.55,
+      at,
+      freq: (352 - tier * 28) * vary,
+      to: 62,
+      duration: 0.08 + tier * 0.012,
+      type: 'triangle',
+      gain: 0.55,
     });
 
     // Started a beat late and pitched below the punch, so the hit decays into
-    // something instead of leaving a hole. Long enough to feel like the room
-    // absorbed it.
+    // something instead of leaving a hole. Heavier blades ring on noticeably
+    // longer, which is most of what separates a big hit from a small one.
     this.voice({
-      at: at + 0.008, freq: 110, to: 46, duration: 0.24 + tier * 0.04, type: 'sine', gain: 0.34,
+      at: at + 0.008,
+      freq: 132 * vary,
+      to: 74,
+      duration: 0.22 + tier * 0.05,
+      type: 'sine',
+      gain: 0.32,
     });
 
-    // A breath of air, a quarter of its old length and less than half its old
-    // level. Enough to sit under the hit; not enough to become the hit.
-    this.hiss(0.06, 1200, 300, 0.12);
+    // A breath of air under the hit. Never enough to become the hit.
+    this.hiss(0.055, 1100, 320, 0.11);
   }
 
   /** Forging a bigger blade — a short rising arpeggio. */
