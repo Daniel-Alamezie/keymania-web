@@ -24,22 +24,30 @@ export default function ProfileDashboard() {
   const { profile, loading, error, anonymous, saveName, saveHandle } = useServerProfile();
   const account = useAccount();
 
-  if (loading) return <Shell><p className={styles.muted}>Loading your record…</p></Shell>;
+  if (loading) {
+    return <Shell><Notice><p className={styles.muted}>Loading your record…</p></Notice></Shell>;
+  }
 
   if (anonymous) {
     return (
       <Shell>
-        <p className={styles.muted}>
-          Your profile lives with your account, so your name and history follow you
-          between devices.
-        </p>
-        <LoginLink className={`btn btn-primary ${styles.loginBtn}`}>Sign in</LoginLink>
+        <Notice>
+          <p className={styles.muted}>
+            Your profile lives with your account, so your name and history follow you
+            between devices.
+          </p>
+          <LoginLink className={`btn btn-primary ${styles.loginBtn}`}>Sign in</LoginLink>
+        </Notice>
       </Shell>
     );
   }
 
   if (error || !profile) {
-    return <Shell><p className={styles.error}>{error ?? 'Could not load your record.'}</p></Shell>;
+    return (
+      <Shell>
+        <Notice><p className={styles.error}>{error ?? 'Could not load your record.'}</p></Notice>
+      </Shell>
+    );
   }
 
   // The API stores newest-first; a chart reads left-to-right through time.
@@ -58,152 +66,152 @@ export default function ProfileDashboard() {
   return (
     <Shell>
       {/*
-        * Who you are, before anything you can change about it.
+        * Two boxes, not one box with columns drawn in it.
         *
-        * The same pairing the public card uses, and deliberately so: this is
-        * how other players see you, so recognising yourself here is the point.
-        * The name is what people read and the handle is what identifies them —
-        * showing only one would leave you unable to tell which is which when
-        * two players share a display name.
+        * Friends and your record are separate things and now look it. Both
+        * inside a single panel is what made every rearrangement still read as
+        * one slab.
+        *
+        * Ordered record-then-friends in the DOM and placed by grid area, so the
+        * two need not agree: a phone gets the record first, which is what
+        * someone opening their profile came for, while a desktop puts friends
+        * in the margin the record was never going to use.
         */}
-      <header className={styles.identity}>
-        <h1 className={`${styles.identityName} pixel-font`}>
-          {profile.displayName || account.displayName}
-        </h1>
-        {profile.handle && <p className={styles.identityHandle}>@{profile.handle}</p>}
-      </header>
+      <div className={styles.layout}>
+        <div className={`panel ${styles.recordBox}`}>
+          {/*
+            * Who you are, before anything you can change about it. The same
+            * pairing the public card uses, deliberately — that is how other
+            * players see you, so recognising yourself here is the point, and it
+            * is the one place that shows which of your two names is which.
+            */}
+          <header className={styles.identity}>
+            <h1 className={`${styles.identityName} pixel-font`}>
+              {profile.displayName || account.displayName}
+            </h1>
+            {profile.handle && <p className={styles.identityHandle}>@{profile.handle}</p>}
+          </header>
 
-      {/*
-        * Two columns rather than one long strip.
-        *
-        * Every section used to be stacked full width in a 720px column, which
-        * on any desktop meant a page of empty space either side and a scroll
-        * long enough to lose the bottom of.
-        *
-        * The split is by what you do with a thing rather than by what it is.
-        * The left is everything you read or act on — your record, and your
-        * people. The right is the two fields you change, which you touch once
-        * and then leave alone for months.
-        *
-        * Ordered main-then-side in the DOM so that collapsing to one column on
-        * a phone leaves the stats first, where somebody opening their profile
-        * is looking, and the settings last, where settings belong.
-        */}
-      <div className={styles.body}>
-        <div className={styles.main}>
+          <div className={styles.body}>
+            <div className={styles.main}>
 
-      <section className={styles.section}>
-        <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
-        <dl className={styles.stats}>
-          <Stat label="Current speed" value={now} unit="wpm" highlight
-                note={movement === null ? 'building a baseline'
-                  : movement === 0 ? 'holding steady'
-                  : `${movement > 0 ? '+' : ''}${movement} wpm vs earlier`} />
-          <Stat label="Best ranked speed" value={profile.bestRankedWpm} unit="wpm"
-                note="what the board orders on" />
-        </dl>
-        <p className={styles.muted}>
-          Speed counts wherever you earn it — practice is still typing. Records
-          below are kept apart, so a run of bot wins never flatters the one that
-          decides the board.
-        </p>
-      </section>
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
+                <dl className={styles.stats}>
+                  <Stat label="Current speed" value={now} unit="wpm" highlight
+                        note={movement === null ? 'building a baseline'
+                          : movement === 0 ? 'holding steady'
+                          : `${movement > 0 ? '+' : ''}${movement} wpm vs earlier`} />
+                  <Stat label="Best ranked speed" value={profile.bestRankedWpm} unit="wpm"
+                        note="what the board orders on" />
+                </dl>
+                <p className={styles.muted}>
+                  Speed counts wherever you earn it — practice is still typing. Records
+                  below are kept apart, so a run of bot wins never flatters the one that
+                  decides the board.
+                </p>
+              </section>
 
-      {/* Two records, never merged. Beating Rookie on a loop is a fine way to
-          get faster and a worthless way to look good. */}
-      <section className={styles.section}>
-        <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
-        <dl className={styles.stats}>
-          <Stat label="Duels" value={ranked.duels} highlight />
-          <Stat label="Record" value={ranked.wins}
-                suffix={`W — ${ranked.duels - ranked.wins}L`} />
-          <Stat label="Win rate" value={rankedRate ?? 0} unit="%"
-                note={rankedRate === null ? 'no ranked duels yet' : undefined} />
-          <Stat label="Best speed" value={ranked.bestWpm} unit="wpm" />
-          <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
-          <Stat label="Best combo" value={ranked.bestCombo} prefix="x" />
-        </dl>
-        {ranked.duels === 0 && (
-          <p className={styles.muted}>
-            Nothing here yet. Beat another player and this fills in — it is the only
-            record that reaches the leaderboard.
-          </p>
-        )}
-      </section>
+              {/* Two records, never merged. Beating Rookie on a loop is a fine way to
+                  get faster and a worthless way to look good. */}
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
+                <dl className={styles.stats}>
+                  <Stat label="Duels" value={ranked.duels} highlight />
+                  <Stat label="Record" value={ranked.wins}
+                        suffix={`W — ${ranked.duels - ranked.wins}L`} />
+                  <Stat label="Win rate" value={rankedRate ?? 0} unit="%"
+                        note={rankedRate === null ? 'no ranked duels yet' : undefined} />
+                  <Stat label="Best speed" value={ranked.bestWpm} unit="wpm" />
+                  <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
+                  <Stat label="Best combo" value={ranked.bestCombo} prefix="x" />
+                </dl>
+                {ranked.duels === 0 && (
+                  <p className={styles.muted}>
+                    Nothing here yet. Beat another player and this fills in — it is the only
+                    record that reaches the leaderboard.
+                  </p>
+                )}
+              </section>
 
-      <section className={styles.section}>
-        <h2 className={`${styles.heading} pixel-font`}>Practice · versus bots</h2>
-        <dl className={styles.stats}>
-          <Stat label="Duels" value={practice.duels} />
-          <Stat label="Record" value={practice.wins}
-                suffix={`W — ${practice.duels - practice.wins}L`} />
-          <Stat label="Win rate" value={practiceRate ?? 0} unit="%"
-                note={practiceRate === null ? 'no practice yet' : undefined} />
-          <Stat label="Best speed" value={practice.bestWpm} unit="wpm" />
-          <Stat label="Best accuracy" value={practice.bestAccuracy} unit="%" />
-          <Stat label="Best combo" value={practice.bestCombo} prefix="x" />
-        </dl>
-      </section>
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>Practice · versus bots</h2>
+                <dl className={styles.stats}>
+                  <Stat label="Duels" value={practice.duels} />
+                  <Stat label="Record" value={practice.wins}
+                        suffix={`W — ${practice.duels - practice.wins}L`} />
+                  <Stat label="Win rate" value={practiceRate ?? 0} unit="%"
+                        note={practiceRate === null ? 'no practice yet' : undefined} />
+                  <Stat label="Best speed" value={practice.bestWpm} unit="wpm" />
+                  <Stat label="Best accuracy" value={practice.bestAccuracy} unit="%" />
+                  <Stat label="Best combo" value={practice.bestCombo} prefix="x" />
+                </dl>
+              </section>
 
-      <section className={styles.section}>
-        <h2 className={`${styles.heading} pixel-font`}>How you have been going</h2>
-        <WpmChart points={points} />
-      </section>
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>How you have been going</h2>
+                <WpmChart points={points} />
+              </section>
 
-      {profile.history.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={`${styles.heading} pixel-font`}>Recent duels</h2>
-          <ul className={styles.list}>
-            {profile.history.slice(0, 8).map((duel) => (
-              <RecentRow key={duel.at} duel={duel} />
-            ))}
-          </ul>
-        </section>
-      )}
+              {profile.history.length > 0 && (
+                <section className={styles.section}>
+                  <h2 className={`${styles.heading} pixel-font`}>Recent duels</h2>
+                  <ul className={styles.list}>
+                    {profile.history.slice(0, 8).map((duel) => (
+                      <RecentRow key={duel.at} duel={duel} />
+                    ))}
+                  </ul>
+                </section>
+              )}
 
+            </div>
+
+            {/* The two fields you change, alongside the record you read. Sticky
+                on tall screens so a field you are typing into stays put. */}
+            <aside className={styles.side}>
+              <NameEditor
+                current={profile.displayName}
+                suggestion={account.displayName}
+                onSave={saveName}
+              />
+
+              <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
+            </aside>
+          </div>
         </div>
 
-        {/*
-          * Its own column, to the left of the record on a wide screen.
-          *
-          * Ordered after the record in the DOM and placed by grid area rather
-          * than by source order, so the two do not have to agree: on a phone
-          * the record comes first, because that is what someone opening their
-          * profile came to see, while on a desktop friends sits in what was
-          * otherwise empty margin.
-          */}
-        <div className={styles.friends}>
+        <aside className={`panel ${styles.friendsBox}`}>
           <FriendsPanel />
-        </div>
-
-        {/* Sticky on tall screens, so the fields you might be typing into stay
-            put while the record scrolls past them. */}
-        <aside className={styles.side}>
-          <NameEditor
-            current={profile.displayName}
-            suggestion={account.displayName}
-            onSave={saveName}
-          />
-
-          <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
         </aside>
       </div>
     </Shell>
   );
 }
 
+/**
+ * The page around the boxes, rather than a box itself.
+ *
+ * This used to be one panel with everything inside it and columns drawn within,
+ * which is why the page kept reading as a single slab however the insides were
+ * rearranged — the border said "this is all one thing" no matter how it was
+ * divided. The title bar belongs to the page; what sits below it are separate
+ * containers, each holding one idea.
+ */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className={styles.screen}>
-      <div className={`panel ${styles.card}`}>
-        <header className={styles.header}>
-          <h1 className={`${styles.title} pixel-font`}>Profile</h1>
-          <Link href="/" className={styles.back}>← Back to the arena</Link>
-        </header>
-        {children}
-      </div>
+      <header className={styles.header}>
+        <h1 className={`${styles.title} pixel-font`}>Profile</h1>
+        <Link href="/" className={styles.back}>← Back to the arena</Link>
+      </header>
+      {children}
     </main>
   );
+}
+
+/** A single panel, for the states that have nothing to lay out. */
+function Notice({ children }: { children: React.ReactNode }) {
+  return <div className={`panel ${styles.notice}`}>{children}</div>;
 }
 
 /**

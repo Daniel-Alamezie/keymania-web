@@ -1,9 +1,8 @@
+/* No border and no background of its own: this fills a panel that already has
+   both, and drawing another inside it is a box in a box. */
 .section {
-  /* A card rather than a rule across the page. It used to be one more band in a
-     single stacked column; in a sidebar it has to hold its own edges. */
-  background: var(--bg-deep);
-  border: 2px solid var(--edge-soft);
-  padding: var(--gap-md);
+  display: flex;
+  flex-direction: column;
 }
 
 .heading {
@@ -28,9 +27,6 @@
 .input {
   flex: 1 1 200px;
   min-width: 0;
-  /* Capped so a full-width column does not stretch one short field across the
-     whole page — a handle is at most sixteen characters. */
-  max-width: 340px;
 }
 
 /* Height is held even when empty so accepting a request does not shunt the
@@ -63,15 +59,16 @@
 /* Two people per row once the column is wide enough to hold a name, a handle
    and two buttons twice over. A friends list is the one thing on this page that
    grows without limit, so it is the one thing worth making denser. */
-@media (min-width: 720px) {
-  .list {
-    /* min(100%, 300px), not a bare 300px. The media query asks about the
-       viewport, but this grid lives in a column that may be narrower than its
-       own minimum — a bare minmax(300px, …) would then build a track wider than
-       the container and push the list out of it. Clamping to 100% collapses to
-       a single column instead of overflowing. */
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  }
+/*
+ * One person per row, however wide the page gets.
+ *
+ * The column this lives in is about 320px whatever the viewport does, so a
+ * media query on viewport width tells you nothing useful about the space
+ * available here. min(100%, …) stays as the guard: it is what stops a track
+ * minimum wider than its container pushing the list out of the box.
+ */
+.list {
+  grid-template-columns: minmax(min(100%, 260px), 1fr);
 }
 
 .row {
