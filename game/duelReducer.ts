@@ -1,4 +1,6 @@
-import { applyDamage, bladeTier, keepsCombo, scoreWord, wpmFor } from './engine';
+import {
+  applyDamage, bladeTier, keepsCombo, sanitiseElapsed, scoreWord, wpmFor,
+} from './engine';
 import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
 import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
@@ -177,7 +179,13 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       });
 
       const sentenceDone = advanced >= state.sentence.length;
-      const wpm = wpmFor(keystrokes, Math.max(1, action.now - state.wordStartedAt));
+      // Through the same clamp the damage uses, rather than raw elapsed with a
+      // 1ms floor. Unclamped, a timing artefact reported a whole word typed in
+      // 36 milliseconds as a peak of 1333 wpm.
+      const wpm = wpmFor(
+        keystrokes,
+        sanitiseElapsed(keystrokes, action.now - state.wordStartedAt),
+      );
 
       // Which word of the whole script this was, so charged words line up with
       // whatever the server marked.

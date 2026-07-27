@@ -48,8 +48,30 @@ export function keepsCombo(gapMs: number): boolean {
 }
 
 /** Score a completed word into damage, combo state and a blade tier. */
+/** Lower bound on how fast a word can plausibly be typed, in ms per character. */
+export const MIN_MS_PER_CHAR = 28;
+
+/**
+ * Clamp a word's duration into a believable range.
+ *
+ * This exists on the server to stop a tampered client claiming a 1ms word. It
+ * has to exist here too, for a duller reason: without it the two disagree about
+ * what a fast word is worth, so the client predicts damage the server will not
+ * award and the player watches a big hit get corrected.
+ *
+ * It is also what stops a peak-word figure of 1333 wpm — a whole word in 36
+ * milliseconds — from being reported as though somebody typed it.
+ *
+ * MUST match sanitiseElapsed in keymania-api's lib/scoring.ts.
+ */
+export function sanitiseElapsed(characters: number, claimedMs: number): number {
+  const floor = characters * MIN_MS_PER_CHAR;
+  if (!Number.isFinite(claimedMs) || claimedMs <= 0) return floor;
+  return Math.max(floor, Math.min(claimedMs, COMBO_WINDOW_MS * 4));
+}
+
 export function scoreWord({ characters, elapsedMs, combo }: WordAttempt): DamageResult {
-  const wpm = wpmFor(characters, elapsedMs);
+  const wpm = wpmFor(characters, sanitiseElapsed(characters, elapsedMs));
   const nextCombo = combo + 1;
   const damage = BASE_DAMAGE * speedMultiplier(wpm) * comboMultiplier(combo);
 
