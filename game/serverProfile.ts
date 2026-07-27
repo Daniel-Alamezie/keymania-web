@@ -142,7 +142,12 @@ export function ensureProfile(): Promise<void> {
   // relying on that ordering is exactly how a cache quietly stops working.
   hydrate();
 
-  const fresh = snapshot.profile !== null && Date.now() - fetchedAt < STALE_AFTER_MS;
+  // "Signed out" is an answer, not an absence of one. Treating only a loaded
+  // profile as settled meant every subscriber refetched on mount and every
+  // notify, so a signed-out visitor hammered the endpoint with 401s — three
+  // components now read this store, and the menu made that immediately visible.
+  const settled = snapshot.profile !== null || snapshot.anonymous;
+  const fresh = settled && Date.now() - fetchedAt < STALE_AFTER_MS;
   if (fresh || inflight) return inflight ?? Promise.resolve();
 
   inflight = (async () => {
@@ -152,6 +157,9 @@ export function ensureProfile(): Promise<void> {
       if (response.status === 401) {
         forgetProfile();
         publish({ loading: false, anonymous: true, profile: null });
+        // After forgetProfile, which zeroes it. Without this the answer is
+        // never considered fresh and the request repeats indefinitely.
+        fetchedAt = Date.now();
         return;
       }
       if (!response.ok) {

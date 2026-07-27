@@ -127,6 +127,20 @@ describe('profile cache', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('asks once when signed out, not once per subscriber', async () => {
+    // "Signed out" is an answer. Treating it as an absence meant every reader
+    // refetched on mount and on every notify — three components share this
+    // store, so a signed-out visitor was firing 401s continuously.
+    fetchMock.mockReturnValue(Promise.resolve(new Response('{}', { status: 401 })));
+
+    const store = await freshStore();
+    await store.ensureProfile();
+    await store.ensureProfile();
+    await store.ensureProfile();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('clears a cached record when the session has expired', async () => {
     // A 401 must not leave the previous person's record on screen.
     storage.setItem('keymania.account.v1', JSON.stringify({ profile: PROFILE, at: 0 }));

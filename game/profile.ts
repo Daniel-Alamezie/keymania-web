@@ -77,7 +77,9 @@ export function recordDuel(stats: DuelStats, won: boolean, wpm: number, acc: num
   });
 }
 
-export const winRate = (p: Profile): number =>
-  p.duels === 0 ? 0 : Math.round((p.wins / p.duels) * 100);
+// A second `winRate` used to live here, returning 0 for a player with no
+// duels rather than null. Two functions of the same name disagreeing about
+// what "no record" looks like is how the panels drifted apart in the first
+// place — serverProfile's is now the only one.
 
 export type { LocalRecord as Profile } from '@/models/profile';
