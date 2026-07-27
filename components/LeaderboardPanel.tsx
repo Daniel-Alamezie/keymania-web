@@ -66,7 +66,7 @@ export default function LeaderboardPanel() {
 
       {status === 'ready' && entries.length === 0 && (
         <p className={styles.empty}>
-          Nobody has been ranked yet. Win a duel against a human and the board is yours.
+          Nobody has been ranked yet. Beat another player and the board is yours.
         </p>
       )}
 

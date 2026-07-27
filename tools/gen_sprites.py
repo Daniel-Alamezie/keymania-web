@@ -600,6 +600,52 @@ def make_flame(frame: int, palette: tuple) -> list[list[tuple]]:
 
 
 # --------------------------------------------------------------------------
+# latest marker — a sparkle that sits on the newest point of the trend chart
+#
+# The chart is a wall of identical squares; this is what makes "the duel you
+# just played" findable without reading the axis. Three frames, cycled by CSS
+# like the torches and the podium flames.
+# --------------------------------------------------------------------------
+MARKER_SIZE = 13
+
+MARKER_CORE = (255, 250, 226, 255)
+MARKER_MID = (255, 214, 110, 255)
+MARKER_TIP = (255, 170, 60, 220)
+
+
+def make_marker(frame: int) -> list[list[tuple]]:
+    canvas = new_canvas(MARKER_SIZE, MARKER_SIZE)
+    c = MARKER_SIZE // 2
+
+    # Arms breathe out as the core tightens, so it pulses rather than simply
+    # flashing on and off.
+    arm = (3, 5, 4)[frame]
+    diag = (1, 2, 2)[frame]
+    core = (2, 1, 2)[frame]
+
+    # Four straight arms, brightest at the base.
+    for step in range(1, arm + 1):
+        colour = MARKER_MID if step <= arm - 1 else MARKER_TIP
+        put(canvas, c + step, c, colour)
+        put(canvas, c - step, c, colour)
+        put(canvas, c, c + step, colour)
+        put(canvas, c, c - step, colour)
+
+    # Shorter diagonals turn a plus into a sparkle.
+    for step in range(1, diag + 1):
+        for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            put(canvas, c + dx * step, c + dy * step, MARKER_TIP)
+
+    # Solid centre.
+    for y in range(-core, core + 1):
+        for x in range(-core, core + 1):
+            if abs(x) + abs(y) <= core:
+                put(canvas, c + x, c + y, MARKER_CORE)
+
+    return canvas
+
+
+# --------------------------------------------------------------------------
 def main() -> None:
     print("blades:")
     for i, (length, thick, steel, glow) in enumerate(BLADE_TIERS, start=1):
@@ -622,6 +668,10 @@ def main() -> None:
     for name, palette in FLAME_PALETTES.items():
         for f in range(3):
             save(make_flame(f, palette), f"flame-{name}-{f + 1}.png")
+
+    print("chart marker:")
+    for f in range(3):
+        save(make_marker(f), f"marker-{f + 1}.png")
 
     print("environment:")
     # Tiles are saved unscaled; CSS repeats them and scales with pixelated rendering.

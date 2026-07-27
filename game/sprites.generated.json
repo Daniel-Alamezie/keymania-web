@@ -83,6 +83,18 @@
     "width": 96,
     "height": 96
   },
+  "marker-1": {
+    "width": 52,
+    "height": 52
+  },
+  "marker-2": {
+    "width": 52,
+    "height": 52
+  },
+  "marker-3": {
+    "width": 52,
+    "height": 52
+  },
   "power-mend": {
     "width": 64,
     "height": 64

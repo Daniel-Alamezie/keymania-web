@@ -57,8 +57,8 @@ export default function RecordPanel() {
     <Shell
       note={
         showing === 'ranked'
-          ? 'Duels against humans. Practice is kept separately.'
-          : 'Bot practice. Duel a human and your ranked record starts here.'
+          ? 'Duels against other players. Practice is kept separately.'
+          : 'Bot practice. Play another player and your ranked record starts here.'
       }
     >
       {tally.duels === 0 ? <Empty /> : <Body tally={tally} recent={profile.history.slice(0, 5)} />}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import styles from './WpmChart.module.css';
 
 export interface ChartPoint {
@@ -13,7 +14,7 @@ export interface ChartPoint {
  *  authoring pixel art small and upscaling it. */
 const W = 320;
 const H = 130;
-const PAD = { top: 12, right: 10, bottom: 20, left: 28 };
+const PAD = { top: 12, right: 12, bottom: 20, left: 28 };
 
 const PLOT_W = W - PAD.left - PAD.right;
 const PLOT_H = H - PAD.top - PAD.bottom;
@@ -22,18 +23,29 @@ const PLOT_H = H - PAD.top - PAD.bottom;
 const MIN_RANGE = 10;
 
 interface Props {
-  points: ChartPoint[];
   /** Oldest first. */
+  points: ChartPoint[];
   className?: string;
+}
+
+interface Placed extends ChartPoint {
+  /** Position along the shared timeline, so both lines share one x axis. */
+  index: number;
+  x: number;
+  y: number;
 }
 
 /**
  * Speed across recent duels.
  *
+ * Two lines rather than one: duels against other players and practice against
+ * bots are different things measured the same way, and a single line mixing
+ * them implies a trend that is really two. They share one x axis — the order
+ * the duels happened in — so you can still read them against each other.
+ *
  * Hand-rolled rather than pulled from a charting library: the whole visual
  * language here is square edges and hard pixels, which is the one thing chart
- * libraries are built to smooth away. It is also ~100 lines against ~50kb of
- * dependency.
+ * libraries are built to smooth away.
  *
  * The y-axis is zoomed to the data rather than anchored at zero. Anchoring at
  * zero is the honest default for comparing magnitudes, but this chart answers
@@ -41,6 +53,8 @@ interface Props {
  * axis. The axis is labelled with its real bounds so the zoom is never hidden.
  */
 export default function WpmChart({ points, className }: Props) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
   if (points.length === 0) {
     return (
       <p className={styles.empty}>
@@ -59,64 +73,136 @@ export default function WpmChart({ points, className }: Props) {
   const lo = Math.max(0, Math.floor(mid - span * 0.75));
   const hi = Math.ceil(mid + span * 0.75);
 
-  const x = (i: number) =>
+  const xFor = (i: number) =>
     points.length === 1 ? PAD.left + PLOT_W / 2 : PAD.left + (i * PLOT_W) / (points.length - 1);
-  const y = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * PLOT_H;
+  const yFor = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * PLOT_H;
 
-  const line = points.map((p, i) => `${x(i)},${y(p.wpm)}`).join(' ');
+  const placed: Placed[] = points.map((p, index) => ({
+    ...p, index, x: xFor(index), y: yFor(p.wpm),
+  }));
+
+  // Each line joins only its own kind, but keeps its place on the shared
+  // timeline — so a gap in one line is a stretch where you played the other.
+  const ranked = placed.filter((p) => p.ranked);
+  const practice = placed.filter((p) => !p.ranked);
+
   const average = values.reduce((sum, v) => sum + v, 0) / values.length;
+  const latest = placed[placed.length - 1];
+  const active = hovered === null ? null : placed[hovered];
+
+  const path = (list: Placed[]) => list.map((p) => `${p.x},${p.y}`).join(' ');
 
   return (
     <figure className={`${styles.wrap} ${className ?? ''}`}>
-      <svg
-        className={styles.svg}
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label={
-          `Speed across the last ${points.length} duels, ` +
-          `from ${rawLo} to ${rawHi} words per minute, averaging ${Math.round(average)}.`
-        }
-      >
-        {/* Horizontal guides at the band edges and the middle. */}
-        {[lo, Math.round((lo + hi) / 2), hi].map((v) => (
-          <g key={v}>
-            <line className={styles.grid} x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} />
-            <text className={styles.axis} x={PAD.left - 5} y={y(v) + 3} textAnchor="end">{v}</text>
-          </g>
-        ))}
+      <div className={styles.plot}>
+        <svg
+          className={styles.svg}
+          viewBox={`0 0 ${W} ${H}`}
+          role="img"
+          aria-label={
+            `Speed across the last ${points.length} duels, ` +
+            `from ${rawLo} to ${rawHi} words per minute, averaging ${Math.round(average)}.`
+          }
+          onMouseLeave={() => setHovered(null)}
+        >
+          {/* Horizontal guides at the band edges and the middle. */}
+          {[lo, Math.round((lo + hi) / 2), hi].map((v) => (
+            <g key={v}>
+              <line className={styles.grid} x1={PAD.left} x2={W - PAD.right} y1={yFor(v)} y2={yFor(v)} />
+              <text className={styles.axis} x={PAD.left - 5} y={yFor(v) + 3} textAnchor="end">{v}</text>
+            </g>
+          ))}
 
-        {/* The player's mean, so a single fast run is not mistaken for a trend. */}
-        <line
-          className={styles.average}
-          x1={PAD.left}
-          x2={W - PAD.right}
-          y1={y(average)}
-          y2={y(average)}
-        />
-
-        <polyline className={styles.line} points={line} />
-
-        {/* Square markers, not circles — this is a pixel-art game. Ranked duels
-            are gold; bot practice is muted, so the graph never pretends a
-            practice run counted for the standings. */}
-        {points.map((p, i) => (
-          <rect
-            key={p.at}
-            className={styles.dot}
-            data-ranked={p.ranked || undefined}
-            x={x(i) - 2.5}
-            y={y(p.wpm) - 2.5}
-            width={5}
-            height={5}
+          {/* The mean across everything, so one fast run is not read as a trend. */}
+          <line
+            className={styles.average}
+            x1={PAD.left} x2={W - PAD.right}
+            y1={yFor(average)} y2={yFor(average)}
           />
-        ))}
-      </svg>
+
+          {practice.length > 1 && <polyline className={styles.linePractice} points={path(practice)} />}
+          {ranked.length > 1 && <polyline className={styles.lineRanked} points={path(ranked)} />}
+
+          {/* Square markers, not circles — this is a pixel-art game. */}
+          {placed.map((p) => (
+            <rect
+              key={p.at}
+              className={styles.dot}
+              data-ranked={p.ranked || undefined}
+              data-active={p.index === hovered || undefined}
+              x={p.x - 2.5} y={p.y - 2.5} width={5} height={5}
+            />
+          ))}
+
+          {/* A sparkle on the duel you just played, so it is findable in a wall
+              of identical squares. Three frames cycled in CSS, like the torches. */}
+          <g className={styles.latest} transform={`translate(${latest.x - 6.5} ${latest.y - 6.5})`}>
+            {[1, 2, 3].map((frame) => (
+              <image
+                key={frame}
+                className={styles.latestFrame}
+                href={`/sprites/marker-${frame}.png`}
+                width={13} height={13}
+              />
+            ))}
+          </g>
+
+          {/* Generous invisible hit areas — a 5px square is not a pointer
+              target, and on the shared axis the columns never overlap. */}
+          {placed.map((p) => (
+            <rect
+              key={`hit-${p.at}`}
+              className={styles.hit}
+              x={p.x - PLOT_W / (points.length * 2) - 2}
+              y={PAD.top}
+              width={PLOT_W / points.length + 4}
+              height={PLOT_H}
+              tabIndex={0}
+              role="button"
+              aria-label={describe(p)}
+              onMouseEnter={() => setHovered(p.index)}
+              onFocus={() => setHovered(p.index)}
+              onBlur={() => setHovered(null)}
+            />
+          ))}
+        </svg>
+
+        {active && (
+          <div
+            className={styles.tip}
+            // Positioned as a percentage of the viewBox so it tracks the point
+            // through every scale the chart is rendered at.
+            style={{ left: `${(active.x / W) * 100}%`, top: `${(active.y / H) * 100}%` }}
+            data-flip={active.x > W * 0.6 || undefined}
+            role="status"
+          >
+            <span className={`${styles.tipWpm} pixel-font`}>{active.wpm} wpm</span>
+            <span className={styles.tipMeta} data-won={active.won || undefined}>
+              {active.won ? 'Won' : 'Lost'} · {active.ranked ? 'player' : 'bot'}
+            </span>
+            <span className={styles.tipWhen}>{when(active.at)}</span>
+          </div>
+        )}
+      </div>
 
       <figcaption className={styles.legend}>
-        <span className={styles.key} data-ranked>Ranked duel</span>
-        <span className={styles.key}>Bot practice</span>
+        <span className={styles.key} data-series="ranked">Versus players</span>
+        <span className={styles.key} data-series="practice">Versus bots</span>
         <span className={styles.avgKey}>Average {Math.round(average)} wpm</span>
       </figcaption>
     </figure>
   );
+}
+
+const describe = (p: Placed) =>
+  `${p.wpm} words per minute, ${p.won ? 'won' : 'lost'}, against ${p.ranked ? 'a player' : 'a bot'}.`;
+
+/** Relative, because "3 days ago" is what a player actually wants to know. */
+function when(at: number): string {
+  const days = Math.floor((Date.now() - at) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'last week';
+  return `${Math.floor(days / 7)} weeks ago`;
 }

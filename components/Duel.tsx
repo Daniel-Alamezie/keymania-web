@@ -455,7 +455,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 caption={
                   isOut(fighter) ? 'out'
                     : marked ? 'your target'
-                    : isMulti ? 'human'
+                    : isMulti ? 'player'
                     : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
                 }
               />

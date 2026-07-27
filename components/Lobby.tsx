@@ -87,7 +87,7 @@ export default function Lobby({
 
   return (
     <div className={`panel ${styles.lobby}`}>
-      <h2 className={`${styles.heading} pixel-font`}>Duel a human</h2>
+      <h2 className={`${styles.heading} pixel-font`}>Play other players</h2>
 
       <label className={styles.nameRow}>
         <span className="eyebrow">Your name</span>

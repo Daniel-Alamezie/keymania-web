@@ -3,6 +3,12 @@
   width: 100%;
 }
 
+/* Anchors the hover tip, which is positioned as a percentage of the chart. */
+.plot {
+  position: relative;
+  width: 100%;
+}
+
 .svg {
   display: block;
   width: 100%;
@@ -15,16 +21,24 @@
   stroke-width: 1;
 }
 
+/* Purple rather than the old blue: blue now belongs to the practice line, and
+   two different meanings sharing a colour is how a chart stops being readable. */
 .average {
-  stroke: var(--player);
+  stroke: var(--muted);
   stroke-width: 1;
   stroke-dasharray: 3 3;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
-.line {
+/* ---------- The two series --------------------------------------------------
+ *
+ * Duels against players and practice against bots are different things
+ * measured the same way. One line mixing them implies a trend that is really
+ * two, so they get a line each on a shared timeline.
+ * -------------------------------------------------------------------------- */
+.lineRanked,
+.linePractice {
   fill: none;
-  stroke: var(--gold);
   stroke-width: 2;
   /* Mitred joins keep the corners sharp; the default round join sands them off
      and the line stops matching everything around it. */
@@ -32,12 +46,26 @@
   stroke-linecap: square;
 }
 
+.lineRanked { stroke: var(--gold); }
+
+.linePractice {
+  stroke: var(--player);
+  /* Dashed as well as differently coloured, so the two are still tellable
+     apart without relying on colour alone. */
+  stroke-dasharray: 5 3;
+  opacity: 0.85;
+}
+
 .dot {
-  fill: var(--faint);
+  fill: var(--player);
   stroke: var(--bg-deep);
   stroke-width: 1;
+  transition: transform 120ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 .dot[data-ranked] { fill: var(--gold); }
+.dot[data-active] { transform: scale(1.7); }
 
 .axis {
   fill: var(--faint);
@@ -45,6 +73,58 @@
   font-family: var(--font-body), monospace;
 }
 
+/* ---------- The newest point ---------- */
+.latest { pointer-events: none; }
+
+.latestFrame {
+  opacity: 0;
+  animation: twinkle 0.48s steps(1) infinite;
+}
+.latestFrame:nth-child(1) { animation-delay: 0s; }
+.latestFrame:nth-child(2) { animation-delay: 0.16s; }
+.latestFrame:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes twinkle {
+  0%, 33% { opacity: 1; }
+  34%, 100% { opacity: 0; }
+}
+
+/* ---------- Hover ---------- */
+.hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.hit:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.tip {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  /* Sits above and to the right of the point, clear of the cursor. */
+  transform: translate(10px, -115%);
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* Flips before it can run off the right edge. */
+.tip[data-flip] { transform: translate(-100%, -115%) translateX(-10px); }
+
+.tipWpm { font-size: 12px; color: var(--gold); }
+
+.tipMeta { font-size: 10px; color: var(--opponent); }
+.tipMeta[data-won] { color: var(--good); }
+
+.tipWhen { font-size: 10px; color: var(--faint); }
+
+/* ---------- Legend ---------- */
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -63,12 +143,13 @@
   height: 7px;
   margin-right: 6px;
   vertical-align: middle;
-  background: var(--faint);
+  background: var(--player);
 }
-.key[data-ranked]::before { background: var(--gold); }
+.key[data-series='ranked']::before { background: var(--gold); }
+
 .avgKey::before {
   height: 2px;
-  background: var(--player);
+  background: var(--muted);
 }
 
 .empty {

@@ -214,7 +214,7 @@ export default function Game() {
           ))}
         </div>
 
-          <span className="eyebrow">Or duel a human</span>
+          <span className="eyebrow">Or play other players</span>
           {account.signedIn ? (
             <button className={`btn btn-primary ${styles.full}`} onClick={openLobby}>
               Multiplayer
@@ -224,7 +224,7 @@ export default function Game() {
             // Bots stay open to everyone; only human duels need an account,
             // because only those results are server-verified enough to rank.
             <LoginLink className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
-              Sign in to duel humans
+              Sign in to play others
               <small className="btn-sub">Google or email · unlocks the leaderboard</small>
             </LoginLink>
           )}

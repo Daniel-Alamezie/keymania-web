@@ -32,7 +32,7 @@ export default function AccountBar() {
       <div className={styles.bar}>
         <LoginLink className={`btn btn-ghost ${styles.action}`}>
           Sign in
-          <small className="btn-sub">to duel humans</small>
+          <small className="btn-sub">to play others</small>
         </LoginLink>
       </div>
     );

@@ -77,7 +77,7 @@ export default function ProfileDashboard() {
       {/* Two records, never merged. Beating Rookie on a loop is a fine way to
           get faster and a worthless way to look good. */}
       <section className={styles.section}>
-        <h2 className={`${styles.heading} pixel-font`}>Ranked · versus humans</h2>
+        <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
         <dl className={styles.stats}>
           <Stat label="Duels" value={ranked.duels} highlight />
           <Stat label="Record" value={ranked.wins}
@@ -90,7 +90,7 @@ export default function ProfileDashboard() {
         </dl>
         {ranked.duels === 0 && (
           <p className={styles.muted}>
-            Nothing here yet. Duel a human and this fills in — it is the only
+            Nothing here yet. Beat another player and this fills in — it is the only
             record that reaches the leaderboard.
           </p>
         )}
