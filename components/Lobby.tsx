@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ROOM_SIZES, type RoomSize, type RoomSummary, type SocketStatus } from '@/game/protocol';
+import type { SocketStatus } from '@/models/protocol';
+// ROOM_SIZES is a value, not a type — it is mapped over to render the picker.
+import { ROOM_SIZES, type RoomSize, type RoomSummary } from '@/models/room';
 import styles from './Lobby.module.css';
 
 interface LobbyProps {

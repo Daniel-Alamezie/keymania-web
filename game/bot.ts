@@ -1,16 +1,9 @@
 import { BOT_PROFILES } from './constants';
 import { randomSentence } from './sentences';
 import { toWords } from './engine';
-import type { Difficulty } from './types';
+import type { Difficulty } from '@/models/bot';
+import type { BotWordEvent } from '@/models/bot';
 
-export interface BotWordEvent {
-  characters: number;
-  elapsedMs: number;
-  /** 0 -> 1 progress through the bot's current sentence, for the HUD. */
-  progress: number;
-  /** The bot mistyped this word, which breaks its combo just like a player's. */
-  fumbled: boolean;
-}
 
 export interface BotHandle {
   stop: () => void;
@@ -67,3 +60,5 @@ export function startBot(difficulty: Difficulty, onWord: (event: BotWordEvent) =
     },
   };
 }
+
+export type { BotWordEvent } from '@/models/bot';

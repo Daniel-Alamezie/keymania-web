@@ -1,7 +1,7 @@
 'use client';
 
-import type { DuelStats } from './duelReducer';
 import { recordDuel } from './profile';
+import type { FinishedDuel } from '@/models/profile';
 import { invalidateProfile } from './serverProfile';
 
 /**
@@ -19,15 +19,6 @@ import { invalidateProfile } from './serverProfile';
  * The local record is written in every case: it is what the menu panels read,
  * so the arena updates the moment a duel ends without waiting on a round trip.
  */
-export interface FinishedDuel {
-  stats: DuelStats;
-  won: boolean;
-  wpm: number;
-  accuracy: number;
-  signedIn: boolean;
-  /** Absent for bot practice. */
-  multiplayer: boolean;
-}
 
 export function saveResult({ stats, won, wpm, accuracy, signedIn, multiplayer }: FinishedDuel): void {
   recordDuel(stats, won, wpm, accuracy);
@@ -48,3 +39,5 @@ export function saveResult({ stats, won, wpm, accuracy, signedIn, multiplayer }:
     body: JSON.stringify({ wpm, accuracy, won, maxCombo: stats.maxCombo, opponent: 'Bot' }),
   }).catch(() => {});
 }
+
+export type { FinishedDuel } from '@/models/profile';

@@ -2,7 +2,8 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PROJECTILE_FLIGHT_MS } from '@/game/constants';
-import type { BladeTier, Side } from '@/game/types';
+import type { Side } from '@/models/duel';
+import type { BladeTier } from '@/models/scoring';
 
 export interface EffectsHandle {
   /** Send a blade flying from one fighter toward the other. */

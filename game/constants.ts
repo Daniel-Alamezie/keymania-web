@@ -1,4 +1,5 @@
-import type { BladeTier, Difficulty } from './types';
+import type { Difficulty } from '@/models/bot';
+import type { BladeTier } from '@/models/scoring';
 
 /** Starting health for both fighters. */
 export const MAX_HEALTH = 100;

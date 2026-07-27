@@ -2,7 +2,7 @@
 
 import PixelSprite, { type SpriteName } from './PixelSprite';
 import { TIER_THRESHOLDS } from '@/game/constants';
-import type { BladeTier } from '@/game/types';
+import type { BladeTier } from '@/models/scoring';
 import styles from './ComboMeter.module.css';
 
 interface ComboMeterProps {

@@ -2,7 +2,7 @@ import {
   BASE_DAMAGE, COMBO_STEP, COMBO_WINDOW_MS, FAST_WPM, MAX_COMBO_MULTIPLIER,
   MAX_SPEED_MULTIPLIER, MIN_SPEED_MULTIPLIER, SLOW_WPM, TIER_THRESHOLDS,
 } from './constants';
-import type { BladeTier, DamageResult, WordAttempt } from './types';
+import type { BladeTier, DamageResult, WordAttempt } from '@/models/scoring';
 
 /**
  * Pure scoring rules for KeyMania.

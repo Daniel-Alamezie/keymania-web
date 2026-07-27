@@ -1,6 +1,9 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+// The record's shape lives with the other data models; this file owns the
+// storage and the subscription, not the schema.
+import type { LocalRecord as Profile } from '@/models/profile';
 import type { DuelStats } from './duelReducer';
 
 /**
@@ -11,16 +14,6 @@ import type { DuelStats } from './duelReducer';
  * store with a server snapshot" case that hook exists for. Reading it during
  * render would break hydration; setting it from an effect would cascade renders.
  */
-export interface Profile {
-  name: string;
-  duels: number;
-  wins: number;
-  bestWpm: number;
-  bestAccuracy: number;
-  bestCombo: number;
-  /** Most recent results, newest first. */
-  recent: { wpm: number; accuracy: number; won: boolean; at: number }[];
-}
 
 const KEY = 'keymania.profile.v1';
 const RECENT_LIMIT = 5;
@@ -86,3 +79,5 @@ export function recordDuel(stats: DuelStats, won: boolean, wpm: number, acc: num
 
 export const winRate = (p: Profile): number =>
   p.duels === 0 ? 0 : Math.round((p.wins / p.duels) * 100);
+
+export type { LocalRecord as Profile } from '@/models/profile';

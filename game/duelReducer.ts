@@ -1,98 +1,14 @@
 import { applyDamage, bladeTier, keepsCombo, scoreWord, wpmFor } from './engine';
 import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
-import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER, type PowerKind } from './powers';
-import type { BladeTier, Difficulty, Phase } from './types';
+import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
+import type { Difficulty } from '@/models/bot';
+import type { DuelAction, DuelState, DuelStats, Fighter } from '@/models/duel';
+import type { PowerKind } from '@/models/powers';
+import type { BladeTier } from '@/models/scoring';
 
-export interface DuelStats {
-  wordsTyped: number;
-  charsTyped: number;
-  mistakes: number;
-  maxCombo: number;
-  /** Fastest single word. A burst figure — see `finalWpm` for the honest one. */
-  bestWpm: number;
-  startedAt: number;
-  /** Frozen when the duel ends, so results stop moving once they are shown. */
-  endedAt: number;
-}
 
-export interface DuelState {
-  phase: Phase;
-  difficulty: Difficulty;
-  countdown: number;
 
-  /** Multiplayer duels are driven by the server rather than a local bot. */
-  multiplayer: boolean;
-  /** The shared word script sent by the server; null in solo play. */
-  script: string[] | null;
-  scriptIndex: number;
-
-  /**
-   * Everyone in the duel, in the server's slot order — including you.
-   *
-   * Slots rather than "player and opponent" because that is the language the
-   * server already speaks: it sends healths[], progress[] and targets[] indexed
-   * by slot. Every index bug so far came from translating that into two sides
-   * at the boundary (`1 - mySlot`, and `healths[-1]` for slot 2 of four).
-   * Mirroring the server's shape removes the translation entirely.
-   *
-   * Solo play is simply two fighters: you, and the bot.
-   */
-  fighters: Fighter[];
-  /** Which slot is you. Always 0 in solo. */
-  mySlot: number;
-
-  /** Always carries a trailing space so every word is committed with SPACE. */
-  sentence: string;
-  cursor: number;
-  wordStartedAt: number;
-  lastWordAt: number;
-
-  /** Your own streak. Singular because there is only ever one of you. */
-  playerCombo: number;
-
-  /** Charged words, keyed by flat word index across the whole script. */
-  powers: Record<number, PowerKind>;
-  /** Flat index of the first word of the current sentence. */
-  wordOffset: number;
-  /** Absorbs the next blade aimed at you. */
-  ward: boolean;
-  /** Doubles your next throw. */
-  surge: boolean;
-  /** Most recent power collected, for the pickup flourish. */
-  lastPower: { kind: PowerKind; tick: number } | null;
-  /** Bumped when a ward absorbs a blade. */
-  blockTick: number;
-
-  missTick: number;
-  lastHit: {
-    id: number;
-    /** Who threw it and who wore it. Both needed: with more than two fighters
-     *  neither can be inferred from the other. */
-    fromSlot: number;
-    toSlot: number;
-    damage: number;
-    wpm: number;
-    tier: BladeTier;
-  } | null;
-  hitSeq: number;
-  /** Bumped when the player forges a bigger blade, for the fanfare. */
-  tierUpTick: number;
-  stats: DuelStats;
-  /** Winning slot, or null while it is still live. */
-  winner: number | null;
-}
-
-/** One fighter in the duel. */
-export interface Fighter {
-  name: string;
-  health: number;
-  combo: number;
-  /** How far through the current sentence they are, 0..1, for the HUD. */
-  progress: number;
-  /** The slot their blade currently flies at, or -1 if they have nobody left. */
-  target: number;
-}
 
 export const newFighter = (name: string, target = -1): Fighter =>
   ({ name, health: MAX_HEALTH, combo: 0, progress: 0, target });
@@ -111,32 +27,6 @@ export const isOut = (fighter: Fighter): boolean => fighter.health <= 0;
 /** Whether the local player has been knocked out but the duel continues. */
 export const spectating = (state: DuelState): boolean =>
   isOut(you(state)) && state.winner === null;
-
-export type DuelAction =
-  | { type: 'start'; difficulty: Difficulty }
-  | {
-      type: 'startMulti';
-      script: string[];
-      /** Every player's name in slot order. */
-      roster: string[];
-      mySlot: number;
-      powers: Record<number, PowerKind>;
-    }
-  | { type: 'countdown' }
-  | { type: 'typed'; char: string; now: number }
-  | { type: 'botWord'; characters: number; elapsedMs: number; progress: number; fumbled: boolean }
-  /** `now` is passed in rather than read inside, keeping the reducer pure. */
-  | { type: 'land'; toSlot: number; damage: number; now: number }
-  /** Authoritative health from the server — never computed locally in multiplayer. */
-  | { type: 'setHealths'; healths: number[] }
-  /** Who each fighter is currently aiming at, recomputed by the server. */
-  | { type: 'setTargets'; targets: number[] }
-  | { type: 'setProgress'; slot: number; progress: number }
-  /** Authoritative power state from the server. */
-  | { type: 'setPowers'; ward: boolean; surge: boolean; granted?: PowerKind; blocked?: boolean }
-  | { type: 'finish'; winnerSlot: number; now: number }
-  | { type: 'settle' }
-  | { type: 'reset' };
 
 /** Sentences always end in a space so the final word is committed like any other. */
 const freshSentence = (exclude?: string) => `${randomSentence(exclude)} `;
@@ -503,3 +393,5 @@ export function finalWpm(stats: DuelStats): number {
   if (!stats.startedAt || !stats.endedAt) return 0;
   return Math.round(wpmFor(stats.charsTyped, stats.endedAt - stats.startedAt));
 }
+
+export type { DuelStats, DuelState, Fighter, DuelAction } from '@/models/duel';

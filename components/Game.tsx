@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { BOT_PROFILES } from '@/game/constants';
-import type { RoomSize, RoomSummary } from '@/game/protocol';
+import type { RoomSize, RoomSummary } from '@/models/room';
 import type { PowerKind } from '@/game/powers';
-import type { Difficulty } from '@/game/types';
+import type { Difficulty } from '@/models/bot';
 import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
 import ArenaScene from './ArenaScene';

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useDisplayName } from '@/game/serverProfile';
+import type { BoardEntry, LeaderboardResponse } from '@/models/leaderboard';
 import RankFlame, { type Podium } from './RankFlame';
 import styles from './SidePanel.module.css';
 
@@ -21,13 +22,6 @@ import styles from './SidePanel.module.css';
  * which made a private list look like a public one. An empty board that says so
  * is more honest than a full board that means nothing.
  */
-
-interface BoardEntry {
-  position: number;
-  name: string;
-  wpm: number;
-  accuracy: number;
-}
 
 type Status = 'loading' | 'ready' | 'unavailable';
 
@@ -49,7 +43,7 @@ export default function LeaderboardPanel() {
           setStatus('unavailable');
           return;
         }
-        const { entries: board } = (await response.json()) as { entries: BoardEntry[] };
+        const { entries: board } = (await response.json()) as LeaderboardResponse;
         setEntries(board);
         setStatus('ready');
       } catch {

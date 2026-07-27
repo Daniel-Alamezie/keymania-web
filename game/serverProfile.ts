@@ -2,49 +2,10 @@
 
 // The store owns all the state, so nothing here needs local React state.
 import { useSyncExternalStore } from 'react';
+import type { DuelResult, ServerProfile, Tally } from '@/models/profile';
 
-/**
- * The player's account-backed record.
- *
- * Every call goes through this app's own /api routes rather than straight to
- * the duel server, so the access token stays on the Next.js server — see
- * lib/upstream.ts.
- */
 
-export interface DuelResult {
-  wpm: number;
-  accuracy: number;
-  won: boolean;
-  at: number;
-  /** True only for duels the server refereed; bot practice is never ranked. */
-  ranked: boolean;
-  opponent?: string;
-}
 
-/** One column of the record, tallied separately for ranked and practice. */
-export interface Tally {
-  duels: number;
-  wins: number;
-  bestWpm: number;
-  bestAccuracy: number;
-  bestCombo: number;
-}
-
-export interface ServerProfile {
-  displayName: string;
-  /**
-   * Duels against humans, refereed by the server. The record that counts.
-   *
-   * Kept apart from practice because a combined tally is farmable: the quickest
-   * path to a perfect win rate would be beating the easiest bot on a loop.
-   */
-  ranked: Tally;
-  /** Bot practice. Real progress, but the client reported it about itself. */
-  practice: Tally;
-  bestRankedWpm: number;
-  /** Newest first, as the API stores it. */
-  history: DuelResult[];
-}
 
 export const EMPTY_TALLY: Tally = {
   duels: 0, wins: 0, bestWpm: 0, bestAccuracy: 0, bestCombo: 0,
@@ -344,3 +305,5 @@ export function trend(history: DuelResult[], sample = 10): number | null {
   const mean = (list: DuelResult[]) => list.reduce((sum, d) => sum + d.wpm, 0) / list.length;
   return Math.round(mean(newer) - mean(older));
 }
+
+export type { DuelResult, Tally, ServerProfile } from '@/models/profile';

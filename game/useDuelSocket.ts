@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ClientMessage, ServerMessage, SocketStatus } from './protocol';
+import type { ClientMessage, ServerMessage, SocketStatus } from '@/models/protocol';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? '';
 
