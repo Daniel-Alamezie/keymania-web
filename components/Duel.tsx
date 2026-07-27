@@ -37,6 +37,8 @@ export interface MultiplayerConfig {
   onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) => void;
   /** Forfeit — the opponent is awarded the win. */
   onResign: () => void;
+  /** Ask to play again with the same room. */
+  onRematch: () => void;
 }
 
 interface DuelProps {
@@ -82,6 +84,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [confirmQuit, setConfirmQuit] = useState(false);
 
   const isMulti = Boolean(multiplayer);
+  /**
+   * Who has asked to go again, straight from the server.
+   *
+   * Not derived from a local "I clicked it" flag: the tally has to include
+   * everyone else, and the roster itself can shrink while the screen is up if
+   * somebody leaves.
+   */
+  const [rematch, setRematch] = useState<{ players: string[]; ready: boolean[] } | null>(null);
+  const [asked, setAsked] = useState(false);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -348,6 +359,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       }
 
       if (message.type === 'gameOver') {
+        /**
+         * Each result screen starts with a clean slate.
+         *
+         * Reset here rather than when the next match arms, because this is
+         * where a result screen *begins* — and because clearing it in that
+         * effect meant setting state synchronously inside one, which React
+         * rightly objects to.
+         */
+        setRematch(null);
+        setAsked(false);
+
         const iWon = message.winnerSlot === mySlot;
         if (message.reason === 'resign') {
           setNotice(iWon ? 'Your opponent forfeited.' : 'You forfeited the duel.');
@@ -368,7 +390,13 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       if (message.type === 'opponentLeft') {
         setNotice('Your opponent left the duel.');
+        // No rematch is possible with nobody left, so the tally goes with them.
+        setRematch(null);
         dispatch({ type: 'finish', winnerSlot: mySlot, now: Date.now() });
+      }
+
+      if (message.type === 'rematchState') {
+        setRematch({ players: message.players, ready: message.ready });
       }
     });
 
@@ -625,8 +653,40 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                   Rematch
                 </button>
               )}
+
+              {/*
+                * Against people, "again" is a request rather than a decision —
+                * so the button reports that it has been sent and then waits,
+                * rather than pretending anything has happened yet.
+                */}
+              {isMulti && multiplayer && (
+                <button
+                  className="btn btn-primary"
+                  disabled={asked}
+                  onClick={() => {
+                    setAsked(true);
+                    multiplayer.onRematch();
+                  }}
+                >
+                  {asked ? 'Waiting…' : 'Play again'}
+                </button>
+              )}
+
               <button className="btn btn-ghost" onClick={onExit}>Back to menu</button>
             </div>
+
+            {/* Names, not just a count. In a four-way the useful question is
+                which of them you are still waiting on. */}
+            {isMulti && rematch && (
+              <p className={styles.rematchTally}>
+                {rematch.ready.filter(Boolean).length} of {rematch.players.length} ready
+                <span className={styles.rematchWho}>
+                  {rematch.players
+                    .map((name, i) => (rematch.ready[i] ? name : `${name} …`))
+                    .join(' · ')}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       )}

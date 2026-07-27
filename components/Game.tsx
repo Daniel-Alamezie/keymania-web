@@ -182,6 +182,9 @@ export default function Game() {
             onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>
               send({ action: 'wordComplete', word, elapsedMs, accuracy, typos }),
             onResign: () => send({ action: 'resign' }),
+            // No room code needed: the server knows which room this socket is
+            // in, and that room now outlives the match played in it.
+            onRematch: () => send({ action: 'rematch' }),
           }
         : undefined,
     [match, subscribe, send],

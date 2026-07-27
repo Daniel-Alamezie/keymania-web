@@ -383,3 +383,19 @@
   .arena { min-height: 150px; }
   .screen { padding: 10px 14px 12px; gap: 8px; }
 }
+
+/* Who is still deciding, under the result screen's buttons. */
+.rematchTally {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 14px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.rematchWho {
+  font-size: 10px;
+  color: var(--faint);
+}

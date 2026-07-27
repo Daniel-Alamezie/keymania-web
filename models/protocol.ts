@@ -74,6 +74,15 @@ export type ServerMessage =
     targets?: number[];
   }
   | { type: 'gameOver'; winnerSlot: number; reason?: 'resign' | 'left' }
+  /**
+   * Who has asked to go again, after a duel has finished.
+   *
+   * Sent to everyone in the room, including the people who have not answered —
+   * waiting is much easier when you can see what you are waiting for. The
+   * roster can shrink between messages: somebody leaving the result screen
+   * drops out of it rather than taking the room with them.
+   */
+  | { type: 'rematchState'; players: string[]; ready: boolean[] }
   | { type: 'opponentLeft' }
   | { type: 'error'; message: string };
 
@@ -101,4 +110,13 @@ export type ClientMessage =
   // you lost. It is the same trust as elapsedMs, which the server already
   // accepts and clamps, and lying only helps in one direction.
   | { action: 'wordComplete'; word: string; elapsedMs: number; accuracy?: number; typos?: number }
-  | { action: 'resign' };
+  | { action: 'resign' }
+  /**
+   * Another duel with the people already here.
+   *
+   * Needs no room code: the server knows which room this socket is in, and the
+   * room now outlives the match that was played in it. Unanimous among whoever
+   * is still connected — a rematch is not something you can decline once it has
+   * started.
+   */
+  | { action: 'rematch' };
