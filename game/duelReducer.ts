@@ -59,7 +59,9 @@ export function initialState(difficulty: Difficulty = 'rival'): DuelState {
     fighters: [newFighter('You', 1), newFighter('', 0)],
     mySlot: 0,
     // Fixed, not random — this state is server-rendered too (see OPENING_SENTENCE).
+    previous: '',
     sentence: `${OPENING_SENTENCE} `,
+    upcoming: '',
     cursor: 0,
     wordStartedAt: 0,
     lastWordAt: 0,
@@ -99,6 +101,7 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         ...initialState(action.difficulty),
         phase: 'countdown',
         sentence,
+        upcoming: freshSentence(sentence),
         powers: chargeSentence(sentence.trim()),
       };
     }
@@ -119,6 +122,7 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         // Both players type the same words in the same order — the server sent
         // this script, and it also validates every submission against it.
         sentence: `${action.script[0]} `,
+        upcoming: `${action.script[1 % action.script.length]} `,
       };
 
     case 'countdown': {
@@ -202,11 +206,21 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
       // step; solo play just picks another sentence at random.
       const nextIndex = sentenceDone ? state.scriptIndex + 1 : state.scriptIndex;
       const wordsThisSentence = state.sentence.trim().split(' ').length;
-      const nextSentence = !sentenceDone
-        ? state.sentence
+      // The stream always holds one sentence beyond the one being typed, so
+      // the text flowing in from the right is never invented at the moment
+      // it is needed.
+      // Falls back rather than trusting `upcoming` to be there. It always is
+      // in a duel that started properly, but an empty one would roll the
+      // player onto an empty sentence with nothing to type and no way out.
+      const drawNext = () => (state.script
+        ? `${state.script[nextIndex % state.script.length]} `
+        : freshSentence(state.sentence));
+      const nextSentence = !sentenceDone ? state.sentence : (state.upcoming || drawNext());
+      const nextUpcoming = !sentenceDone
+        ? state.upcoming
         : state.script
-          ? `${state.script[nextIndex % state.script.length]} `
-          : freshSentence(state.sentence);
+          ? `${state.script[(nextIndex + 1) % state.script.length]} `
+          : freshSentence(nextSentence);
 
       // Solo charges each new sentence as it arrives; multiplayer already has
       // the whole script's charges from the server.
@@ -217,7 +231,9 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
       return {
         ...state,
+        previous: sentenceDone ? state.sentence : state.previous,
         sentence: nextSentence,
+        upcoming: nextUpcoming,
         scriptIndex: nextIndex,
         wordOffset: rolledOffset,
         powers: nextPowers,

@@ -66,8 +66,22 @@ export interface DuelState {
   /** Which slot is you. Always 0 in solo. */
   mySlot: number;
 
+  /**
+   * The sentence just finished, kept so the stream has something trailing off
+   * to the left after a roll rather than starting from a bare edge.
+   */
+  previous: string;
   /** Always carries a trailing space so every word is committed with SPACE. */
   sentence: string;
+  /**
+   * The sentence after this one, known before it is needed.
+   *
+   * The text is rendered as a moving stream, so there has to be something to
+   * flow in from the right — without this the strip would run out at the end of
+   * the current sentence and the next would appear from nowhere. Empty while
+   * idle, which also keeps the server-rendered state deterministic.
+   */
+  upcoming: string;
   cursor: number;
   wordStartedAt: number;
   lastWordAt: number;

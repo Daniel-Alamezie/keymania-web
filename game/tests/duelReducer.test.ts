@@ -128,6 +128,42 @@ describe('SPACE commits the word', () => {
   });
 });
 
+/**
+ * The stream.
+ *
+ * The text is rendered as one moving line, so there must always be a sentence
+ * in hand beyond the one being typed — otherwise there is nothing to flow in
+ * from the right and the join between sentences becomes a visible reset again.
+ */
+describe('the sentence stream', () => {
+  it('holds a sentence in hand from the moment a duel starts', () => {
+    const started = duelReducer(initialState('rival'), { type: 'start', difficulty: 'rival' });
+    expect(started.upcoming.trim().length).toBeGreaterThan(0);
+    expect(started.upcoming).not.toBe(started.sentence);
+  });
+
+  it('promotes the one in hand and draws another when a sentence is finished', () => {
+    const before = { ...playing('hi there '), upcoming: 'next one ' };
+    const after = type(before, 'hi there ');
+
+    expect(after.sentence).toBe('next one ');
+    expect(after.previous).toBe('hi there ');
+    expect(after.upcoming.trim().length).toBeGreaterThan(0);
+    expect(after.upcoming).not.toBe('next one ');
+  });
+
+  it('never rolls onto an empty sentence, even with nothing in hand', () => {
+    // A duel with nothing to type has no way out of itself.
+    const after = type({ ...playing('hi there '), upcoming: '' }, 'hi there ');
+    expect(after.sentence.trim().length).toBeGreaterThan(0);
+  });
+
+  it('leaves the sentence in hand alone mid-sentence', () => {
+    const before = { ...playing('hi there '), upcoming: 'next one ' };
+    expect(type(before, 'hi ').upcoming).toBe('next one ');
+  });
+});
+
 describe('damage and victory', () => {
   it('applies damage only when a blade lands', () => {
     const thrown = type(playing(), 'the ');

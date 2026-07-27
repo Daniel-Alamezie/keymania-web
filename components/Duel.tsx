@@ -514,7 +514,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       <section className={styles.deck}>
         <SentenceView
+          previous={state.previous}
           sentence={state.sentence}
+          upcoming={state.upcoming}
           cursor={state.cursor}
           missTick={state.missTick}
           powers={state.powers}

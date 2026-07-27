@@ -1,16 +1,40 @@
-.sentence {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: baseline;
+/**
+ * The stream.
+ *
+ * A single line that runs past both edges, rather than a wrapped block that
+ * ends. Nothing here is centred: the cursor is pinned by a transform on .strip
+ * and everything else moves around it.
+ */
+.viewport {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  /* Held open so the line never changes height — a stream that jumps vertically
+     as words come and go is worse than one that does not move at all. */
+  height: 2.1em;
   font-size: clamp(22px, 3.4vw, 38px);
-  line-height: 1.5;
-  padding: 6px 8px;
   user-select: none;
+  /* Room for the charged-word icon, which sits above the line. */
+  padding-top: 0.55em;
+  margin-top: -0.55em;
+}
+
+.strip {
+  position: absolute;
+  top: 0.55em;
+  left: 0;
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+  /* Eases between keystrokes so the text glides rather than stepping. Short
+     enough that fast typing still feels immediate — much above 120ms and the
+     cursor visibly lags behind your fingers. */
+  transition: transform 110ms cubic-bezier(0.25, 0.9, 0.35, 1);
+  will-change: transform;
 }
 
 /* Word-level focus: the word you are on is lifted out, everything else
-   recedes, so the eye always knows where it is in a long sentence. */
+   recedes, so the eye always knows where it is in the stream. */
 .token {
   white-space: nowrap;
   transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
@@ -18,7 +42,7 @@
 }
 
 .token[data-word='ahead'] { opacity: 0.42; }
-.token[data-word='done'] { opacity: 0.28; }
+.token[data-word='done'] { opacity: 0.22; }
 .token[data-word='active'] {
   opacity: 1;
   transform: scale(1.06);
@@ -85,4 +109,28 @@
 @keyframes pop {
   0% { transform: translateY(-4px) scale(1.7); color: #fff; }
   100% { transform: translateY(0) scale(1); }
+}
+
+/* ---------- Edges ----------
+ *
+ * The stream continues past the viewport, so it fades out rather than being
+ * sliced off — a hard cut reads as a container, a fade reads as more text.
+ */
+.fadeLeft,
+.fadeRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12%;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(90deg, var(--panel) 10%, transparent);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(270deg, var(--panel) 10%, transparent);
 }
