@@ -4,6 +4,26 @@
   background: var(--bg-deep);
 }
 
+/*
+ * Filling the viewport, as the menu backdrop does.
+ *
+ * `.scene[data-fixed]` rather than letting the caller supply `position: fixed`
+ * from its own stylesheet. Two single-class rules from two modules have equal
+ * specificity, so the winner is whichever the bundler emits last — and Next
+ * orders module CSS by import in development and by chunk in production. The
+ * menu's own rule won locally and lost in production, where `.scene`'s
+ * `position: relative` then made `inset: 0` meaningless; with every child
+ * absolutely positioned, nothing was left to give the element height and the
+ * whole scene rendered at zero pixels.
+ *
+ * An attribute selector on the same class in the same file outranks `.scene`
+ * outright and cannot be reordered away from it.
+ */
+.scene[data-fixed] {
+  position: fixed;
+  inset: 0;
+}
+
 /* Tiles are 48px sprites repeated — pixelated so they stay crisp when scaled. */
 .wall {
   position: absolute;

@@ -8,9 +8,9 @@
 
 /* The arena sits behind the menu, so entering a duel feels like stepping
    forward into the same room rather than cutting to a different screen. */
+/* Stacking only. The positioning moved into ArenaScene's own stylesheet —
+   see `.scene[data-fixed]` there for why a caller must not set it from here. */
 .backdrop {
-  position: fixed;
-  inset: 0;
   z-index: 0;
 }
 

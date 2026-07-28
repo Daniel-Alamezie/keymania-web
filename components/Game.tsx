@@ -292,7 +292,7 @@ function Backdrop() {
 
   return (
     <>
-      <ArenaScene dim className={styles.backdrop}>
+      <ArenaScene dim fixed className={styles.backdrop}>
         {/* Whoever you have chosen stands on the left of your own menu — the
             cheapest possible confirmation that the picker did something, seen
             before you go looking for it. */}
