@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { START_RATING } from '@/models/rating';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
@@ -121,6 +122,9 @@ export default function PublicProfile({ handle }: { handle: string }) {
       </header>
 
       <dl className={styles.stats}>
+        {/* Leads, because it is the only figure here that compares this player
+            to the person reading it rather than to themselves. */}
+        <Stat label="Rating" value={profile.rating ?? START_RATING} highlight />
         <Stat label="Best speed" value={profile.bestRankedWpm} unit="wpm" highlight />
         <Stat label="Ranked duels" value={ranked.duels} />
         <Stat label="Win rate" value={rate ?? '—'} unit={rate === null ? '' : '%'} />

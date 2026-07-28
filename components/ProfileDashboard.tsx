@@ -9,6 +9,7 @@ import {
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
 import { asCharacter } from '@/models/character';
+import { START_RATING } from '@/models/rating';
 import CharacterPicker from './CharacterPicker';
 import FriendsPanel from './FriendsPanel';
 import { useUiSounds } from './SoundToggle';
@@ -129,6 +130,12 @@ export default function ProfileDashboard() {
               <section className={styles.section}>
                 <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
                 <dl className={styles.stats}>
+                  {/* First, and highlighted, because it is the one figure here
+                      that is a standing rather than a personal best. Everything
+                      beside it says how well you have played; this says where
+                      that puts you. */}
+                  <Stat label="Rating" value={profile.rating ?? START_RATING} highlight
+                        note={ranked.duels === 0 ? 'unplayed — everyone starts here' : undefined} />
                   <Stat label="Duels" value={ranked.duels} highlight />
                   {/* "11–3", not "11W — 3L". The long form is eight characters
                       of a pixel font in a tile sized for four, so it broke after

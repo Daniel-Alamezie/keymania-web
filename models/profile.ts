@@ -79,6 +79,14 @@ export interface ServerProfile {
   practice: Tally;
   /** Best refereed speed — what the leaderboard orders on. */
   bestRankedWpm: number;
+  /**
+   * Standing among people. Starts mid-scale, moves only on human duels.
+   *
+   * Optional on the wire for an older server, never absent in practice — the
+   * API resolves the default before answering, so a player who has never
+   * duelled a person is still told where they stand.
+   */
+  rating?: number;
   /** Newest first, as the API stores it. */
   history: DuelResult[];
 }
@@ -118,6 +126,13 @@ export interface PublicProfile {
   displayName: string;
   ranked: Tally;
   bestRankedWpm: number;
+  /**
+   * Public on purpose — a rating nobody else can see is a private score, and a
+   * private score is not standing. It is also the least revealing thing here:
+   * unlike history and practice, which are withheld because they say when
+   * somebody last played and who with, this says only how they have done.
+   */
+  rating?: number;
 }
 
 /** `POST /api/me/duels` — a bot practice result, stored unranked. */
