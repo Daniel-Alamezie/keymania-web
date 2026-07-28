@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { START_RATING } from '@/models/rating';
+import { ratingFlame, START_RATING } from '@/models/rating';
+import { Flame } from './RankFlame';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
@@ -124,7 +125,12 @@ export default function PublicProfile({ handle }: { handle: string }) {
       <dl className={styles.stats}>
         {/* Leads, because it is the only figure here that compares this player
             to the person reading it rather than to themselves. */}
-        <Stat label="Rating" value={profile.rating ?? START_RATING} highlight />
+        <Stat
+          label="Rating"
+          value={profile.rating ?? START_RATING}
+          icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={18} />}
+          highlight
+        />
         <Stat label="Best speed" value={profile.bestRankedWpm} unit="wpm" highlight />
         <Stat label="Ranked duels" value={ranked.duels} />
         <Stat label="Win rate" value={rate ?? '—'} unit={rate === null ? '' : '%'} />
@@ -178,7 +184,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Stat({ label, value, unit, highlight }: {
+function Stat({ icon, label, value, unit, highlight }: {
+  /** Sits beside the figure. Used for the rating's flame. */
+  icon?: React.ReactNode;
   label: string;
   value: number | string;
   unit?: string;
@@ -188,6 +196,7 @@ function Stat({ label, value, unit, highlight }: {
     <div className={styles.stat} data-highlight={highlight || undefined}>
       <dt className={styles.statLabel}>{label}</dt>
       <dd className={`${styles.statValue} pixel-font`}>
+        {icon}
         {value}
         {unit && <span className={styles.statUnit}>{unit}</span>}
       </dd>

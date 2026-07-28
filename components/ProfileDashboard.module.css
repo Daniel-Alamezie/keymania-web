@@ -259,6 +259,11 @@
    the rest of the row, and grid stretches every sibling to match — one long
    figure was setting the height of six. */
 .statValue {
+  /* A flex row so the rating's flame sits on the figure's line rather than on
+     its baseline, where an inline image would drop below the digits. */
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin: 0;
   font-size: 17px;
   color: var(--ink);

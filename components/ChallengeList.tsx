@@ -2,6 +2,7 @@
 
 import { characterById } from '@/models/character';
 import type { ChallengeProgress } from '@/models/profile';
+import { Flame } from './RankFlame';
 import styles from './ChallengeList.module.css';
 
 /**
@@ -40,6 +41,21 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
   });
 
   const shown = limit ? ordered.slice(0, limit) : ordered;
+
+  /**
+   * The one challenge the flame burns on.
+   *
+   * Exactly one, and only where there is progress to indicate. Five flames
+   * flickering at once emphasise nothing — it reads as decoration rather than
+   * as a signal. On a single bar it says "this is the one you are about to
+   * get", which is the only thing worth animating on a page you mostly read.
+   *
+   * Deliberately not on an untouched challenge, where a flame pinned to the
+   * far left of an empty track looks like a fault rather than a fire; nor on a
+   * finished one, which is already green and labelled and would be competing
+   * with the live one for the same glance.
+   */
+  const burning = shown.find((c) => !c.done && c.progress > 0)?.id;
   const done = challenges.filter((c) => c.done).length;
 
   if (challenges.length === 0) {
@@ -77,6 +93,13 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
                   list jump the moment something good happens. */}
               <div className={styles.track} aria-hidden="true">
                 <span className={styles.fill} style={{ width: `${pct}%` }} />
+                {challenge.id === burning && (
+                  // Riding the leading edge of the fill, so it moves up the bar
+                  // as the number does.
+                  <span className={styles.torch} style={{ left: `${pct}%` }}>
+                    <Flame kind="ember" height={16} />
+                  </span>
+                )}
               </div>
 
               <span className={styles.note}>

@@ -9,7 +9,8 @@ import {
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
 import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
-import { START_RATING } from '@/models/rating';
+import { ratingFlame, START_RATING } from '@/models/rating';
+import { Flame } from './RankFlame';
 import CharacterPicker from './CharacterPicker';
 import ChallengeList from './ChallengeList';
 import FriendsPanel from './FriendsPanel';
@@ -180,8 +181,15 @@ export default function ProfileDashboard() {
                       that is a standing rather than a personal best. Everything
                       beside it says how well you have played; this says where
                       that puts you. */}
-                  <Stat label="Rating" value={profile.rating ?? START_RATING} highlight
-                        note={ranked.duels === 0 ? 'unplayed — everyone starts here' : undefined} />
+                  <Stat
+                    label="Rating"
+                    value={profile.rating ?? START_RATING}
+                    // Ember, azure, then gold. The mark is the progress: a
+                    // crown would say the same thing at 300 as at 500.
+                    icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={18} />}
+                    highlight
+                    note={ranked.duels === 0 ? 'unplayed — everyone starts here' : undefined}
+                  />
                   <Stat label="Duels" value={ranked.duels} highlight />
                   {/* "11–3", not "11W — 3L". The long form is eight characters
                       of a pixel font in a tile sized for four, so it broke after
@@ -489,7 +497,9 @@ function RecentRow({ duel }: { duel: DuelResult }) {
   );
 }
 
-function Stat({ label, value, unit, prefix, suffix, note, highlight }: {
+function Stat({ icon, label, value, unit, prefix, suffix, note, highlight }: {
+  /** Sits beside the figure. Used for the rating's flame. */
+  icon?: React.ReactNode;
   label: string; value: number; unit?: string; prefix?: string;
   suffix?: string; note?: string; highlight?: boolean;
 }) {
@@ -497,6 +507,7 @@ function Stat({ label, value, unit, prefix, suffix, note, highlight }: {
     <div className={styles.stat} data-highlight={highlight || undefined}>
       <dt className={styles.statLabel}>{label}</dt>
       <dd className={`${styles.statValue} pixel-font`}>
+        {icon}
         {prefix}{value}{suffix}
         {unit && <small className={styles.unit}>{unit}</small>}
       </dd>

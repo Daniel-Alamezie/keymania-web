@@ -28,3 +28,21 @@
   0%, 33% { opacity: 1; }
   34%, 100% { opacity: 0; }
 }
+
+/*
+ * Still, for anyone who has asked for it.
+ *
+ * The component's own comment claimed this already existed. It did not — the
+ * flame flickered regardless. Worth having now that flames are no longer
+ * confined to three leaderboard rows: one burns permanently beside a rating
+ * and another rides a progress bar, so a page somebody reads has two looping
+ * animations on it.
+ *
+ * Frozen on the first frame rather than hidden. The flame carries meaning here
+ * — a rating tier, and which challenge is closest — so removing it would take
+ * information away rather than only taking movement away.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .frame { animation: none; }
+  .frame:first-child { opacity: 1; }
+}

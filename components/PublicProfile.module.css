@@ -62,6 +62,10 @@
 }
 
 .statValue {
+  /* Row, so the rating flame sits on the figure's line. */
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 17px;
   margin: 0;
 }
