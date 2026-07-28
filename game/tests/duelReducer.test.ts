@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  accuracy, duelReducer, initialState, newFighter, type DuelState,
+  accuracy, duelReducer, initialState, newFighter, you, type DuelState,
 } from '../duelReducer';
+import { DEFAULT_CHARACTER } from '@/models/character';
 
 /** A duel already in progress on a known sentence. */
 function playing(sentence = 'the cat sat '): DuelState {
@@ -376,5 +377,42 @@ describe('accuracy', () => {
   it('is 100% with no keystrokes and drops with mistakes', () => {
     expect(accuracy({ wordsTyped: 0, charsTyped: 0, mistakes: 0, maxCombo: 0, bestWpm: 0, startedAt: 0, endedAt: 0 })).toBe(100);
     expect(accuracy({ wordsTyped: 0, charsTyped: 9, mistakes: 1, maxCombo: 0, bestWpm: 0, startedAt: 0, endedAt: 0 })).toBe(90);
+  });
+});
+
+/**
+ * Who you look like in a bot duel.
+ *
+ * `initialState` is server-rendered, so it cannot read a profile and hands
+ * both fighters the default. That is fine for the idle screen and wrong the
+ * moment a duel starts — and because the default is also what most players are
+ * before they open the picker, the symptom was two identical figures and a
+ * character choice that appeared to have been ignored.
+ */
+describe('character on a bot duel', () => {
+  const start = (character?: 'baron' | 'rookie' | 'sprout') =>
+    duelReducer(initialState('rookie'), { type: 'start', difficulty: 'rookie', character });
+
+  it('puts the player in the character they chose', () => {
+    expect(you(start('sprout')).character).toBe('sprout');
+  });
+
+  it('never gives the bot the same face as the player', () => {
+    // 'rookie' is the Rookie bot's own character, so this is the collision.
+    const state = start('rookie');
+    expect(you(state).character).toBe('rookie');
+    expect(state.fighters[1].character).not.toBe('rookie');
+  });
+
+  it('gives each difficulty its own bot, so the three tell apart', () => {
+    const faceOf = (difficulty: 'rookie' | 'rival' | 'master') =>
+      duelReducer(initialState(difficulty), { type: 'start', difficulty, character: 'sprout' })
+        .fighters[1].character;
+    const faces = [faceOf('rookie'), faceOf('rival'), faceOf('master')];
+    expect(new Set(faces).size).toBe(3);
+  });
+
+  it('falls back to the default when no profile has loaded', () => {
+    expect(you(start()).character).toBe(DEFAULT_CHARACTER);
   });
 });

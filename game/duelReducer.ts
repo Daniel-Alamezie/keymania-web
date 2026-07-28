@@ -1,13 +1,15 @@
 import {
   applyDamage, bladeTier, keepsCombo, sanitiseElapsed, scoreWord, wpmFor,
 } from './engine';
-import { COUNTDOWN_FROM, MAX_HEALTH } from './constants';
+import { BOT_CHARACTERS, COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
 import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
 import type { Difficulty } from '@/models/bot';
 import type { DuelAction, DuelState, DuelStats, Fighter } from '@/models/duel';
 import type { PowerKind } from '@/models/powers';
-import { DEFAULT_CHARACTER, asCharacter, type CharacterId } from '@/models/character';
+import {
+  DEFAULT_CHARACTER, asCharacter, nextCharacter, type CharacterId,
+} from '@/models/character';
 import type { BladeTier } from '@/models/scoring';
 
 
@@ -102,9 +104,29 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
     case 'start': {
       const sentence = freshSentence();
       const upcoming = freshSentence(sentence);
+
+      /**
+       * Who the two of you are.
+       *
+       * `initialState` cannot answer this: it is server-rendered, so it has no
+       * profile to read and hands both fighters the default. That default is
+       * also what most players are before they open the picker, which is why a
+       * bot duel so often showed two identical figures and made the character
+       * you had just chosen look like it had been ignored — it had.
+       */
+      const mine = action.character ?? DEFAULT_CHARACTER;
+      const theirs = BOT_CHARACTERS[action.difficulty];
+
       return {
         ...initialState(action.difficulty),
         phase: 'countdown',
+        // Never the same face on both sides. If the bot's own character is the
+        // one you picked, it steps aside to the next in the roster — you chose
+        // yours, it did not choose its.
+        fighters: [
+          newFighter('You', 1, mine),
+          newFighter('', 0, theirs === mine ? nextCharacter(mine) : theirs),
+        ],
         sentence,
         upcoming,
         // Both sentences are charged up front, and every later sentence is

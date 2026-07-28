@@ -1,3 +1,4 @@
+import type { CharacterId } from '@/models/character';
 import type { Difficulty } from '@/models/bot';
 import type { BladeTier } from '@/models/scoring';
 
@@ -49,6 +50,21 @@ export const BOT_PROFILES: Record<Difficulty, { wpm: number; errorRate: number; 
   rookie: { wpm: 34, errorRate: 0.18, label: 'Rookie' },
   rival: { wpm: 55, errorRate: 0.12, label: 'Rival' },
   master: { wpm: 80, errorRate: 0.09, label: 'Master' },
+};
+
+/**
+ * Who each bot fights as.
+ *
+ * Bots used to render as the default character, which is also what most
+ * players are before they open the picker — so a duel was frequently two
+ * identical figures throwing knives at each other, and the character you chose
+ * appeared to have been ignored. Giving each difficulty its own face makes the
+ * three of them tell apart at a glance as a side effect.
+ */
+export const BOT_CHARACTERS: Record<Difficulty, CharacterId> = {
+  rookie: 'rookie',
+  rival: 'drifter',
+  master: 'baron',
 };
 
 /** Seconds counted down before a duel begins. */

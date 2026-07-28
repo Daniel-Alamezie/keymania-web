@@ -82,3 +82,12 @@ export const characterById = (id: CharacterId): Character =>
 export const characterFrame = (id: CharacterId, frame: 1 | 2) =>
   `characters/${id}-${frame}` as const;
 export const characterHit = (id: CharacterId) => `characters/${id}-hit` as const;
+
+/**
+ * The next character along the roster, wrapping at the end.
+ *
+ * Used to break a tie when two fighters would otherwise wear the same face —
+ * the bot steps aside, never the player, since only one of them made a choice.
+ */
+export const nextCharacter = (id: CharacterId): CharacterId =>
+  CHARACTERS[(CHARACTERS.indexOf(id) + 1) % CHARACTERS.length];

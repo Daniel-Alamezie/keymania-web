@@ -23,6 +23,7 @@ import ArenaScene from './ArenaScene';
 import SentenceView from './SentenceView';
 import ComboMeter from './ComboMeter';
 import PowerBar from './PowerBar';
+import { useCharacter } from '@/game/serverProfile';
 import styles from './Duel.module.css';
 
 export interface MultiplayerConfig {
@@ -70,6 +71,16 @@ const HEAT_COMBO = 4;
 const FINISH_HOLD_MS = 1900;
 
 export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
+  /**
+   * Who you fight as, straight from the profile store.
+   *
+   * Read here rather than passed down, because it is needed at the moment
+   * `start` is dispatched and nothing between here and the menu has any other
+   * use for it. Falls back to the default until the profile has loaded, which
+   * is also what a signed-out player gets.
+   */
+  const mine = useCharacter();
+
   const [state, dispatch] = useReducer(duelReducer, undefined, () => initialState(difficulty));
   const account = useAccount();
   const effects = useRef<EffectsHandle>(null);
@@ -594,7 +605,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 undo a mute the moment the next duel began. */}
             <button
               className="btn btn-primary"
-              onClick={() => dispatch({ type: 'start', difficulty })}
+              onClick={() => dispatch({ type: 'start', difficulty, character: mine })}
             >
               Fight {BOT_PROFILES[difficulty].label}
             </button>
@@ -675,7 +686,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
             <div className={styles.choices}>
               {!isMulti && (
-                <button className="btn btn-primary" onClick={() => dispatch({ type: 'start', difficulty })}>
+                <button className="btn btn-primary" onClick={() => dispatch({ type: 'start', difficulty, character: mine })}>
                   Rematch
                 </button>
               )}

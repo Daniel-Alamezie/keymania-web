@@ -42,13 +42,28 @@
 
 @keyframes pulse { 50% { opacity: 0.4; } }
 
+/*
+ * Mute and leave, out in the margin.
+ *
+ * They used to sit at the top-right of the screen, which is the same corner as
+ * the opponent's health plate — so the two ran into each other and the icons
+ * read as part of the readout rather than as controls. The layout is centred
+ * and narrower than the window, so there is empty desktop either side doing
+ * nothing; putting them there gets them out of the duel entirely.
+ *
+ * Fixed rather than absolute, and vertically centred, so they hold one place
+ * whatever the arena does. Stacked, because two icons in a column read as a
+ * pair of controls where two in a row read as a toolbar with the rest missing.
+ */
 .controls {
-  position: absolute;
-  top: 10px;
-  right: 14px;
+  position: fixed;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
   z-index: 8;
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .iconBtn {
@@ -62,7 +77,9 @@
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  opacity: 0.55;
+  /* Raised from 0.55: out on their own they can afford to be legible, and
+     the reason they were faint was to keep them off the health plate. */
+  opacity: 0.72;
   transition: opacity 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 .iconBtn:hover {
@@ -101,7 +118,7 @@
  * arena does too — a constant 276px sprite in a stage that grows with the
  * viewport is precisely how the room ended up empty above their heads.
  */
-.screen { --fighter-h: clamp(200px, 44vh, 480px); }
+.screen { --fighter-h: clamp(190px, 38vh, 400px); }
 
 /* Three abreast, so each gets a fraction of the room one opponent had. */
 .lane[data-many] .foe { --fighter-h: clamp(110px, 20vh, 230px); }

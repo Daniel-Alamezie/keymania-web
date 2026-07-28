@@ -136,7 +136,20 @@ export interface DuelState {
 }
 
 export type DuelAction =
-  | { type: 'start'; difficulty: Difficulty }
+  | {
+      type: 'start';
+      difficulty: Difficulty;
+      /**
+       * Who the player fights as, read from their profile at the moment they
+       * press start.
+       *
+       * Carried on the action rather than baked into `initialState`, which is
+       * server-rendered and must not depend on a profile the server has not
+       * fetched. Optional so a caller without a loaded profile still gets a
+       * duel, wearing the default.
+       */
+      character?: CharacterId;
+    }
   | {
       type: 'startMulti';
       script: string[];
