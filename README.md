@@ -15,6 +15,10 @@ Type fast, strike hard.
 This is the game client. The serverless backend (AWS Lambda + API Gateway
 WebSocket) lives in [`keymania`](https://github.com/Daniel-Alamezie/keymania).
 
+> **[docs/GAME.md](docs/GAME.md) — how the game works.** Every rule, constant
+> and design decision across both repos, in one place. This README covers what
+> KeyMania is and how to run it; that covers what actually happens.
+
 ## The core loop
 
 Type each word, then press <kbd>SPACE</kbd> to commit it — that is the moment a
