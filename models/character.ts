@@ -17,6 +17,13 @@ export const CHARACTERS = [
   'drifter',
   'sprout',
   'baron',
+  // The monsters. Every one below this line is earned, never free — see the
+  // challenge roster in keymania-api/src/lib/challenges.ts.
+  'skeleton',
+  'ghost',
+  'wraith',
+  'knight',
+  'ogre',
 ] as const;
 
 export type CharacterId = (typeof CHARACTERS)[number];
@@ -55,6 +62,11 @@ export const CHARACTER_LIST: Character[] = [
   { id: 'drifter', name: 'Drifter', blurb: 'Belongs nowhere on purpose. Arrives first regardless.' },
   { id: 'sprout', name: 'Sprout', blurb: 'Too small to know the odds. Far too pleased to care.' },
   { id: 'baron', name: 'Baron', blurb: 'Certainty is a poor habit. Prefers the question.' },
+  { id: 'skeleton', name: 'Skeleton', blurb: 'Lost everything but the grin. Kept typing.' },
+  { id: 'ghost', name: 'Ghost', blurb: 'Untouched on the best days. Practises for them.' },
+  { id: 'wraith', name: 'Wraith', blurb: 'Turned up so often the dark gave in.' },
+  { id: 'knight', name: 'Knight', blurb: 'Armour outside, doubt inside. Answers every call.' },
+  { id: 'ogre', name: 'Ogre', blurb: 'Subtlety is for smaller creatures. Swings first.' },
 ];
 
 export const isCharacter = (value: unknown): value is CharacterId =>

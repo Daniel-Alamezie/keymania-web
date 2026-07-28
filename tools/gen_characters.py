@@ -643,6 +643,251 @@ OVERLAYS = {"steam": part_steam, "smoke": part_smoke}
 
 
 # --------------------------------------------------------------------------
+# monsters
+#
+# The face/hair/outfit stack assumes a person in clothes, and none of these
+# are. Each monster is one function that draws the whole figure; everything
+# after that — parts, outline, the derived hit frame — is shared with the
+# humans, so a monster is still a citizen of the same pipeline rather than a
+# second one.
+#
+# Frames animate inside the body function (a hover, a sway, a blink) because
+# monsters have no steam or smoke to carry the idle the way the humans do.
+# --------------------------------------------------------------------------
+
+
+def _dome(canvas, rows, colour):
+    """Stacked centred spans — the cheap way to a rounded silhouette."""
+    for y, half in rows:
+        box(canvas, CX - half, y, CX + half - 1, y, colour)
+
+
+def _rim(canvas, y0, y1, light, dark):
+    """Left-edge light, right-edge dark, run after a silhouette is placed.
+
+    One pass instead of per-row shading decisions: monsters read as lit from
+    the same side as everybody else without each body hand-placing rims.
+    """
+    for y in range(y0, y1 + 1):
+        if y < 0 or y >= len(canvas):
+            continue
+        row = canvas[y]
+        xs = [x for x in range(len(row)) if solid(row[x])]
+        if not xs:
+            continue
+        if light is not None:
+            put(canvas, xs[0], y, light)
+        if dark is not None:
+            put(canvas, xs[-1], y, dark)
+
+
+def body_skeleton(canvas, p, frame):
+    bone, dark, light, void = p["bone"], p["bone_dark"], p["bone_light"], p["void"]
+
+    # Skull: a big dome with a squared jaw, most of the figure — chibi rules.
+    _dome(canvas, ((4, 4), (5, 6), (6, 7), (7, 8), (8, 9), (9, 9), (10, 9),
+                   (11, 9), (12, 9), (13, 9), (14, 9), (15, 8)), bone)
+    _dome(canvas, ((16, 7), (17, 6), (18, 6), (19, 5)), bone)
+    _rim(canvas, 4, 19, light, dark)
+
+    # Sockets: large, round-ish, and empty. The emptiness is the character.
+    for sx in (CX - 7, CX + 2):
+        box(canvas, sx, 11, sx + 4, 14, void)
+        put(canvas, sx, 11, bone)
+        put(canvas, sx + 4, 11, bone)
+        put(canvas, sx, 14, bone)
+        put(canvas, sx + 4, 14, bone)
+    # A pinpoint of light in each socket; it blinks sides with the frame,
+    # which is all the idle a skull needs.
+    put(canvas, (CX - 5) if frame == 0 else (CX + 4), 12, light)
+
+    # Nasal cavity and a row of teeth.
+    box(canvas, CX - 1, 15, CX, 16, void)
+    box(canvas, CX - 4, 18, CX + 3, 18, dark)
+    for x in range(CX - 4, CX + 4, 2):
+        put(canvas, x, 18, void)
+
+    # Neck, ribcage over a void chest, arms and legs of plain bone.
+    box(canvas, CX - 1, 20, CX + 1, 21, dark)
+    box(canvas, CX - 6, 22, CX + 5, 30, void)
+    for y in (23, 25, 27, 29):
+        box(canvas, CX - 5, y, CX + 4, y, bone)
+        put(canvas, CX + 4, y, dark)
+    box(canvas, CX - 1, 22, CX, 30, bone)   # sternum
+    box(canvas, CX - 5, 31, CX + 4, 33, bone)
+    box(canvas, CX - 2, 31, CX + 1, 31, void)
+    _rim(canvas, 31, 33, light, dark)
+
+    for ax in (CX - 9, CX + 7):
+        box(canvas, ax, 22, ax + 1, 26, bone)
+        box(canvas, ax, 28, ax + 1, 31, bone)   # gap at 27: the elbow
+        put(canvas, ax + 1, 26, dark)
+    for lx in (CX - 5, CX + 2):
+        box(canvas, lx, 34, lx + 2, 37, bone)
+        box(canvas, lx, 39, lx + 2, 42, bone)   # gap at 38: the knee
+        box(canvas, lx - 1, 43, lx + 3, 44, bone)
+        put(canvas, lx + 2, 44, dark)
+
+
+def body_ghost(canvas, p, frame):
+    sheet, dark, light, eye = p["sheet"], p["sheet_dark"], p["sheet_light"], p["eye"]
+    # The whole figure rises a pixel on the second frame: a hover, not a walk.
+    lift = -1 if frame == 1 else 0
+
+    rows = [(5, 5), (6, 7), (7, 8), (8, 9), (9, 9), (10, 10)]
+    rows += [(y, 10) for y in range(11, 34)]
+    _dome(canvas, [(y + lift, h) for y, h in rows], sheet)
+
+    # The hem: scallops, with the wave phase swapping between frames so the
+    # trailing edge is the part that moves.
+    phase = 0 if frame == 0 else 2
+    for i, x in enumerate(range(CX - 10, CX + 10)):
+        depth = (34, 37, 35, 36)[(i + phase) % 4]
+        box(canvas, x, 34 + lift, x, depth + lift, sheet)
+    _rim(canvas, 5 + lift, 37 + lift, light, dark)
+
+    # Stub arms, flared away from the body.
+    box(canvas, CX - 12, 22 + lift, CX - 11, 27 + lift, sheet)
+    box(canvas, CX + 10, 22 + lift, CX + 11, 27 + lift, sheet)
+    put(canvas, CX - 12, 27 + lift, dark)
+    put(canvas, CX + 11, 27 + lift, dark)
+
+    # Eyes and a small o of a mouth — surprised to be here, permanently.
+    for ex in (CX - 6, CX + 4):
+        box(canvas, ex, 15 + lift, ex + 1, 18 + lift, eye)
+    box(canvas, CX - 1, 21 + lift, CX, 22 + lift, eye)
+
+
+def body_wraith(canvas, p, frame):
+    cloak, dark, light, void, eye = (
+        p["cloak"], p["cloak_dark"], p["cloak_light"], p["void"], p["eye"])
+    lift = -1 if frame == 1 else 0
+
+    # The hood: a peak that leans with the frame, over a deep cowl.
+    peak = CX - 1 if frame == 0 else CX
+    for y, half in ((2, 1), (3, 1), (4, 2), (5, 3), (6, 5), (7, 6), (8, 7), (9, 8)):
+        box(canvas, peak - half, y + lift, peak + half, y + lift, cloak)
+    _dome(canvas, [(y + lift, 9) for y in range(10, 20)], cloak)
+
+    # The opening, and nothing in it but eyes.
+    _dome(canvas, [(y + lift, 6) for y in range(12, 19)], void)
+    for ex in (CX - 5, CX + 3):
+        box(canvas, ex, 14 + lift, ex + 1, 15 + lift, eye)
+
+    # Cloak to a ragged hem; no feet, nothing under it.
+    for y in range(20, 36):
+        half = 8 + (1 if y > 26 else 0)
+        box(canvas, CX - half, y + lift, CX + half - 1, y + lift, cloak)
+    for i, x in enumerate(range(CX - 9, CX + 9)):
+        depth = (38, 36, 40, 37)[(i + (0 if frame == 0 else 1)) % 4]
+        box(canvas, x, 36 + lift, x, depth + lift, cloak)
+    _rim(canvas, 4 + lift, 40 + lift, light, dark)
+
+    # Sleeves crossed low, hands never shown.
+    box(canvas, CX - 11, 23 + lift, CX - 9, 29 + lift, dark)
+    box(canvas, CX + 8, 23 + lift, CX + 10, 29 + lift, dark)
+
+
+def body_knight(canvas, p, frame):
+    steel, dark, light, slit, plume, plume_dark = (
+        p["steel"], p["steel_dark"], p["steel_light"], p["void"],
+        p["plume"], p["plume_dark"])
+
+    # The plume first, behind the helm, swaying a pixel with the frame.
+    sway = 0 if frame == 0 else 1
+    for y, x, w_ in ((0, CX - 1, 2), (1, CX - 1, 3), (2, CX, 3), (3, CX + 1, 3), (4, CX + 2, 3), (5, CX + 3, 2)):
+        box(canvas, x + sway, y, x + sway + w_, y + 1, plume if y < 4 else plume_dark)
+
+    # The helm: a dome with a flat jaw, one dark visor slit, no face at all.
+    _dome(canvas, ((4, 5), (5, 7), (6, 8), (7, 9), (8, 9), (9, 9), (10, 9),
+                   (11, 9), (12, 9), (13, 9), (14, 9), (15, 9), (16, 8),
+                   (17, 8), (18, 7), (19, 6)), steel)
+    box(canvas, CX - 7, 12, CX + 6, 14, slit)
+    for x in range(CX - 6, CX + 6, 3):
+        put(canvas, x, 15, dark)            # breath holes
+    box(canvas, CX - 8, 11, CX + 7, 11, light)
+    _rim(canvas, 4, 19, light, dark)
+
+    # Gorget, pauldrons, cuirass with a centre ridge catching the light.
+    box(canvas, CX - 3, 20, CX + 2, 21, dark)
+    box(canvas, CX - 6, 22, CX + 5, 32, steel)
+    box(canvas, CX - 9, 22, CX - 7, 25, steel)
+    box(canvas, CX + 6, 22, CX + 8, 25, steel)
+    box(canvas, CX - 1, 22, CX, 31, light)
+    box(canvas, CX - 6, 32, CX + 5, 32, dark)      # belt
+    _rim(canvas, 20, 32, light, dark)
+
+    # Arms in plate, gauntlets a shade darker.
+    for ax in (CX - 9, CX + 7):
+        box(canvas, ax, 26, ax + 1, 29, steel)
+        box(canvas, ax, 30, ax + 1, 32, dark)
+
+    # Greaves and sabatons.
+    for lx in (CX - 5, CX + 2):
+        box(canvas, lx, 33, lx + 2, 42, steel)
+        put(canvas, lx + 2, 34, dark)
+        box(canvas, lx - 1, 43, lx + 3, 44, dark)
+
+
+def body_ogre(canvas, p, frame):
+    skin, dark, light = p["skin_g"], p["skin_g_dark"], p["skin_g_light"]
+    tusk, cloth, cloth_dark, eye = p["tusk"], p["cloth"], p["cloth_dark"], p["eye"]
+    # The heave: shoulders and arms rise a pixel on the second frame — the
+    # breath of something big rather than a bounce.
+    heave = -1 if frame == 1 else 0
+
+    # Head: wide, low, all jaw. Ears poke past the sides.
+    _dome(canvas, ((6, 6), (7, 8), (8, 9), (9, 9), (10, 9), (11, 9), (12, 9),
+                   (13, 9), (14, 9), (15, 9), (16, 9), (17, 9), (18, 8),
+                   (19, 8), (20, 7)), skin)
+    for ex in (CX - 11, CX + 9):
+        box(canvas, ex, 14, ex + 1, 16, skin)
+        put(canvas, ex if ex < CX else ex + 1, 15, dark)
+
+    # Heavy brow in shadow; small eyes beneath it; a broad flat nose.
+    box(canvas, CX - 8, 12, CX + 7, 12, dark)
+    for ex in (CX - 6, CX + 4):
+        box(canvas, ex, 14, ex + 1, 15, eye)
+    box(canvas, CX - 2, 16, CX + 1, 17, dark)
+
+    # The underbite: a lighter jaw slab with two tusks rising past the lip.
+    box(canvas, CX - 5, 18, CX + 4, 20, light)
+    for tx in (CX - 5, CX + 3):
+        box(canvas, tx, 15, tx + 1, 18, tusk)
+    _rim(canvas, 6, 20, light, dark)
+
+    # A slab of a torso, wider than any human, in a rough tunic.
+    box(canvas, CX - 8, 21, CX + 7, 33, cloth)
+    box(canvas, CX - 8, 21, CX + 7, 22, skin)      # bare shoulders
+    for y in (24, 28, 31):
+        box(canvas, CX - 3 + (y % 3), y, CX - 2 + (y % 3), y, cloth_dark)
+    box(canvas, CX - 8, 33, CX + 7, 33, cloth_dark)
+    _rim(canvas, 21, 33, None, cloth_dark)
+
+    # Arms like hams, knuckles nearly at the ground.
+    for side in (-1, 1):
+        ax = CX - 12 if side < 0 else CX + 9
+        box(canvas, ax, 22 + heave, ax + 2, 35 + heave, skin)
+        box(canvas, ax, 36 + heave, ax + 2, 38 + heave, dark)   # fists
+        put(canvas, ax + (2 if side > 0 else 0), 23 + heave, light)
+
+    # Short thick legs; the figure is mostly torso and arm.
+    for lx in (CX - 6, CX + 2):
+        box(canvas, lx, 34, lx + 3, 42, skin)
+        put(canvas, lx + 3, 35, dark)
+        box(canvas, lx - 1, 43, lx + 4, 44, dark)
+
+
+MONSTERS = {
+    "skeleton": body_skeleton,
+    "ghost": body_ghost,
+    "wraith": body_wraith,
+    "knight": body_knight,
+    "ogre": body_ogre,
+}
+
+
+# --------------------------------------------------------------------------
 # the roster
 # --------------------------------------------------------------------------
 BASE = {
@@ -776,6 +1021,53 @@ CHARACTERS: dict[str, dict] = {
         "_parts": ("tophat", "pipe"),
         "_overlays": ("smoke",),
     },
+    # ---- the monsters, earned rather than picked ----
+    "skeleton": {
+        "bone": (236, 234, 224, 255),
+        "bone_dark": (192, 188, 174, 255),
+        "bone_light": (252, 251, 246, 255),
+        "void": (32, 26, 40, 255),
+        "_body": "skeleton",
+        "_parts": (), "_overlays": (),
+    },
+    "ghost": {
+        "sheet": (232, 238, 248, 255),
+        "sheet_dark": (192, 202, 224, 255),
+        "sheet_light": (250, 252, 255, 255),
+        "eye": (52, 56, 84, 255),
+        "_body": "ghost",
+        "_parts": (), "_overlays": (),
+    },
+    "wraith": {
+        "cloak": (66, 52, 96, 255),
+        "cloak_dark": (46, 36, 68, 255),
+        "cloak_light": (92, 76, 128, 255),
+        "void": (18, 12, 28, 255),
+        "eye": (140, 240, 228, 255),
+        "_body": "wraith",
+        "_parts": (), "_overlays": (),
+    },
+    "knight": {
+        "steel": (176, 182, 196, 255),
+        "steel_dark": (128, 134, 150, 255),
+        "steel_light": (222, 228, 240, 255),
+        "void": (30, 30, 40, 255),
+        "plume": (200, 62, 66, 255),
+        "plume_dark": (150, 42, 48, 255),
+        "_body": "knight",
+        "_parts": (), "_overlays": (),
+    },
+    "ogre": {
+        "skin_g": (122, 158, 82, 255),
+        "skin_g_dark": (88, 118, 58, 255),
+        "skin_g_light": (152, 186, 106, 255),
+        "tusk": (240, 236, 220, 255),
+        "cloth": (110, 82, 54, 255),
+        "cloth_dark": (82, 60, 40, 255),
+        "eye": (40, 34, 30, 255),
+        "_body": "ogre",
+        "_parts": (), "_overlays": (),
+    },
 }
 
 
@@ -799,6 +1091,22 @@ def whiteout(canvas) -> None:
 
 def make_character(p: dict, frame: int, hit: bool = False):
     canvas = new_canvas()
+
+    # Monsters draw themselves whole; the face/hair/outfit stack assumes a
+    # person in clothes. Both routes converge on the same parts, the same
+    # outline pass and the same derived hit frame.
+    body = MONSTERS.get(p.get("_body", ""))
+    if body:
+        body(canvas, p, frame)
+        for part in p["_parts"]:
+            PARTS[part](canvas, p, frame)
+        outline(canvas, OUTLINE)
+        for over in p["_overlays"]:
+            OVERLAYS[over](canvas, p, frame)
+        if hit:
+            whiteout(canvas)
+        return canvas
+
     FACES[p.get("_face", "human")](canvas, p)
 
     # Long hair hangs over the jacket's shoulders, so it draws after the

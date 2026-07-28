@@ -498,7 +498,9 @@ describe('characters in a human duel', () => {
       roster: ['You', 'Rival'],
       mySlot: 0,
       powers: {},
-      characters: ['baron', 'wraith'] as never,
+      // 'wraith' sat here as the canonical unknown id until it shipped as a
+      // real character — an id is only invalid until somebody builds it.
+      characters: ['baron', 'zombie'] as never,
     });
     expect(state.fighters[1].character).toBe(DEFAULT_CHARACTER);
   });

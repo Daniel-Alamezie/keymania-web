@@ -43,6 +43,42 @@
     "width": 128,
     "height": 184
   },
+  "characters/ghost-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/ghost-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/ghost-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/knight-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/knight-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/knight-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/ogre-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/ogre-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/ogre-hit": {
+    "width": 128,
+    "height": 184
+  },
   "characters/rookie-1": {
     "width": 128,
     "height": 184
@@ -67,6 +103,18 @@
     "width": 128,
     "height": 184
   },
+  "characters/skeleton-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/skeleton-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/skeleton-hit": {
+    "width": 128,
+    "height": 184
+  },
   "characters/sprout-1": {
     "width": 128,
     "height": 184
@@ -88,6 +136,18 @@
     "height": 184
   },
   "characters/wanderer-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/wraith-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/wraith-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/wraith-hit": {
     "width": 128,
     "height": 184
   },
