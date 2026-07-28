@@ -9,6 +9,10 @@ It spans **both repos** — `keymania-web` (the game, the browser, the bots) and
 than being split in two because half a rulebook in each repo is how two
 descriptions of one game drift apart. `keymania-api/README.md` links to it.
 
+Its companion is [INTERESTING-PROBLEMS.md](INTERESTING-PROBLEMS.md): this file
+is how the game works, that one is what went wrong on the way there. Several
+rules here exist *because* of an entry in that one, and are cross-referenced.
+
 **Every number below is read from the code, not remembered.** When you change a
 constant, change it here in the same commit — a stale rulebook is worse than
 none, because it gets believed.

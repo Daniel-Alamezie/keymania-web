@@ -15,6 +15,10 @@ Type fast, strike hard.
 This is the game client. The serverless backend (AWS Lambda + API Gateway
 WebSocket) lives in [`keymania`](https://github.com/Daniel-Alamezie/keymania).
 
+> **[docs/INTERESTING-PROBLEMS.md](docs/INTERESTING-PROBLEMS.md) — what went
+> wrong on the way, and what it taught us.** The bugs whose cause was somewhere
+> surprising, or where every tool said the code was fine.
+>
 > **[docs/GAME.md](docs/GAME.md) — how the game works.** Every rule, constant
 > and design decision across both repos, in one place. This README covers what
 > KeyMania is and how to run it; that covers what actually happens.
