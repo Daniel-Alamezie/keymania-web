@@ -396,7 +396,13 @@
 
 /* How many challenges are already earned, so a completion is noticed without
    opening the tab to look for it. */
-.badge {
+/*
+ * `tabBadge`, not `badge`. This file already had a `.badge` — the W/L marker on
+ * a recent duel — and appending a second rule under the same name silently
+ * turned every one of those into a green pill, because CSS modules scope names
+ * per file rather than per component and the later rule simply won.
+ */
+.tabBadge {
   display: inline-grid;
   place-items: center;
   min-width: 17px;
@@ -408,4 +414,4 @@
   border-radius: 9px;
 }
 
-.tab[data-active] .badge { background: var(--bg-deep); color: var(--gold); }
+.tab[data-active] .tabBadge { background: var(--bg-deep); color: var(--gold); }

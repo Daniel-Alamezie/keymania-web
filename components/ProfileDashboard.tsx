@@ -140,12 +140,16 @@ export default function ProfileDashboard() {
               >
                 {label}
                 {id === 'challenges' && earned > 0 && (
-                  <span className={styles.badge}>{earned}</span>
+                  <span className={styles.tabBadge}>{earned}</span>
                 )}
               </button>
             ))}
           </nav>
-          <div className={styles.body} hidden={tab !== 'profile'}>
+          {/* Rendered conditionally, not `hidden`. `.body` is `display: grid`,
+              which beats the browser's `[hidden] { display: none }` — so the
+              attribute did nothing and every tab showed the record as well. */}
+          {tab === 'profile' && (
+          <div className={styles.body}>
             <div className={styles.main}>
 
               <section className={styles.section}>
@@ -242,18 +246,9 @@ export default function ProfileDashboard() {
 
               <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
 
-              {/* Sits with the name and the handle: all three are "who you are
-                  to other players", and none of them is a statistic. */}
-              <CharacterPicker
-                current={asCharacter(profile.character)}
-                onChoose={saveCharacter}
-                // Straight from the server, which derives both from the record.
-                // The picker greys things out; the endpoint refuses them.
-                unlocked={profile.unlocked ?? [DEFAULT_CHARACTER]}
-                challenges={profile.challenges ?? []}
-              />
             </aside>
           </div>
+          )}
 
           {tab === 'challenges' && (
             <section className={styles.section}>
