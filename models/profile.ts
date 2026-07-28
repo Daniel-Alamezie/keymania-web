@@ -81,7 +81,7 @@ export interface ServerProfile {
  *
  * Both fields are optional and independent: sending one leaves the other
  * untouched. They are rationed very differently — a display name can change as
- * often as you like, a handle roughly once a month.
+ * often as you like, a handle once a fortnight after the first free change.
  */
 export interface UpdateProfileRequest {
   displayName?: string;

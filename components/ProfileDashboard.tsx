@@ -355,9 +355,9 @@ function HandleEditor({ current, onSave }: {
     <section className={styles.section}>
       <h2 className={`${styles.heading} pixel-font`}>Handle</h2>
       <p className={styles.muted}>
-        How other players find you, and the only name that is yours alone. You can
-        change it about once a month — unlike your display name, which you can
-        change whenever you like.
+        How other players find you, and the only name that is yours alone. Your
+        first change is free; after that it settles for about a fortnight —
+        unlike your display name, which you can change whenever you like.
       </p>
 
       <form className={styles.nameRow} onSubmit={submit}>
