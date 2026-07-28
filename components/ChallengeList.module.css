@@ -120,63 +120,66 @@
  * The live bar: liquid, still rising.
  *
  * Only on the challenge you are nearest to. A flame sat here first and was the
- * wrong read — fire on a progress bar says "burning down", which is the
- * opposite of what a bar filling up means. Liquid says the thing that is
- * actually true: there is more coming, and it has not arrived yet.
+ * wrong read — fire on a progress bar says "burning down", the opposite of a
+ * bar filling up. Liquid says the true thing: more is coming.
  *
- * Three parts, because one was not enough to see. A slow swell keeps the fill
- * alive between passes, a sheen runs its length, and the leading edge carries
- * a bright meniscus where the eye lands. Everything animates `transform` and
- * `opacity` only, so the browser composites without re-laying-out the row.
+ * The shape of the motion matters as much as its presence. One cycle is a
+ * story with an arrival in it: a wave rolls slowly up the fill, reaches the
+ * leading edge, and breaks there — the splash at the tip is the payoff, and
+ * the pause afterwards is what makes the next wave an event rather than a
+ * texture. The first version ran a 1.5s loop with the flare beating to its
+ * own clock; it read as a shimmer, and a fast shimmer reads as nothing.
+ *
+ * Everything is transform/opacity/filter, so the browser composites it
+ * without re-laying-out the row. Both animations share one duration and are
+ * phased against each other — the swell peaks just as the wave reaches the
+ * tip. Change one duration and you must change the other.
  */
 .fill { position: relative; overflow: hidden; }
 
-/*
- * The whole fill breathes.
- *
- * Without this there is dead air between sweeps, and a bar that is only
- * sometimes moving reads as a bar that is not moving — you have to be looking
- * at the right moment to catch it. This is always happening, so the sweep
- * arrives as a flourish on something already alive rather than as the only
- * evidence of life.
- */
 .fill[data-live] {
-  animation: breathe 1.5s ease-in-out infinite;
+  /* A slow underlying breath so the bar is never fully still between waves —
+     a bar that is only sometimes moving reads as one that is not. Kept faint;
+     the wave is the event. */
+  animation: breathe 3.6s ease-in-out infinite;
 }
 
 @keyframes breathe {
   0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.35); }
+  55% { filter: brightness(1.18); }
 }
 
+/* The wave: a soft crest that rolls the length of the fill. */
 .fill[data-live]::before {
   content: '';
   position: absolute;
   inset: 0;
-  width: 45%;
+  width: 55%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.95) 45%,
-    #fff 55%,
+    rgba(255, 255, 255, 0.35) 35%,
+    rgba(255, 255, 255, 0.85) 60%,
     transparent
   );
-  /*
-   * `linear`, and this is the whole reason the first attempt was invisible.
-   * With `ease-in-out` the sweep dawdles at both ends of its travel — and both
-   * ends are off the bar — so it crossed the visible middle at its fastest and
-   * flickered past. At a constant speed it spends its time where it can be
-   * seen.
-   */
-  animation: rush 1.5s linear infinite;
+  animation: wave 3.6s linear infinite;
 }
 
-@keyframes rush {
-  from { transform: translateX(-120%); }
-  to { transform: translateX(340%); }
+/*
+ * The travel takes the first ~55% of the cycle and the rest is rest.
+ *
+ * `linear` on the moving segment, and this is not taste: with ease-in-out the
+ * sweep dawdled at both ends of its travel — which are off the bar — and
+ * crossed the visible middle at full speed. Constant speed spends the time
+ * where the eye is.
+ */
+@keyframes wave {
+  0% { transform: translateX(-110%); opacity: 1; }
+  55% { transform: translateX(200%); opacity: 1; }
+  56%, 100% { transform: translateX(200%); opacity: 0; }
 }
 
-/* The meniscus: the liquid's own surface, breaking at the leading edge. */
+/* The break: the tip flares as the wave arrives, then settles. */
 .fill[data-live]::after {
   content: '';
   position: absolute;
@@ -185,26 +188,33 @@
   right: 0;
   width: 4px;
   background: #fff;
-  box-shadow: 0 0 10px 3px var(--gold), 0 0 4px 1px #fff;
-  animation: swell 1.5s ease-in-out infinite;
+  transform-origin: right center;
+  animation: splash 3.6s ease-out infinite;
 }
 
-@keyframes swell {
-  0%, 100% { opacity: 0.7; transform: scaleX(1); }
-  50% { opacity: 1; transform: scaleX(2.4); }
+/*
+ * Quiet while the wave travels, breaking at ~55% — the moment the crest
+ * reaches the leading edge — then draining away. The whoosh is the glow
+ * blooming and collapsing rather than any new element.
+ */
+@keyframes splash {
+  0%, 42% { opacity: 0.4; transform: scaleX(1); box-shadow: 0 0 3px 0 var(--gold); }
+  55% { opacity: 1; transform: scaleX(3); box-shadow: 0 0 14px 4px var(--gold), 0 0 5px 2px #fff; }
+  72% { opacity: 0.75; transform: scaleX(1.4); box-shadow: 0 0 7px 2px var(--gold); }
+  100% { opacity: 0.4; transform: scaleX(1); box-shadow: 0 0 3px 0 var(--gold); }
 }
 
 /*
  * Still, for anyone who has asked for it.
  *
- * The fill keeps its colour and its width, so the bar still says how far along
- * it is — only the motion goes. A progress bar that vanished under reduced
- * motion would be removing the information rather than the animation.
+ * The fill keeps its colour and its width, so the bar still says how far
+ * along it is — only the motion goes. A progress bar that vanished under
+ * reduced motion would be removing the information rather than the animation.
  */
 @media (prefers-reduced-motion: reduce) {
   .fill[data-live],
   .fill[data-live]::before,
   .fill[data-live]::after { animation: none; }
   .fill[data-live]::before { opacity: 0; }
-  .fill[data-live]::after { opacity: 0.9; }
+  .fill[data-live]::after { opacity: 0.8; }
 }

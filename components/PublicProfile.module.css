@@ -99,9 +99,3 @@
   margin: var(--gap-lg) 0 0;
 }
 
-/* The rating leads here too — see ProfileDashboard.module.css for why the
-   figure grows rather than the flame shrinking. */
-.stat[data-hero] .statValue {
-  font-size: 30px;
-  line-height: 1;
-}

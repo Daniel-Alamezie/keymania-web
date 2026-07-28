@@ -128,9 +128,8 @@ export default function PublicProfile({ handle }: { handle: string }) {
         <Stat
           label="Rating"
           value={profile.rating ?? START_RATING}
-          icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={38} />}
+          icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={19} />}
           highlight
-          hero
         />
         <Stat label="Best speed" value={profile.bestRankedWpm} unit="wpm" highlight />
         <Stat label="Ranked duels" value={ranked.duels} />
@@ -185,19 +184,16 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Stat({ icon, label, value, unit, highlight, hero }: {
+function Stat({ icon, label, value, unit, highlight }: {
   /** Sits beside the figure. Used for the rating's flame. */
   icon?: React.ReactNode;
   label: string;
   value: number | string;
   unit?: string;
   highlight?: boolean;
-  /** Draws the figure larger. One tile at most, or nothing leads. */
-  hero?: boolean;
 }) {
   return (
-    <div className={styles.stat} data-highlight={highlight || undefined}
-         data-hero={hero || undefined}>
+    <div className={styles.stat} data-highlight={highlight || undefined}>
       <dt className={styles.statLabel}>{label}</dt>
       <dd className={`${styles.statValue} pixel-font`}>
         {icon}

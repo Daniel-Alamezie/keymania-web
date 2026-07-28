@@ -421,23 +421,3 @@
 
 .tab[data-active] .tabBadge { background: var(--bg-deep); color: var(--gold); }
 
-/*
- * The rating, drawn large.
- *
- * A flame is 19px of source art, so it can only be shown at 19px or 38px
- * without pixel rows landing unevenly and the outline going lumpy. At 19 it
- * reads slight — the sprite is narrow and tapers, so even at the digits' own
- * height it has less visual mass than three of them. At 38 beside a 17px
- * figure it stops being a mark and starts being a mascot.
- *
- * So the figure grows to meet it rather than the sprite shrinking to a size it
- * cannot be drawn at. That is also what was wanted in the first place: this is
- * the one number on the page that is a standing rather than a personal best,
- * and it should be the one that catches the eye.
- */
-.stat[data-hero] .statValue {
-  font-size: 30px;
-  line-height: 1;
-}
-
-.stat[data-hero] .unit { font-size: 12px; }
