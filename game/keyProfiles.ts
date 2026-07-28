@@ -68,7 +68,7 @@ export interface KeySound {
   } | null;
 }
 
-export type KeySoundId = 'tac' | 'creamy' | 'thock' | 'clack' | 'typewriter';
+export type KeySoundId = 'tac' | 'creamy' | 'thock' | 'creamythock' | 'clack' | 'typewriter';
 
 export const DEFAULT_KEY_SOUND: KeySoundId = 'tac';
 
@@ -109,6 +109,49 @@ export const KEY_SOUNDS: KeySound[] = [
     body: { low: 120, high: 1900, centre: 520, q: 0.8, gain: 0.24, attack: 0.004, duration: 0.05 },
     tac: { centre: 300, q: 2.4, gain: 0.2, duration: 0.06, lift: 0, cap: 300 },
     thump: { freq: 210, to: 132, gain: 0.22, attack: 0.007, duration: 0.1 },
+  },
+  {
+    id: 'creamythock',
+    label: 'Creamy Thock',
+    blurb: 'Deep underneath, smooth on top, hollow in between.',
+    /**
+     * Creamy and Thock at once — which is not the average of the two.
+     *
+     * Averaging them was the obvious move and the wrong one. Creamy sits at
+     * 1350Hz and Thock at 520Hz, so splitting the difference lands around
+     * 900Hz: the boxy region both of those profiles are shaped to avoid. It
+     * sounds worse than either parent, and it sounds worse for the same reason
+     * a cheap case does.
+     *
+     * What a heavy board actually gives you is both ends and nothing in the
+     * middle. A low case resonance you feel rather than hear, a smooth band of
+     * definition up where the switch speaks, and a deliberate hollow between
+     * them. The gap is the effect. Take it out and this is mud; that is the
+     * entire difference between this profile and a bad one.
+     *
+     * So: `thump` carries the thock, `body` starts at 620Hz rather than
+     * Creamy's 260Hz to leave the hollow open, and the ceiling stays at 3.6kHz
+     * — above Creamy's 3.2kHz for a little more definition, still well under
+     * the 5kHz where clack begins.
+     */
+    body: { low: 620, high: 3600, centre: 1500, q: 0.85, gain: 0.27, attack: 0.008, duration: 0.068 },
+    /**
+     * Capped at 1950Hz, lower than Tac's 2600.
+     *
+     * A combo brightens this, but it must not be able to climb out of its own
+     * character — a profile chosen for being smooth turning clacky at speed is
+     * a bug, and the fastest typists would be the only ones to hit it.
+     */
+    tac: { centre: 1450, q: 2.9, gain: 0.1, duration: 0.034, lift: 30, cap: 1950 },
+    /**
+     * Lower and longer than Creamy's, quieter than Thock's.
+     *
+     * Thock's 0.22 gain would swallow the top band and undo the point of
+     * fusing them. The softest attack of any profile here, 9ms, because with
+     * this much low weight any edge on the onset reads as a click over a thud
+     * rather than as one sound.
+     */
+    thump: { freq: 168, to: 128, gain: 0.19, attack: 0.009, duration: 0.095 },
   },
   {
     id: 'clack',
