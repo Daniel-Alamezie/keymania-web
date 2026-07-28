@@ -78,10 +78,10 @@
 .track {
   grid-area: bar;
   position: relative;
-  /* Raised from 6px. The liquid needs somewhere to be — at six pixels a
-     travelling highlight is indistinguishable from the bar simply being a
-     slightly different colour. */
-  height: 9px;
+  /* Raised from 6px, then again from 9px. The liquid needs somewhere to be:
+     below about a dozen pixels a travelling highlight is indistinguishable
+     from the bar simply being a slightly different colour. */
+  height: 12px;
   min-width: 0;
   background: var(--bg-deep);
   border: 1px solid var(--edge);
@@ -124,51 +124,74 @@
  * opposite of what a bar filling up means. Liquid says the thing that is
  * actually true: there is more coming, and it has not arrived yet.
  *
- * Two parts. A sheen travels the length of the fill, which is the motion; and
- * the leading edge carries a brighter meniscus, which is where the eye lands.
- * Both are `transform` and `opacity` only, so the browser composites them
- * without re-laying-out or repainting the row — the reason this is affordable
- * on a page somebody sits and reads.
+ * Three parts, because one was not enough to see. A slow swell keeps the fill
+ * alive between passes, a sheen runs its length, and the leading edge carries
+ * a bright meniscus where the eye lands. Everything animates `transform` and
+ * `opacity` only, so the browser composites without re-laying-out the row.
  */
 .fill { position: relative; overflow: hidden; }
+
+/*
+ * The whole fill breathes.
+ *
+ * Without this there is dead air between sweeps, and a bar that is only
+ * sometimes moving reads as a bar that is not moving — you have to be looking
+ * at the right moment to catch it. This is always happening, so the sweep
+ * arrives as a flourish on something already alive rather than as the only
+ * evidence of life.
+ */
+.fill[data-live] {
+  animation: breathe 1.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
 
 .fill[data-live]::before {
   content: '';
   position: absolute;
   inset: 0;
-  /* Wider than the bar so the sweep runs off both ends rather than appearing
-     and vanishing mid-track. */
-  width: 60%;
+  width: 45%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.95) 45%,
+    #fff 55%,
     transparent
   );
-  animation: rush 1.9s ease-in-out infinite;
+  /*
+   * `linear`, and this is the whole reason the first attempt was invisible.
+   * With `ease-in-out` the sweep dawdles at both ends of its travel — and both
+   * ends are off the bar — so it crossed the visible middle at its fastest and
+   * flickered past. At a constant speed it spends its time where it can be
+   * seen.
+   */
+  animation: rush 1.5s linear infinite;
 }
 
 @keyframes rush {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(300%); }
+  from { transform: translateX(-120%); }
+  to { transform: translateX(340%); }
 }
 
-/* The meniscus: the liquid's own surface, breathing at the leading edge. */
+/* The meniscus: the liquid's own surface, breaking at the leading edge. */
 .fill[data-live]::after {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: -2px;
+  bottom: -2px;
   right: 0;
-  width: 3px;
+  width: 4px;
   background: #fff;
-  box-shadow: 0 0 6px 1px var(--gold);
-  animation: swell 1.9s ease-in-out infinite;
+  box-shadow: 0 0 10px 3px var(--gold), 0 0 4px 1px #fff;
+  animation: swell 1.5s ease-in-out infinite;
 }
 
 @keyframes swell {
-  0%, 100% { opacity: 0.55; transform: scaleX(1); }
-  50% { opacity: 1; transform: scaleX(1.8); }
+  0%, 100% { opacity: 0.7; transform: scaleX(1); }
+  50% { opacity: 1; transform: scaleX(2.4); }
 }
 
 /*
@@ -179,6 +202,9 @@
  * motion would be removing the information rather than the animation.
  */
 @media (prefers-reduced-motion: reduce) {
-  .fill[data-live]::before { animation: none; opacity: 0; }
-  .fill[data-live]::after { animation: none; opacity: 0.8; }
+  .fill[data-live],
+  .fill[data-live]::before,
+  .fill[data-live]::after { animation: none; }
+  .fill[data-live]::before { opacity: 0; }
+  .fill[data-live]::after { opacity: 0.9; }
 }
