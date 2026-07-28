@@ -327,3 +327,29 @@
   font-size: 12px;
   margin: 0;
 }
+
+/*
+ * Scrollbars hidden, scrolling kept.
+ *
+ * Two of them show on this page: the page's own, and the friends panel's once
+ * it becomes its own sticky scroll container. Both land beside the character
+ * grid, and a gutter tracking down the edge of a picker that is itself a grid
+ * of boxes reads as part of the layout rather than as chrome.
+ *
+ * Scrolling is untouched — wheel, trackpad, keyboard and touch all still work.
+ * The cost is real and worth naming: the bar is also the only thing that says
+ * "there is more below". It is affordable here because a profile is a page
+ * people arrive expecting to scroll, and because the grid is visibly cut off
+ * rather than ending cleanly, which says the same thing.
+ */
+.screen,
+.side {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* legacy Edge */
+}
+
+.screen::-webkit-scrollbar,
+.side::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
