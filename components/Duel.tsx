@@ -116,12 +116,58 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [rematch, setRematch] = useState<{ players: string[]; ready: boolean[] } | null>(null);
   const [asked, setAsked] = useState(false);
 
+  /**
+   * The invisible input that exists purely to summon a phone's keyboard.
+   *
+   * A soft keyboard only appears for a focused, editable element, and this game
+   * has none — it reads `window.keydown` and draws its own caret. So there is
+   * one input, kept off-screen and empty, whose only job is to hold focus.
+   */
+  const capture = useRef<HTMLInputElement>(null);
+  /** Whether the player is on a device where that input is the way in. */
+  const [touch, setTouch] = useState(false);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   });
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  /**
+   * Coarse pointer, not screen width.
+   *
+   * A narrow window on a laptop is still a laptop and already has a keyboard;
+   * a tablet is wide and does not. Asking what kind of pointer is present
+   * answers the actual question — "can this person type without help?" —
+   * where a breakpoint only guesses at it.
+   */
+  useEffect(() => {
+    const query = window.matchMedia('(pointer: coarse)');
+    const sync = () => setTouch(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+
+  /**
+   * Track the keyboard by watching the visual viewport, not by guessing.
+   *
+   * An open soft keyboard does not resize the window — it shrinks the *visual*
+   * viewport and leaves `innerHeight` alone, so a layout that keys off window
+   * height happily draws the sentence underneath the keys. This is the only
+   * reliable signal, and the threshold is generous because the bars at the top
+   * and bottom of mobile browsers move on their own.
+   */
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const sync = () => setKeyboardUp(vv.height < window.innerHeight * 0.75);
+    sync();
+    vv.addEventListener('resize', sync);
+    return () => vv.removeEventListener('resize', sync);
+  }, []);
 
   const track = (timer: ReturnType<typeof setTimeout>) => {
     timers.current.push(timer);
@@ -147,27 +193,19 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [multiplayer?.script]);
 
-  /** Keyboard is the controller. SPACE commits a word and throws the blade. */
-  useEffect(() => {
-    if (state.phase !== 'playing') return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-      // Escape is the way out mid-duel — it only opens the confirmation, since
-      // forfeiting hands the opponent the win and cannot be undone.
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setConfirmQuit((open) => !open);
-        return;
-      }
-
-      const key = e.key === 'Spacebar' ? ' ' : e.key;
-      if (key.length !== 1 || confirmQuit) return;
-      e.preventDefault();
-
+  /**
+   * One character, from whichever keyboard produced it.
+   *
+   * Extracted so a physical key and a phone's soft keyboard run the same code.
+   * They arrive by completely different routes — `keydown` for one, an
+   * `input` event for the other — and having each drive its own copy of the
+   * scoring and reporting is how the two quietly diverge.
+   */
+  const typeChar = useCallback((raw: string) => {
+      const key = raw.toLowerCase();
       const snapshot = stateRef.current;
       const expected = snapshot.sentence[snapshot.cursor];
-      const correct = key.toLowerCase() === expected;
+      const correct = key === expected;
 
       if (!correct) audio.miss();
       else if (expected !== ' ') audio.key(snapshot.playerCombo);
@@ -189,11 +227,81 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         );
       }
 
-      dispatch({ type: 'typed', char: key.toLowerCase(), now: Date.now() });
+      dispatch({ type: 'typed', char: key, now: Date.now() });
+  }, [multiplayer]);
+
+  /**
+   * The soft keyboard, read through a native listener rather than React's prop.
+   *
+   * `onBeforeInput` looks like the obvious way to do this and is not: React's
+   * is a *synthetic* event backed by `textInput` and composition events, not
+   * the native `beforeinput`, so what arrives and when depends on the browser's
+   * composition behaviour. Attaching directly to the element removes that
+   * question entirely — verified by dispatching a native `beforeinput`, which
+   * the React prop never saw.
+   *
+   * `beforeinput` rather than `keydown` because a composing Android keyboard
+   * reports `key: 'Unidentified'` and `keyCode: 229`: the character simply is
+   * not in the key event. It is in `event.data`, which is also where predictive
+   * text puts whole words — hence looping rather than taking `data[0]`.
+   */
+  useEffect(() => {
+    const input = capture.current;
+    if (!input) return;
+
+    const onBeforeInput = (e: Event) => {
+      const native = e as InputEvent;
+      // Always prevented: the field must stay empty. A field with a value in it
+      // gives predictive text something to autocorrect, and gives the browser a
+      // second caret to draw next to the game's own.
+      e.preventDefault();
+      if (confirmQuit || stateRef.current.phase !== 'playing') return;
+      for (const char of native.data ?? '') typeChar(char);
+    };
+
+    // Belt and braces: if anything does land in the field, it leaves at once.
+    const clear = () => { input.value = ''; };
+
+    input.addEventListener('beforeinput', onBeforeInput);
+    input.addEventListener('input', clear);
+    return () => {
+      input.removeEventListener('beforeinput', onBeforeInput);
+      input.removeEventListener('input', clear);
+    };
+  }, [confirmQuit, typeChar]);
+
+  /** A physical keyboard. SPACE commits a word and throws the blade. */
+  useEffect(() => {
+    if (state.phase !== 'playing') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      // Escape is the way out mid-duel — it only opens the confirmation, since
+      // forfeiting hands the opponent the win and cannot be undone.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setConfirmQuit((open) => !open);
+        return;
+      }
+
+      /**
+       * Ignored while the on-screen capture has focus.
+       *
+       * A physical key pressed into a focused input fires `keydown` *and* an
+       * input event, so without this every character would count twice on any
+       * device that has both — a tablet with a keyboard, or a phone the moment
+       * somebody pairs one.
+       */
+      if (document.activeElement === capture.current) return;
+
+      const key = e.key === 'Spacebar' ? ' ' : e.key;
+      if (key.length !== 1 || confirmQuit) return;
+      e.preventDefault();
+      typeChar(key);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.phase, multiplayer, confirmQuit]);
+  }, [state.phase, confirmQuit, typeChar]);
 
   /**
    * When the server will start accepting words, as an instant on this clock.
@@ -471,6 +579,10 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       className={styles.screen}
       data-heat={state.playerCombo >= HEAT_COMBO || undefined}
       data-danger={playerLow || undefined}
+      // Drives the whole compact layout. When a soft keyboard is up there is
+      // perhaps 300px of usable height left, and the words have to win it.
+      data-keyboard={keyboardUp || undefined}
+      data-touch={touch || undefined}
     >
       <div className={styles.controls}>
         <SoundToggle className={styles.iconBtn} />
@@ -618,6 +730,54 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           />
         </div>
       </ArenaScene>
+
+      {/*
+        * The keyboard summoner.
+        *
+        * `beforeinput` rather than `keydown`, because on Android a soft
+        * keyboard reports `key: 'Unidentified'` and `keyCode: 229` while it is
+        * composing — the character is simply not in the key event. It *is* in
+        * `event.data`, which is also where predictive text puts whole words, so
+        * this reads that and feeds it through one character at a time.
+        *
+        * Default is prevented and the value is never allowed to grow: an empty
+        * field gives predictive text nothing to autocorrect, and the game's own
+        * caret stays the only cursor on screen.
+        */}
+      <input
+        ref={capture}
+        className={styles.capture}
+        // Everything a keyboard might helpfully do to typed text, refused. A
+        // corrected word would be scored as a string of mistakes the player
+        // never made.
+        autoCapitalize="none"
+        autoCorrect="off"
+        autoComplete="off"
+        spellCheck={false}
+        inputMode="text"
+        enterKeyHint="done"
+        aria-label="Type here to duel"
+        tabIndex={-1}
+        onBlur={() => setKeyboardUp(false)}
+      />
+
+      {/*
+        * The way in on a phone.
+        *
+        * Shown only on a coarse pointer and only while the keyboard is down, so
+        * a laptop never sees it and it disappears the moment it has done its
+        * job. It is a real button because focusing an input from script alone
+        * is refused on iOS unless it happens inside a genuine user gesture.
+        */}
+      {touch && !keyboardUp && state.phase !== 'over' && (
+        <button
+          type="button"
+          className={styles.tapToType}
+          onClick={() => capture.current?.focus()}
+        >
+          Tap to type
+        </button>
+      )}
 
       <section className={styles.deck}>
         <div className={styles.deckRow}>

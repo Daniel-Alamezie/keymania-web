@@ -531,3 +531,100 @@
   font-size: 10px;
   color: var(--faint);
 }
+
+/* ---------- Playing on a phone -------------------------------------------
+ *
+ * A soft keyboard only appears for a focused, editable element, and this game
+ * has none: it reads window.keydown and draws its own caret. So there is one
+ * input whose entire purpose is to hold focus, and a button to put focus in it
+ * — script alone cannot, because iOS only honours focus inside a real gesture.
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Off-screen, not `display: none` and not `hidden`.
+ *
+ * A hidden input cannot be focused, and an unfocusable input raises no
+ * keyboard — which is the one thing this element exists to do. It is also not
+ * `opacity: 0` at 0x0, because some browsers refuse to bring up a keyboard for
+ * a field with no size. So: real size, pushed out of sight.
+ */
+.capture {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  /* Never 16px or smaller: iOS zooms the page when focusing a field with a
+     font smaller than that, and a zoomed arena is very hard to get back. */
+  font-size: 16px;
+  /* Out of the way of taps — the button below is the real target. */
+  pointer-events: none;
+}
+
+.tapToType {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 9;
+  padding: 12px 22px;
+  background: var(--gold);
+  color: var(--bg-deep);
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  /* Comfortably past the 44px minimum touch target. */
+  min-height: 48px;
+}
+
+/*
+ * With the keyboard up, the words are the only thing that matters.
+ *
+ * The visual viewport can drop to around 300px, and the arena is the one part
+ * that can be spared — you cannot read a sentence you cannot see, but you can
+ * play perfectly well glancing at a smaller fighter. Health stays, because it
+ * is the other thing a player is actually tracking.
+ */
+.screen[data-keyboard] {
+  height: auto;
+  padding: 6px 10px 8px;
+  gap: 6px;
+}
+
+.screen[data-keyboard] .arena {
+  min-height: 0;
+  /* Enough to keep the fight legible, little enough to leave the sentence and
+     the health bars on screen above the keys. */
+  height: clamp(90px, 22vh, 150px);
+}
+
+.screen[data-keyboard] .deck { gap: 6px; }
+/* The combo meter and power bar are read between words, not during them. */
+.screen[data-keyboard] .deckRow { display: none; }
+
+/*
+ * On a phone the arena was 399px wide inside a 375px viewport.
+ *
+ * `.screen` caps at `min(1560px, 94vw)`, which is fine until the padding is
+ * added on top of it — at which point the content box is wider than the
+ * window. Bounding the arena itself is the belt to that braces.
+ */
+@media (max-width: 700px) {
+  .screen {
+    padding: 10px 12px 12px;
+    max-width: 100vw;
+  }
+
+  .arena { max-width: 100%; }
+
+  /* Two plates plus a VS does not fit across a phone; the names wrap and the
+     numbers collide. Stacked, each keeps its own line. */
+  .hud { gap: 8px; }
+  .vs { display: none; }
+}
