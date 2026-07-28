@@ -51,10 +51,13 @@ export default function Fighter({
       <div key={`h${hitTick}`} className={styles.flinch}>
         <div key={`a${attackTick}`} className={styles.lunge}>
           <div className={styles.body}>
+            {/* No height prop: the size is `--fighter-h`, set in Duel.module.css
+                and scaled to the window, because how big a fighter should be is
+                a question about the stage rather than about the fighter. */}
             <PixelSprite
               name={sprite}
               alt={label ?? characterById(character).name}
-              height={132}
+              className={styles.sprite}
             />
 
             {/*
@@ -71,7 +74,7 @@ export default function Fighter({
               */}
             {hitTick > 0 && (
               <div className={styles.blanch} aria-hidden="true">
-                <PixelSprite name={characterHit(character)} height={132} />
+                <PixelSprite name={characterHit(character)} className={styles.sprite} />
               </div>
             )}
           </div>

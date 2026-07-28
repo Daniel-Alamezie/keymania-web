@@ -82,3 +82,16 @@
   0% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/*
+ * The sprite's drawn size, set by the stage rather than by this component.
+ *
+ * `--fighter-h` comes from Duel.module.css and tracks the window, so the
+ * figure grows with the arena instead of leaving a fixed-height actor adrift
+ * in a stage that got taller. The fallback is only for anywhere a Fighter is
+ * rendered outside the duel screen.
+ */
+.sprite {
+  height: var(--fighter-h, 276px);
+  width: auto;
+}

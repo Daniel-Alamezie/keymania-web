@@ -3,7 +3,12 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
-  max-width: 1180px;
+  /*
+   * Widened from 1180px, which left ~385px of dead desktop down each side of
+   * a 1900px screen. The duel is the one view with something worth showing at
+   * size; the menu can stay narrow because it is reading matter.
+   */
+  max-width: min(1560px, 94vw);
   margin: 0 auto;
   padding: 14px 20px 18px;
   gap: 12px;
@@ -89,11 +94,30 @@
   flex: 0 0 auto;
 }
 
+/*
+ * How tall a fighter is drawn.
+ *
+ * Tracks the window rather than sitting at a fixed pixel height, because the
+ * arena does too — a constant 276px sprite in a stage that grows with the
+ * viewport is precisely how the room ended up empty above their heads.
+ */
+.screen { --fighter-h: clamp(200px, 44vh, 480px); }
+
+/* Three abreast, so each gets a fraction of the room one opponent had. */
+.lane[data-many] .foe { --fighter-h: clamp(110px, 20vh, 230px); }
+
 /* ---------- Arena ---------- */
 .arena {
   position: relative;
   border: 3px solid var(--edge);
-  min-height: 250px;
+  /*
+   * Fills the row. An earlier attempt capped this at 640px and centred it,
+   * which shrank the frame without filling anything — the empty room simply
+   * moved outside the border, where it read as margin instead of as wall. The
+   * fix for a stage with too much air in it is a bigger actor, not a smaller
+   * stage.
+   */
+  min-height: 320px;
 }
 
 .canvas {
@@ -105,9 +129,54 @@
   z-index: 3;
 }
 
+/*
+ * The words, laid across the foot of the arena.
+ *
+ * Above the effects canvas deliberately. A blade passing *over* the sentence
+ * would cost a keystroke every time one flew, and the blades arc between the
+ * fighters well above this band anyway — so the only thing the z-order
+ * actually decides is whether the text can ever be obscured, and it must not
+ * be.
+ */
+.stream {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 0 18px 14px;
+}
+
+/*
+ * A scrim under the text.
+ *
+ * The floor is a repeating flagstone tile with enough contrast in it to fight
+ * the letterforms, and the one thing on this screen that must stay readable at
+ * 90wpm is the word being typed. Faded in from transparent rather than a hard
+ * edge, so it reads as depth rather than as a panel bolted over the art.
+ */
+.stream::before {
+  content: '';
+  position: absolute;
+  inset: -34px 0 0 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(10, 7, 22, 0.72) 34%,
+    rgba(10, 7, 22, 0.92) 68%
+  );
+}
+
+.stream > * { position: relative; }
+
 .lane {
   position: absolute;
-  bottom: 19%;
+  /*
+   * Raised from 19%. The sentence now occupies the bottom of the arena, and a
+   * fighter standing in it would be read as part of the text.
+   */
+  bottom: 26%;
   z-index: 2;
   transform: translateX(-50%);
 }
@@ -153,11 +222,23 @@
      column and pushing its neighbours apart. */
   width: 21%;
   min-width: 96px;
-  /* Pushed back by default. The one you are aimed at comes forward, which is
-     the entire explanation of how targeting works — no tutorial needed. */
+  transition: transform 260ms cubic-bezier(0.2, 1.1, 0.4, 1), opacity 260ms ease;
+}
+
+/*
+ * Pushed back by default — but only when there is a field to be pushed back
+ * *from*. The one you are aimed at comes forward, which is the entire
+ * explanation of how targeting works, with no tutorial needed.
+ *
+ * This used to apply to every `.foe`, and `data-targeted` is only ever set
+ * when there is more than one opponent. So the single opponent in an ordinary
+ * duel was permanently dimmed to 72% and shrunk to 82% — smaller and fainter
+ * than the player, for no reason, with nothing that could ever bring them
+ * forward again. It read as a rendering fault, and it was one.
+ */
+.lane[data-many] .foe {
   transform: scale(0.82);
   opacity: 0.72;
-  transition: transform 260ms cubic-bezier(0.2, 1.1, 0.4, 1), opacity 260ms ease;
 }
 
 .foe[data-targeted] {
@@ -414,7 +495,7 @@
 .statValue { margin: 0; font-size: 15px; color: var(--gold); }
 
 @media (max-height: 640px) {
-  .arena { min-height: 150px; }
+  .arena { min-height: 320px; }
   .screen { padding: 10px 14px 12px; gap: 8px; }
 }
 

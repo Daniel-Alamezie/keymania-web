@@ -24,7 +24,12 @@
 
 .floor {
   position: absolute;
-  inset: 74% 0 0 0;
+  /*
+   * Raised from 74%. The fighters stand higher now that the sentence occupies
+   * the foot of the arena, and a ground line below their feet would leave them
+   * hovering over the wall.
+   */
+  inset: 64% 0 0 0;
   background-image: url('/sprites/tile-floor.png');
   background-size: 48px 48px;
   background-repeat: repeat;

@@ -551,10 +551,19 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         )}
 
         <div ref={flashRef} className={styles.flash} aria-hidden="true" />
-      </ArenaScene>
 
-      <section className={styles.deck}>
-        <SentenceView
+        {/*
+          * The words live in the arena, not under it.
+          *
+          * They used to sit in the deck below, which put the three things a
+          * player needs -- health, the fight, the sentence -- in three bands
+          * spread over 800-odd pixels. You read the bottom one, so the blade
+          * you just threw crossed a part of the screen you were not looking
+          * at. Laid over the foot of the arena instead, the throw happens in
+          * the same glance as the word that caused it.
+          */}
+        <div className={styles.stream}>
+          <SentenceView
           previous={state.previous}
           sentence={state.sentence}
           upcoming={state.upcoming}
@@ -562,7 +571,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           missTick={state.missTick}
           powers={state.powers}
           wordOffset={state.wordOffset}
-        />
+          />
+        </div>
+      </ArenaScene>
+
+      <section className={styles.deck}>
         <div className={styles.deckRow}>
           <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />
           <PowerBar ward={state.ward} surge={state.surge} blockTick={state.blockTick} />
