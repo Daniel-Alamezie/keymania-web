@@ -421,3 +421,16 @@
 
 .tab[data-active] .tabBadge { background: var(--bg-deep); color: var(--gold); }
 
+
+/*
+ * A value that has not arrived yet.
+ *
+ * Dimmed rather than blanked, so the tile keeps its height and the row it sits
+ * in does not close up and reopen when the number lands. A dash also says
+ * "nothing yet" honestly — a plausible-looking placeholder number would flash
+ * a figure the player never earned.
+ */
+.ghost {
+  color: var(--faint);
+  opacity: 0.45;
+}

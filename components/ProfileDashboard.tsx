@@ -40,9 +40,16 @@ export default function ProfileDashboard() {
   } = useServerProfile();
   const account = useAccount();
 
-  if (loading) {
-    return <Shell><Notice><p className={styles.muted}>Loading your record…</p></Notice></Shell>;
-  }
+  /**
+   * `!profile`, not just `loading`.
+   *
+   * The store revalidates in the background roughly once a minute, and on
+   * every duel end. Keying the placeholder on `loading` alone meant any of
+   * those could blank a fully-rendered page and rebuild it — a flicker with no
+   * new information behind it, since the answer almost always came back
+   * identical.
+   */
+  if (loading && !profile) return <Shell><Skeleton /></Shell>;
 
   if (anonymous) {
     return (
@@ -316,6 +323,73 @@ function Shell({ children }: { children: React.ReactNode }) {
 /** A single panel, for the states that have nothing to lay out. */
 function Notice({ children }: { children: React.ReactNode }) {
   return <div className={`panel ${styles.notice}`}>{children}</div>;
+}
+
+/**
+ * The page's own shape, before the numbers arrive.
+ *
+ * Not a spinner, and not a message. The record is cached in localStorage, but
+ * localStorage cannot be read while rendering on the server — so the server
+ * always renders the not-yet state, the browser paints it, and only after
+ * hydration does the cached copy appear. Whatever that first paint is, it is
+ * on screen for a moment on every hard refresh.
+ *
+ * A "Loading your record…" panel made that moment expensive: the browser
+ * painted one small box, then replaced it with a full dashboard, so the whole
+ * page jumped. Painting the real layout with its values withheld makes the
+ * same transition a matter of digits filling in, at a size and position they
+ * were always going to occupy.
+ *
+ * It only has to match the *shape*. Getting the tile count and the headings
+ * right is what holds the layout still; the values are dashes on purpose,
+ * because inventing plausible ones would flash a number nobody earned.
+ */
+function Skeleton() {
+  return (
+    <div className={styles.layout} aria-busy="true">
+      <div className={`panel ${styles.recordBox}`}>
+      <header className={styles.identity}>
+        <h1 className={`${styles.identityName} pixel-font ${styles.ghost}`}>&nbsp;</h1>
+      </header>
+
+      <div className={styles.body}>
+        <div className={styles.main}>
+          <section className={styles.section}>
+            <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
+            <dl className={styles.stats} data-pair>
+              <GhostStat label="Current speed" />
+              <GhostStat label="Best ranked speed" />
+            </dl>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
+            <dl className={styles.stats}>
+              {['Rating', 'Duels', 'Record (W–L)', 'Win rate', 'Best speed', 'Best accuracy']
+                .map((label) => <GhostStat key={label} label={label} />)}
+            </dl>
+          </section>
+        </div>
+      </div>
+      </div>
+
+      {/* The friends box is real from the first paint: it loads independently
+          of the record, so withholding it would be inventing a wait that does
+          not exist. */}
+      <aside className={`panel ${styles.friendsBox}`}>
+        <FriendsPanel />
+      </aside>
+    </div>
+  );
+}
+
+function GhostStat({ label }: { label: string }) {
+  return (
+    <div className={styles.stat}>
+      <dt className={styles.statLabel}>{label}</dt>
+      <dd className={`${styles.statValue} pixel-font ${styles.ghost}`}>—</dd>
+    </div>
+  );
 }
 
 /**
