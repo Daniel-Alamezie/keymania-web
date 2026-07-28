@@ -164,6 +164,63 @@ describe('the sentence stream', () => {
     const before = { ...playing('hi there '), upcoming: 'next one ' };
     expect(type(before, 'hi ').upcoming).toBe('next one ');
   });
+
+  /**
+   * The word indices the stream is currently drawing: the sentence just
+   * finished, the one being typed, and the one flowing in from the right.
+   */
+  function onScreen(state: DuelState): [number, number] {
+    const words = (text: string) => (text.trim() ? text.trim().split(' ').length : 0);
+    return [
+      state.wordOffset - words(state.previous),
+      state.wordOffset + words(state.sentence) + words(state.upcoming),
+    ];
+  }
+
+  /**
+   * A charged word is 8px wider than a plain one — `.token[data-charge]` adds
+   * `padding: 0 4px` — so a charge decided late is a layout change to text the
+   * player is already reading. Solo used to charge a sentence at the moment it
+   * became the current one, which meant every roll widened the words arriving
+   * from the right and narrowed the ones leaving. The caret stayed pinned, so
+   * what it looked like was the line lurching around it: the rubberband.
+   *
+   * Multiplayer never had this, which is why it survived a first fix — the
+   * server sends charges for the whole script before the duel starts.
+   */
+  it('never changes a word’s charge once that word is on screen', () => {
+    let state = duelReducer(initialState('rival'), { type: 'start', difficulty: 'rival' });
+    state = { ...state, phase: 'playing' };
+
+    // Several rolls, so the check covers a steady stream rather than the first
+    // hand-off out of the opening state.
+    for (let roll = 0; roll < 6; roll += 1) {
+      const before = state;
+      const after = type(before, before.sentence);
+      expect(after.sentence).not.toBe(before.sentence);
+
+      const [beforeStart, beforeEnd] = onScreen(before);
+      const [afterStart, afterEnd] = onScreen(after);
+
+      for (let i = Math.max(beforeStart, afterStart); i < Math.min(beforeEnd, afterEnd); i += 1) {
+        expect(after.powers[i], `word ${i} changed charge while visible`)
+          .toBe(before.powers[i]);
+      }
+
+      state = after;
+    }
+  });
+
+  it('forgets charges for words that have scrolled out of sight', () => {
+    let state: DuelState = duelReducer(initialState('rival'), { type: 'start', difficulty: 'rival' });
+    state = { ...state, phase: 'playing' };
+    for (let roll = 0; roll < 15; roll += 1) state = type(state, state.sentence);
+
+    const [start] = onScreen(state);
+    for (const index of Object.keys(state.powers)) {
+      expect(Number(index)).toBeGreaterThanOrEqual(start);
+    }
+  });
 });
 
 describe('damage and victory', () => {

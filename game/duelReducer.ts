@@ -101,12 +101,20 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   switch (action.type) {
     case 'start': {
       const sentence = freshSentence();
+      const upcoming = freshSentence(sentence);
       return {
         ...initialState(action.difficulty),
         phase: 'countdown',
         sentence,
-        upcoming: freshSentence(sentence),
-        powers: chargeSentence(sentence.trim()),
+        upcoming,
+        // Both sentences are charged up front, and every later sentence is
+        // charged while it is still `upcoming`. A charged word is 8px wider
+        // than a plain one, so deciding its charge only once it is reached
+        // resizes text that is already on screen — see the roll below.
+        powers: {
+          ...chargeSentence(sentence.trim()),
+          ...shiftCharges(chargeSentence(upcoming.trim()), sentence.trim().split(' ').length),
+        },
       };
     }
 
@@ -230,12 +238,47 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
           ? `${state.script[(nextIndex + 1) % state.script.length]} `
           : freshSentence(nextSentence);
 
-      // Solo charges each new sentence as it arrives; multiplayer already has
-      // the whole script's charges from the server.
       const rolledOffset = sentenceDone ? state.wordOffset + wordsThisSentence : state.wordOffset;
-      const nextPowers = sentenceDone && !state.script
-        ? shiftCharges(chargeSentence(nextSentence.trim()), rolledOffset)
-        : state.powers;
+
+      /**
+       * Solo charges each sentence one roll early; multiplayer already has the
+       * whole script's charges from the server.
+       *
+       * The early part matters more than it looks. `.token[data-charge]` adds
+       * `padding: 0 4px`, so whether a word is charged is a *layout* fact, not
+       * just a colour. This used to replace the whole map with charges for the
+       * sentence being rolled onto, which meant that in the single frame of a
+       * roll the incoming words grew 8px each as they landed and the outgoing
+       * ones shrank by the same amount. The caret stayed pinned — the snap
+       * saw to that — so what you actually saw was the text on either side of
+       * it lurching. That was the rubberband.
+       *
+       * Charging `nextUpcoming` instead settles a word's width before it is
+       * ever drawn, and never touches it again. `nextSentence` is deliberately
+       * left alone: it was charged as `upcoming` a roll ago, and re-charging
+       * it would draw fresh random charges for words already on screen, which
+       * is the same bug wearing a different hat.
+       */
+      const nextPowers = (() => {
+        if (!sentenceDone || state.script) return state.powers;
+
+        const merged = {
+          ...state.powers,
+          ...shiftCharges(
+            chargeSentence(nextUpcoming.trim()),
+            rolledOffset + nextSentence.trim().split(' ').length,
+          ),
+        };
+
+        // Drop anything older than the sentence just finished. Only previous,
+        // current and upcoming are ever rendered, and a duel left running for
+        // an hour should not accumulate a charge for every word it has shown.
+        const kept: Record<number, PowerKind> = {};
+        for (const [index, kind] of Object.entries(merged)) {
+          if (Number(index) >= state.wordOffset) kept[Number(index)] = kind;
+        }
+        return kept;
+      })();
 
       return {
         ...state,
