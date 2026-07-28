@@ -163,3 +163,50 @@
 .rankName[data-link]:focus-visible {
   color: var(--gold);
 }
+
+/* ---------- Panel tabs ---------- */
+
+/*
+ * Two views of one panel, rather than a fourth box on the arena screen.
+ *
+ * The heading became a pair of buttons, so the record keeps its place and the
+ * challenges sit exactly where somebody already looks after a duel.
+ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  background: transparent;
+  border: 2px solid transparent;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.tab:hover { color: var(--ink); }
+
+.tab[data-active] {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  background: var(--good);
+  color: var(--bg-deep);
+  font-size: 8px;
+  border-radius: 8px;
+}

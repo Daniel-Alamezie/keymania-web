@@ -1,9 +1,29 @@
 'use client';
 
+import { useState } from 'react';
 import { useProfile } from '@/game/profile';
+import ChallengeList from './ChallengeList';
 import { useServerProfile, winRate } from '@/game/serverProfile';
 import type { DuelResult, Tally } from '@/models/profile';
+import type { ChallengeProgress } from '@/models/profile';
 import styles from './SidePanel.module.css';
+
+/**
+ * What a signed-out visitor is shown in the challenges tab.
+ *
+ * Titles only, no progress, and the list is greyed by `signedIn={false}`. The
+ * real list comes from the server and needs an account to compute against, so
+ * this is a shop window rather than a placeholder — enough to say what is on
+ * offer without pretending anybody is part-way through it.
+ */
+const LOCKED_PREVIEW: ChallengeProgress[] = [
+  { id: 'p1', title: 'Beat the Rival bot', reward: { kind: 'character', character: 'sprout' },
+    progress: 0, goal: 1, display: 'mark', done: false },
+  { id: 'p2', title: 'Win three duels against people', reward: { kind: 'character', character: 'wanderer' },
+    progress: 0, goal: 3, display: 'count', done: false },
+  { id: 'p3', title: 'Finish a ranked duel at 95% accuracy', reward: { kind: 'character', character: 'scholar' },
+    progress: 0, goal: 95, display: 'mark', done: false },
+];
 
 /**
  * The player's own history, beside the menu.
@@ -19,6 +39,15 @@ import styles from './SidePanel.module.css';
 export default function RecordPanel() {
   const local = useProfile();
   const { profile, anonymous } = useServerProfile();
+  /**
+   * Two views of the same panel.
+   *
+   * The record is what you glance at after a duel; the challenges are what
+   * pull you into the next one. They share a panel rather than each taking a
+   * corner, because the arena screen has three boxes and a fourth would make
+   * the menu the smallest thing on it.
+   */
+  const [tab, setTab] = useState<'record' | 'challenges'>('record');
 
   // The account record wins whenever there is one. `anonymous` is the explicit
   // signed-out signal; a null profile that is merely still loading falls
@@ -27,8 +56,16 @@ export default function RecordPanel() {
 
   if (useLocal) {
     return (
-      <Shell note={anonymous ? 'This device only. Sign in to keep it.' : undefined}>
-        {local.duels === 0 ? (
+      <Shell
+        note={anonymous ? 'This device only. Sign in to keep it.' : undefined}
+        tab={tab}
+        setTab={setTab}
+      >
+        {/* Shown greyed rather than hidden. Progression is the argument for
+            making an account, and somebody who cannot see what is on offer has
+            no reason to want it. */}
+        {tab === 'challenges' ? <ChallengeList challenges={LOCKED_PREVIEW} signedIn={false} />
+        : local.duels === 0 ? (
           <Empty />
         ) : (
           <Body
@@ -60,17 +97,49 @@ export default function RecordPanel() {
           ? 'Duels against other players. Practice is kept separately.'
           : 'Bot practice. Play another player and your ranked record starts here.'
       }
+      tab={tab}
+      setTab={setTab}
+      earned={(profile.challenges ?? []).filter((c) => c.done).length}
     >
-      {tally.duels === 0 ? <Empty /> : <Body tally={tally} recent={profile.history.slice(0, 5)} />}
+      {tab === 'challenges' ? (
+        // The three you are nearest to. The panel is narrow, and "one more
+        // win" is what pulls somebody back into a duel — the full list belongs
+        // on the profile, where there is room to read it.
+        <ChallengeList challenges={profile.challenges ?? []} limit={3} />
+      ) : tally.duels === 0 ? (
+        <Empty />
+      ) : (
+        <Body tally={tally} recent={profile.history.slice(0, 5)} />
+      )}
     </Shell>
   );
 }
 
-function Shell({ note, children }: { note?: string; children: React.ReactNode }) {
+function Shell({ note, children, tab, setTab, earned }: {
+  note?: string;
+  children: React.ReactNode;
+  tab: 'record' | 'challenges';
+  setTab: (tab: 'record' | 'challenges') => void;
+  earned?: number;
+}) {
   return (
     <aside className={`panel ${styles.side}`}>
-      <h2 className={`${styles.heading} pixel-font`}>Your record</h2>
-      {note && <p className={styles.footnote}>{note}</p>}
+      <nav className={styles.tabs} aria-label="Panel sections">
+        <button
+          type="button" className={styles.tab} data-active={tab === 'record' || undefined}
+          aria-pressed={tab === 'record'} onClick={() => setTab('record')}
+        >
+          Your record
+        </button>
+        <button
+          type="button" className={styles.tab} data-active={tab === 'challenges' || undefined}
+          aria-pressed={tab === 'challenges'} onClick={() => setTab('challenges')}
+        >
+          Challenges
+          {earned ? <span className={styles.badge}>{earned}</span> : null}
+        </button>
+      </nav>
+      {tab === 'record' && note && <p className={styles.footnote}>{note}</p>}
       {children}
     </aside>
   );

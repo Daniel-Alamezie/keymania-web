@@ -353,3 +353,59 @@
   width: 0;
   height: 0;
 }
+
+/* ---------- Tabs ---------- */
+
+/*
+ * Three views of one account.
+ *
+ * A row of buttons rather than routes: a profile tab is not somewhere anybody
+ * links to, and it should not be a step the back button walks through. The
+ * record stays the default because it is what most visits are for.
+ */
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 20px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.tab:hover { color: var(--ink); border-color: var(--edge-soft); }
+
+.tab[data-active] {
+  color: var(--bg-deep);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+/* How many challenges are already earned, so a completion is noticed without
+   opening the tab to look for it. */
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  background: var(--good);
+  color: var(--bg-deep);
+  font-size: 9px;
+  border-radius: 9px;
+}
+
+.tab[data-active] .badge { background: var(--bg-deep); color: var(--gold); }

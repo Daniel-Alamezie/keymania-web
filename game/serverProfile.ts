@@ -3,7 +3,9 @@
 // The store owns all the state, so nothing here needs local React state.
 import { useSyncExternalStore } from 'react';
 import { asCharacter, DEFAULT_CHARACTER, type CharacterId } from '@/models/character';
-import type { DuelResult, ServerProfile, Tally } from '@/models/profile';
+import type {
+  ChallengeProgress, DuelResult, ServerProfile, Tally,
+} from '@/models/profile';
 
 
 
@@ -329,6 +331,36 @@ export function useCharacter(): CharacterId {
   );
 }
 
+/**
+ * Everything this player may fight as, and how far off the rest is.
+ *
+ * Both come straight from the server, which derives them from the record — so
+ * they cannot disagree with what `PUT /profile` will accept. The UI uses them
+ * to grey things out, which is a courtesy; the endpoint is the control.
+ *
+ * Stable empty literals for the fallbacks, not fresh `[]` on every call.
+ * `useSyncExternalStore` compares snapshots by identity and would otherwise
+ * see a new array each time and re-render for ever.
+ */
+const NO_CHALLENGES: ChallengeProgress[] = [];
+const ONLY_DEFAULT: CharacterId[] = [DEFAULT_CHARACTER];
+
+export function useUnlocked(): CharacterId[] {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => readSnapshot().profile?.unlocked ?? ONLY_DEFAULT,
+    () => ONLY_DEFAULT,
+  );
+}
+
+export function useChallenges(): ChallengeProgress[] {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => readSnapshot().profile?.challenges ?? NO_CHALLENGES,
+    () => NO_CHALLENGES,
+  );
+}
+
 export function useHandle(): string | null {
   return useSyncExternalStore(
     subscribeToStore,
@@ -379,4 +411,6 @@ export function trend(history: DuelResult[], sample = 10): number | null {
   return Math.round(mean(newer) - mean(older));
 }
 
-export type { DuelResult, Tally, ServerProfile } from '@/models/profile';
+export type {
+  DuelResult, Tally, ServerProfile, ChallengeProgress,
+} from '@/models/profile';

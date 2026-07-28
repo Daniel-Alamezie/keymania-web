@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   CHARACTER_LIST, characterById, characterFrame, type CharacterId,
 } from '@/models/character';
+import type { ChallengeProgress } from '@/models/profile';
 import PixelSprite from './PixelSprite';
 import styles from './CharacterPicker.module.css';
 
@@ -21,9 +22,13 @@ import styles from './CharacterPicker.module.css';
  * answered "slow down" to somebody who had done nothing but look. Trying things
  * on has to be free; only deciding costs anything.
  */
-export default function CharacterPicker({ current, onChoose }: {
+export default function CharacterPicker({ current, onChoose, unlocked, challenges }: {
   current: CharacterId;
   onChoose: (id: CharacterId) => Promise<{ ok: boolean; error?: string }>;
+  /** Everything this player may wear. Anything else is drawn, but locked. */
+  unlocked: CharacterId[];
+  /** Used to say what would earn a locked one, rather than only that it is. */
+  challenges: ChallengeProgress[];
 }) {
   const [selected, setSelected] = useState<CharacterId>(current);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -33,6 +38,19 @@ export default function CharacterPicker({ current, onChoose }: {
   // profile has loaded, so useState seeds correctly on the first render, and
   // after a save `current` catches up on its own.
   const dirty = selected !== current;
+
+  const isUnlocked = (id: CharacterId) => unlocked.includes(id);
+
+  /**
+   * What would earn a given character, if anything currently does.
+   *
+   * Locked options say how to get them rather than only that they are locked.
+   * A grid of padlocks tells a player there is more without telling them how
+   * to reach it, which is the frustrating half of a progression system with
+   * none of the pull.
+   */
+  const earnedBy = (id: CharacterId) =>
+    challenges.find((c) => c.reward.kind === 'character' && c.reward.character === id);
 
   async function save() {
     setStatus('saving');
@@ -61,13 +79,21 @@ export default function CharacterPicker({ current, onChoose }: {
             <button
               type="button"
               className={styles.option}
+              // Locked options stay in the grid, in place. Hiding them would
+              // make the roster appear to grow at random, and it is the sight
+              // of the ones you cannot have yet that gives the rest a point.
+              data-locked={!isUnlocked(character.id) || undefined}
+              disabled={!isUnlocked(character.id)}
               data-chosen={character.id === selected || undefined}
               // Marks the one actually saved, so a browsed grid still shows
               // what you will walk away as if you change your mind.
               data-current={character.id === current || undefined}
               aria-pressed={character.id === selected}
-              aria-label={`${character.name} — ${character.blurb}`}
+              aria-label={isUnlocked(character.id)
+                ? `${character.name} — ${character.blurb}`
+                : `${character.name}, locked. ${earnedBy(character.id)?.title ?? ''}`}
               onClick={() => {
+                if (!isUnlocked(character.id)) return;
                 setSelected(character.id);
                 setStatus('idle');
                 setProblem(null);
@@ -77,7 +103,24 @@ export default function CharacterPicker({ current, onChoose }: {
                   breathing out of step in a grid is a distraction, not charm. */}
               <PixelSprite name={characterFrame(character.id, 1)} height={92} />
               <span className={styles.name}>{character.name}</span>
-              <span className={styles.blurb}>{character.blurb}</span>
+              {isUnlocked(character.id) ? (
+                <span className={styles.blurb}>{character.blurb}</span>
+              ) : (
+                <span className={styles.locked}>
+                  {/* The disposition is withheld until it is earned; knowing
+                      who they are is part of the reward. What replaces it is
+                      the route in, not a shrug. */}
+                  {earnedBy(character.id)?.title ?? 'Locked'}
+                  {(() => {
+                    const challenge = earnedBy(character.id);
+                    return challenge && challenge.display === 'count' ? (
+                      <em className={styles.progress}>
+                        {challenge.progress} / {challenge.goal}
+                      </em>
+                    ) : null;
+                  })()}
+                </span>
+              )}
             </button>
           </li>
         ))}

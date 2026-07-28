@@ -99,3 +99,44 @@
 
 .error { color: var(--bad); }
 .ok { color: var(--good); }
+
+/*
+ * A locked option: present, legible, and plainly not yours yet.
+ *
+ * Drawn in place rather than hidden. A roster that appears to grow at random
+ * gives a player nothing to aim at, and it is the sight of the ones you cannot
+ * have that gives the ones you can a point.
+ *
+ * Desaturated rather than merely faded — a low opacity on a dark panel makes a
+ * sprite hard to identify, and the whole reason to keep it visible is that you
+ * can see who it is.
+ */
+.option[data-locked] {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.option[data-locked]:hover {
+  /* No lift, no glow. Nothing here responds, so nothing should suggest it does. */
+  transform: none;
+  border-color: var(--edge);
+}
+
+.option[data-locked] img { opacity: 0.7; }
+
+/* How to earn it, in place of the disposition it is still hiding. */
+.locked {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+.progress {
+  font-style: normal;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}

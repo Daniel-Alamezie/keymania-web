@@ -87,8 +87,44 @@ export interface ServerProfile {
    * duelled a person is still told where they stand.
    */
   rating?: number;
+  /**
+   * Every character this player may currently fight as.
+   *
+   * Derived on the server from the record, so it is always current and can
+   * never disagree with what the endpoint will accept. The picker greys out
+   * everything absent from here — a convenience, not the control; PUT /profile
+   * refuses a locked character regardless of what the browser drew.
+   */
+  unlocked?: CharacterId[];
+  /** Every open challenge, with progress. Absent from an older server. */
+  challenges?: ChallengeProgress[];
   /** Newest first, as the API stores it. */
   history: DuelResult[];
+}
+
+/**
+ * What finishing a challenge grants.
+ *
+ * A tagged union mirroring `Reward` in keymania-api. One member today; weekly
+ * challenges will need more, since they cannot keep handing out characters
+ * from a roster of six.
+ */
+export type Reward = { kind: 'character'; character: CharacterId };
+
+/** One challenge and how far along it is, as `GET /profile` reports it. */
+export interface ChallengeProgress {
+  id: string;
+  /** What the player is asked to do, in their words. */
+  title: string;
+  reward: Reward;
+  /** How far along, already capped at `goal` by the server. */
+  progress: number;
+  goal: number;
+  /** `count` renders "2 / 3"; `mark` renders done or not. */
+  display: 'count' | 'mark';
+  done: boolean;
+  /** Present only on a challenge that closes, so a deadline can be shown. */
+  endsAt?: number;
 }
 
 /**

@@ -8,9 +8,10 @@ import {
   type DuelResult,
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
-import { asCharacter } from '@/models/character';
+import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
 import { START_RATING } from '@/models/rating';
 import CharacterPicker from './CharacterPicker';
+import ChallengeList from './ChallengeList';
 import FriendsPanel from './FriendsPanel';
 import { useUiSounds } from './SoundToggle';
 import WpmChart, { type ChartPoint } from './WpmChart';
@@ -21,6 +22,15 @@ import styles from './ProfileDashboard.module.css';
  * whether that is going up.
  */
 export default function ProfileDashboard() {
+  /**
+   * Which view of the account is showing.
+   *
+   * Local, not in the URL. A profile tab is not a place somebody links to or
+   * expects the back button to walk through, and putting it in the route would
+   * mean a router push on every click for no gain.
+   */
+  const [tab, setTab] = useState<'profile' | 'challenges' | 'characters'>('profile');
+
   // Its own route, so it never mounts Game and would otherwise be the one
   // silent screen in the app.
   useUiSounds();
@@ -67,6 +77,8 @@ export default function ProfileDashboard() {
     .reverse()
     .map(({ wpm, at, ranked, won }) => ({ wpm, at, ranked, won }));
 
+  // Shown on the tab, so a finished challenge is noticed without opening it.
+  const earned = (profile.challenges ?? []).filter((c) => c.done).length;
   const now = currentSpeed(profile.history);
   const movement = trend(profile.history);
   const ranked = profile.ranked ?? EMPTY_TALLY;
@@ -103,7 +115,37 @@ export default function ProfileDashboard() {
             {profile.handle && <p className={styles.identityHandle}>@{profile.handle}</p>}
           </header>
 
-          <div className={styles.body}>
+          {/*
+            * Three views of one account, rather than one long column.
+            *
+            * The record is what most visits are for, so it stays the default and
+            * keeps its own layout. Challenges and characters each want the full
+            * width instead of a sidebar's share — the character grid especially,
+            * since the roster is meant to grow and six across a narrow column is
+            * already tight.
+            */}
+          <nav className={styles.tabs} aria-label="Profile sections">
+            {([
+              ['profile', 'Profile'],
+              ['challenges', 'Challenges'],
+              ['characters', 'Characters'],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={styles.tab}
+                data-active={tab === id || undefined}
+                aria-pressed={tab === id}
+                onClick={() => setTab(id)}
+              >
+                {label}
+                {id === 'challenges' && earned > 0 && (
+                  <span className={styles.badge}>{earned}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+          <div className={styles.body} hidden={tab !== 'profile'}>
             <div className={styles.main}>
 
               <section className={styles.section}>
@@ -205,9 +247,38 @@ export default function ProfileDashboard() {
               <CharacterPicker
                 current={asCharacter(profile.character)}
                 onChoose={saveCharacter}
+                // Straight from the server, which derives both from the record.
+                // The picker greys things out; the endpoint refuses them.
+                unlocked={profile.unlocked ?? [DEFAULT_CHARACTER]}
+                challenges={profile.challenges ?? []}
               />
             </aside>
           </div>
+
+          {tab === 'challenges' && (
+            <section className={styles.section}>
+              <h2 className={`${styles.heading} pixel-font`}>Challenges</h2>
+              <p className={styles.muted}>
+                Each one earns a character. Progress is worked out from your record,
+                so anything you have already done counts — including duels you played
+                before the challenge existed.
+              </p>
+              <ChallengeList challenges={profile.challenges ?? []} />
+            </section>
+          )}
+
+          {tab === 'characters' && (
+            <section className={styles.section}>
+              <CharacterPicker
+                current={asCharacter(profile.character)}
+                onChoose={saveCharacter}
+                // Straight from the server, which derives both from the record.
+                // The picker greys things out; the endpoint refuses them.
+                unlocked={profile.unlocked ?? [DEFAULT_CHARACTER]}
+                challenges={profile.challenges ?? []}
+              />
+            </section>
+          )}
         </div>
 
         <aside className={`panel ${styles.friendsBox}`}>
