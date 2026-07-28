@@ -33,17 +33,28 @@ export const DEFAULT_CHARACTER: CharacterId = 'rookie';
 export interface Character {
   id: CharacterId;
   name: string;
-  /** One line, for somebody choosing at a glance. */
+  /**
+   * One line, for somebody choosing at a glance.
+   *
+   * A disposition, not a description. These used to list what each character
+   * wore — which the sprite already says, and far better than words can. What
+   * the sprite cannot say is why you would pick one, and that turns out to be
+   * the only thing worth writing down: people choose the stance they recognise
+   * in themselves on a good day.
+   *
+   * No pronouns. Nothing about these characters states a gender, and the
+   * player is the one wearing them.
+   */
   blurb: string;
 }
 
 export const CHARACTER_LIST: Character[] = [
-  { id: 'rookie', name: 'Rookie', blurb: 'Blue jumper, warm mug, no idea what is coming.' },
-  { id: 'wanderer', name: 'Wanderer', blurb: 'Pointed hat, long staff, been walking a while.' },
-  { id: 'scholar', name: 'Scholar', blurb: 'Round glasses and a shirt that has seen a library.' },
-  { id: 'drifter', name: 'Drifter', blurb: 'Long coat, longer hair, somewhere else to be.' },
-  { id: 'sprout', name: 'Sprout', blurb: 'Small, delighted, entirely unbothered by the odds.' },
-  { id: 'baron', name: 'Baron', blurb: 'A frog in a top hat. Asks questions with his pipe.' },
+  { id: 'rookie', name: 'Rookie', blurb: 'Knows nothing yet. Turning up is the hard part.' },
+  { id: 'wanderer', name: 'Wanderer', blurb: 'Never arrived anywhere. Never stopped, either.' },
+  { id: 'scholar', name: 'Scholar', blurb: 'Read how it ends. Came to argue with the ending.' },
+  { id: 'drifter', name: 'Drifter', blurb: 'Belongs nowhere on purpose. Arrives first regardless.' },
+  { id: 'sprout', name: 'Sprout', blurb: 'Too small to know the odds. Far too pleased to care.' },
+  { id: 'baron', name: 'Baron', blurb: 'Certainty is a poor habit. Prefers the question.' },
 ];
 
 export const isCharacter = (value: unknown): value is CharacterId =>
