@@ -20,7 +20,7 @@ const stats = { maxCombo: 7 } as DuelStats;
 const finish = (over: Partial<Parameters<typeof saveResult>[0]> = {}) =>
   saveResult({
     stats, won: true, wpm: 62, accuracy: 94,
-    signedIn: true, multiplayer: false, ...over,
+    signedIn: true, multiplayer: false, difficulty: 'rival', ...over,
   });
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -49,6 +49,28 @@ describe('saveResult', () => {
     expect(JSON.parse(init.body as string)).toMatchObject({
       wpm: 62, accuracy: 94, won: true, maxCombo: 7,
     });
+  });
+
+  /**
+   * Which bot, on every practice result.
+   *
+   * This used to post `opponent: 'Bot'` and nothing else, so all three
+   * difficulties were recorded identically and a player's practice history was
+   * an undifferentiated pile. No challenge can ask you to beat the Master if
+   * beating the Master leaves the same trace as beating the Rookie — and the
+   * history is capped, so anything not labelled at the time is gone for good.
+   */
+  it('records which bot was played', () => {
+    finish({ difficulty: 'master' });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string).difficulty).toBe('master');
+  });
+
+  it('distinguishes the three, rather than reporting them alike', () => {
+    for (const difficulty of ['rookie', 'rival', 'master'] as const) finish({ difficulty });
+    const sent = fetchMock.mock.calls
+      .map(([, init]) => JSON.parse((init as RequestInit).body as string).difficulty);
+    expect(sent).toEqual(['rookie', 'rival', 'master']);
   });
 
   it('does not post for a signed-out guest', () => {

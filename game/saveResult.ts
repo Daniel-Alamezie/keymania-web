@@ -20,7 +20,9 @@ import { invalidateProfile } from './serverProfile';
  * so the arena updates the moment a duel ends without waiting on a round trip.
  */
 
-export function saveResult({ stats, won, wpm, accuracy, signedIn, multiplayer }: FinishedDuel): void {
+export function saveResult({
+  stats, won, wpm, accuracy, signedIn, multiplayer, difficulty,
+}: FinishedDuel): void {
   recordDuel(stats, won, wpm, accuracy);
 
   // The account record now has a duel the cached copy does not know about —
@@ -36,7 +38,12 @@ export function saveResult({ stats, won, wpm, accuracy, signedIn, multiplayer }:
   void fetch('/api/me/duels', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ wpm, accuracy, won, maxCombo: stats.maxCombo, opponent: 'Bot' }),
+    // `difficulty` is the whole reason this is worth recording: without it a
+    // practice history is a pile of duels against "Bot", and no challenge can
+    // ever ask you to beat a particular one.
+    body: JSON.stringify({
+      wpm, accuracy, won, maxCombo: stats.maxCombo, opponent: 'Bot', difficulty,
+    }),
   }).catch(() => {});
 }
 

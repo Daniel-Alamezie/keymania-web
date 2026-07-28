@@ -220,6 +220,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         // A refereed duel is already recorded server-side from figures the
         // server computed; only practice needs reporting from here.
         multiplayer: Boolean(multiplayer),
+        // Which bot. Meaningless when multiplayer, and ignored there.
+        difficulty,
       });
     }
     // account/multiplayer are read, not tracked: the effect must fire once, on

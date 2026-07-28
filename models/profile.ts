@@ -12,6 +12,7 @@
 
 import type { CharacterId } from './character';
 import type { DuelStats } from './duel';
+import type { Difficulty } from './bot';
 
 /** One finished duel, as stored in a player's history. */
 export interface DuelResult {
@@ -27,6 +28,12 @@ export interface DuelResult {
    * leaderboard.
    */
   ranked: boolean;
+  /**
+   * Which bot, on practice duels. Absent on ranked duels and on any practice
+   * duel recorded before the field existed — "missing" means unknown, and must
+   * never be read as the easiest opponent.
+   */
+  difficulty?: Difficulty;
   /** The other player, or "4-way" when there was a field rather than one rival. */
   opponent?: string;
 }
@@ -120,6 +127,8 @@ export interface ReportDuelRequest {
   won: boolean;
   maxCombo: number;
   opponent?: string;
+  /** Which bot. An older client omits it, and the server stores nothing. */
+  difficulty?: Difficulty;
 }
 
 /**
@@ -148,4 +157,9 @@ export interface FinishedDuel {
   signedIn: boolean;
   /** Absent for bot practice. */
   multiplayer: boolean;
+  /**
+   * Which bot was played. Ignored when `multiplayer`, where the opponent was a
+   * person and the server wrote the record itself.
+   */
+  difficulty: Difficulty;
 }
