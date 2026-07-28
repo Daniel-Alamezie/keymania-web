@@ -188,6 +188,9 @@ export default function ProfileDashboard() {
                     // crown would say the same thing at 300 as at 500.
                     icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={38} />}
                     highlight
+                    // The one figure on this page that is a standing rather
+                    // than a personal best, so it is the one drawn large.
+                    hero
                     note={ranked.duels === 0 ? 'unplayed — everyone starts here' : undefined}
                   />
                   <Stat label="Duels" value={ranked.duels} highlight />
@@ -497,14 +500,17 @@ function RecentRow({ duel }: { duel: DuelResult }) {
   );
 }
 
-function Stat({ icon, label, value, unit, prefix, suffix, note, highlight }: {
+function Stat({ icon, label, value, unit, prefix, suffix, note, highlight, hero }: {
   /** Sits beside the figure. Used for the rating's flame. */
   icon?: React.ReactNode;
   label: string; value: number; unit?: string; prefix?: string;
   suffix?: string; note?: string; highlight?: boolean;
+  /** Draws the figure larger. One tile at most, or nothing leads. */
+  hero?: boolean;
 }) {
   return (
-    <div className={styles.stat} data-highlight={highlight || undefined}>
+    <div className={styles.stat} data-highlight={highlight || undefined}
+         data-hero={hero || undefined}>
       <dt className={styles.statLabel}>{label}</dt>
       <dd className={`${styles.statValue} pixel-font`}>
         {icon}
