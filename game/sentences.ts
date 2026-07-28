@@ -71,11 +71,31 @@ const SIGNATURE = [
 const pick: Pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export function randomSentence(exclude?: string): string {
+  /**
+   * Trimmed before comparing, because the duel's sentences carry their
+   * committing trailing space and the corpus's do not. Without this the
+   * exclusion never matched anything: `freshSentence(current)` passed
+   * "…fast one " while every candidate was "…fast one", so the same sentence
+   * could roll in twice in a row — rarely, which is worse than reliably,
+   * because it survived until a test happened to hit the repeat.
+   */
+  const avoid = exclude?.trim();
+
   for (let attempt = 0; attempt < 5; attempt++) {
     const sentence = Math.random() < 0.2 ? pick(SIGNATURE) : pick(TEMPLATES)(pick);
-    if (sentence !== exclude) return sentence;
+    if (sentence !== avoid) return sentence;
   }
-  return pick(TEMPLATES)(pick);
+
+  /**
+   * The fallback is guaranteed different, not merely likely.
+   *
+   * The old one returned an unguarded pick, so exclusion was probabilistic
+   * even when the comparison worked — five bad draws and a repeat slipped
+   * out. Filtering the fixed list cannot fail: SIGNATURE holds several
+   * sentences, so removing one always leaves something to return.
+   */
+  const pool = SIGNATURE.filter((sentence) => sentence !== avoid);
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 /**

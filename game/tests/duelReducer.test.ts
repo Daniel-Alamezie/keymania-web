@@ -167,6 +167,27 @@ describe('the sentence stream', () => {
   });
 
   /**
+   * Never the same sentence twice in a row.
+   *
+   * This failed flakily inside the charge test before it had a name: the
+   * exclusion in randomSentence compared the duel's trailing-spaced sentence
+   * against the corpus's unspaced ones and matched nothing, so a roll could
+   * land on the sentence just typed. Thirty rolls at a 20% signature rate
+   * over eight signatures would repeat within a handful of rolls if the
+   * exclusion were broken again.
+   */
+  it('never rolls onto the sentence just finished', () => {
+    let state = duelReducer(initialState('rival'), { type: 'start', difficulty: 'rival' });
+    state = { ...state, phase: 'playing' };
+
+    for (let roll = 0; roll < 30; roll += 1) {
+      const before = state.sentence;
+      state = type(state, state.sentence);
+      expect(state.sentence, `roll ${roll}`).not.toBe(before);
+    }
+  });
+
+  /**
    * The word indices the stream is currently drawing: the sentence just
    * finished, the one being typed, and the one flowing in from the right.
    */

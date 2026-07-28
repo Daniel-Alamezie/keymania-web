@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OPENING_SENTENCE, randomSentence } from '../sentences';
 
 /**
@@ -75,5 +75,45 @@ describe('OPENING_SENTENCE', () => {
   it('satisfies the same typing invariants as a generated sentence', () => {
     expect(OPENING_SENTENCE).toMatch(/^[a-z ]+$/);
     expect(OPENING_SENTENCE).not.toMatch(/\s{2,}/);
+  });
+});
+
+/**
+ * Exclusion, at the seam where it actually broke.
+ *
+ * The duel's sentences carry a committing trailing space; the corpus's do not.
+ * `randomSentence('…fast one ')` therefore compared unequal strings and never
+ * rejected anything — the same sentence could roll in twice in a row, rarely
+ * enough that it survived until a reducer test happened to hit the repeat.
+ * These pin the fix deterministically by forcing the RNG against it, instead
+ * of waiting for luck.
+ */
+describe('excluding the previous sentence', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('rejects the excluded sentence even when it arrives with its trailing space', () => {
+    // Math.random at 0 forces the signature branch and index 0 on every draw,
+    // so every candidate is the excluded sentence — the worst possible luck.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const first = randomSentence();
+
+    expect(randomSentence(`${first} `)).not.toBe(first);
+  });
+
+  it('guarantees a different sentence, not merely a likely one', () => {
+    /**
+     * 0.5, not 0, and the choice is the test. At 0 every draw takes the
+     * signature branch, and the old unguarded fallback — a template pick —
+     * happened to differ anyway, so the first version of this test passed
+     * against the very bug it was written for. At 0.5 every draw builds the
+     * same template sentence, the fallback rebuilds it identically, and only
+     * a fallback that genuinely guarantees difference can pass.
+     */
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const stuck = randomSentence();
+
+    for (let i = 0; i < 20; i++) {
+      expect(randomSentence(stuck)).not.toBe(stuck);
+    }
   });
 });
