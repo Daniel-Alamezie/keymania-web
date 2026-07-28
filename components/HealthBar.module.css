@@ -96,3 +96,32 @@
   opacity: 0.4;
   filter: grayscale(0.8);
 }
+
+/* ---- compact ----
+ *
+ * The in-arena form, worn under the fighter it describes. No portrait — the
+ * figure standing above it is a better one than any thumbnail — and tighter
+ * type, because this has a fighter's width to live in rather than a strip's.
+ */
+.plate[data-compact] {
+  gap: 0;
+  padding: 3px 5px;
+}
+
+.plate[data-compact] .name {
+  font-size: 7px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plate[data-compact] .value { font-size: 8px; }
+
+.plate[data-compact] .track { height: 6px; }
+
+/* The targeting marker matters more here than in the strip: it is the only
+   thing saying which of three fighters your next blade is going to. */
+.plate[data-compact][data-targeted] {
+  border-color: var(--gold);
+}

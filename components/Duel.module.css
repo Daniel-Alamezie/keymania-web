@@ -69,6 +69,20 @@
 /* ---------- HUD ---------- */
 .hud { display: flex; align-items: center; gap: 16px; }
 
+/*
+ * A four-way leaves one plate in the strip, and a lone plate given the whole
+ * width becomes a metre-long bar that reads as a loading screen. Capped so it
+ * stays a status plate — the room it is no longer competing for goes to the
+ * arena rather than being spent on itself.
+ */
+.hud[data-solo] > * {
+  /* A basis, not a cap. `flex: 0 1 auto` collapsed this to its content and left
+     the player's own plate narrower than the opponents' bars in the arena —
+     which is precisely backwards, since this is the one readout you need
+     without looking for it. */
+  flex: 0 1 380px;
+}
+
 .vs {
   font-size: 13px;
   color: var(--faint);
@@ -109,11 +123,25 @@
  * `align-items: flex-end` keeps every fighter on the same floor line however
  * they are scaled — otherwise the stepped-forward one would appear to hover.
  * -------------------------------------------------------------------------- */
+/*
+ * A four-way spans the arena rather than huddling in it.
+ *
+ * This used to be a point at 68% with three fighters packed around it at 82%
+ * scale, which left the entire left half of the arena empty and read as a
+ * cluster — because it was one. Anchoring both edges and spreading between
+ * them uses the width that was already there.
+ *
+ * Left edge at 34%: far enough from the player at 17% that the gap between you
+ * and the field reads as the divide the blades cross, rather than as a fourth
+ * fighter's worth of missing space.
+ */
 .lane[data-many] {
-  left: 68%;
+  left: 34%;
+  right: 3%;
+  transform: none;
   display: flex;
+  justify-content: space-between;
   align-items: flex-end;
-  gap: 4%;
 }
 
 .foe {
@@ -121,6 +149,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Enough for the attached bar to hold a name without stretching the fighter's
+     column and pushing its neighbours apart. */
+  width: 21%;
+  min-width: 96px;
   /* Pushed back by default. The one you are aimed at comes forward, which is
      the entire explanation of how targeting works — no tutorial needed. */
   transform: scale(0.82);
@@ -141,17 +173,22 @@
   filter: grayscale(1);
 }
 
-.foeName {
-  margin-top: 4px;
-  font-size: 8px;
-  color: var(--faint);
-  max-width: 84px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* ---- attached health, past two players ----
+ *
+ * Sits under the fighter it belongs to. The figure standing above it is the
+ * portrait, so the bar carries only a name and a number — which is exactly the
+ * width that was missing when four plates shared one strip.
+ */
+.foeBar {
+  width: 100%;
+  margin-top: 6px;
+  /* Undoes the parent's scale so a pushed-back fighter's bar stays legible;
+     the fighter recedes, the information does not. */
+  transform: scale(1.18);
+  transform-origin: top center;
 }
-.foe[data-targeted] .foeName { color: var(--gold); }
-.foe[data-out] .foeName { text-decoration: line-through; }
+.foe[data-targeted] 
+.foe[data-out] 
 
 /* ---------- HUD: a bar per opponent ---------- */
 .foes {

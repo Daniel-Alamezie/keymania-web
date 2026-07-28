@@ -444,42 +444,44 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         )}
       </div>
 
-      <header className={styles.hud}>
+      <header className={styles.hud} data-solo={foes.length > 1 || undefined}>
         <HealthBar
           name="YOU"
           value={me.health}
           team="blue"
           align="left"
+          character={me.character}
           caption={state.phase === 'playing' ? `${liveWpm} wpm` : undefined}
         />
-        <span className={`${styles.vs} pixel-font`}>VS</span>
-        {/* One bar per opponent. In a duel this is a single bar and reads
-            exactly as before; in a four-way it is the scoreboard, and the one
-            marked is whoever your blade is currently flying at. */}
-        <div className={styles.foes} data-many={foes.length > 1 || undefined}>
-          {foes.map(({ slot, fighter }) => {
-            // Targeting is only worth pointing out when there is a choice to
-            // be made. With one opponent, "your target" states the obvious.
-            const marked = foes.length > 1 && slot === myTarget;
-            return (
+        {/* "VS" needs something on the other side of it. Past two players the
+            opponents are in the arena, so it would be pointing at nothing. */}
+        {foes.length === 1 && <span className={`${styles.vs} pixel-font`}>VS</span>}
+        {/*
+          * The strip carries one opponent, and only in a duel.
+          *
+          * Four plates in a row meant each got about a fifth of the width, so
+          * names truncated and the numbers jammed against the bars — and yours,
+          * the one you most need at a glance, was crushed by three you mostly
+          * do not. Past two players the opponents move into the arena and sit
+          * under the fighters they belong to, where "who is hurt" becomes a
+          * place rather than a legend to read.
+          */}
+        {foes.length === 1 && (
+          <div className={styles.foes}>
+            {foes.map(({ slot, fighter }) => (
               <HealthBar
                 key={slot}
                 name={labelFor(fighter)}
                 value={fighter.health}
                 team="red"
                 align="right"
-                targeted={marked}
+                character={fighter.character}
                 defeated={isOut(fighter)}
-                caption={
-                  isOut(fighter) ? 'out'
-                    : marked ? 'your target'
-                    : isMulti ? 'player'
-                    : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
-                }
+                caption={isMulti ? 'player' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`}
               />
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </header>
 
       <ArenaScene className={styles.arena}>
@@ -524,9 +526,18 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                   defeated={out || state.winner === state.mySlot}
                 />
                 {foes.length > 1 && (
-                  <span className={`${styles.foeName} pixel-font`}>
-                    {labelFor(fighter)}
-                  </span>
+                  <div className={styles.foeBar}>
+                    <HealthBar
+                      name={labelFor(fighter)}
+                      value={fighter.health}
+                      team="red"
+                      align="left"
+                      character={fighter.character}
+                      compact
+                      targeted={marked}
+                      defeated={out}
+                    />
+                  </div>
                 )}
               </div>
             );
