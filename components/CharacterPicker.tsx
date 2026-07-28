@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { CHARACTER_LIST, characterFrame, type CharacterId } from '@/models/character';
+import {
+  CHARACTER_LIST, characterById, characterFrame, type CharacterId,
+} from '@/models/character';
 import PixelSprite from './PixelSprite';
 import styles from './CharacterPicker.module.css';
 
@@ -12,33 +14,35 @@ import styles from './CharacterPicker.module.css';
  * the whole decision is visual — nobody picks "Baron" over "Sprout" by reading
  * the words. The grid costs more room than a dropdown and is the entire point.
  *
- * The choice saves the instant it is clicked. A picker with a Save button
- * underneath invites choosing one and forgetting to commit it, and there is
- * nothing here worth confirming: the cost of a wrong click is another click.
+ * Selecting is local; saving is a button. The first version wrote on every
+ * click, on the reasoning that a wrong choice only costs another click — which
+ * missed that with a visual picker, *browsing is the normal interaction*. Every
+ * look was a write, six characters was six writes, and the profile rate limit
+ * answered "slow down" to somebody who had done nothing but look. Trying things
+ * on has to be free; only deciding costs anything.
  */
 export default function CharacterPicker({ current, onChoose }: {
   current: CharacterId;
   onChoose: (id: CharacterId) => Promise<{ ok: boolean; error?: string }>;
 }) {
-  /**
-   * What is shown as selected, ahead of the server agreeing.
-   *
-   * Without this the sprite you clicked stays unhighlighted until a round trip
-   * finishes, which reads as the click having missed. Reverted if the save
-   * fails, so the screen never claims something the account does not hold.
-   */
-  const [pending, setPending] = useState<CharacterId | null>(null);
+  const [selected, setSelected] = useState<CharacterId>(current);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [problem, setProblem] = useState<string | null>(null);
-  const chosen = pending ?? current;
 
-  async function choose(id: CharacterId) {
-    if (id === chosen) return;
-    setPending(id);
+  // No effect syncing this to `current`: the component is only rendered once the
+  // profile has loaded, so useState seeds correctly on the first render, and
+  // after a save `current` catches up on its own.
+  const dirty = selected !== current;
+
+  async function save() {
+    setStatus('saving');
     setProblem(null);
 
-    const result = await onChoose(id);
-    if (!result.ok) {
-      setPending(null);
+    const result = await onChoose(selected);
+    if (result.ok) {
+      setStatus('saved');
+    } else {
+      setStatus('idle');
       setProblem(result.error ?? 'Could not save that character.');
     }
   }
@@ -57,10 +61,17 @@ export default function CharacterPicker({ current, onChoose }: {
             <button
               type="button"
               className={styles.option}
-              data-chosen={character.id === chosen || undefined}
-              aria-pressed={character.id === chosen}
+              data-chosen={character.id === selected || undefined}
+              // Marks the one actually saved, so a browsed grid still shows
+              // what you will walk away as if you change your mind.
+              data-current={character.id === current || undefined}
+              aria-pressed={character.id === selected}
               aria-label={`${character.name} — ${character.blurb}`}
-              onClick={() => choose(character.id)}
+              onClick={() => {
+                setSelected(character.id);
+                setStatus('idle');
+                setProblem(null);
+              }}
             >
               {/* Frame 1 only. The idle bob belongs in the arena; six of them
                   breathing out of step in a grid is a distraction, not charm. */}
@@ -72,9 +83,25 @@ export default function CharacterPicker({ current, onChoose }: {
         ))}
       </ul>
 
-      <p className={styles.hint} aria-live="polite">
-        {problem && <span className={styles.error}>{problem}</span>}
-      </p>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!dirty || status === 'saving'}
+          onClick={save}
+        >
+          {status === 'saving' ? 'Saving' : 'Save character'}
+        </button>
+
+        <p className={styles.hint} aria-live="polite">
+          {problem ? <span className={styles.error}>{problem}</span>
+            : status === 'saved' ? (
+              <span className={styles.ok}>Saved — you fight as {characterById(current).name}.</span>
+            )
+            : dirty ? `${characterById(selected).name} selected. Save to lock it in.`
+            : `You fight as ${characterById(current).name}.`}
+        </p>
+      </div>
     </section>
   );
 }

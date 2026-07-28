@@ -52,9 +52,18 @@
   transform: translateY(-2px);
 }
 
+/* Selected but not yet saved: gold, so it is obvious which one you are looking
+   at, and obvious that looking has not committed anything. */
 .option[data-chosen] {
   border-color: var(--gold);
   background: var(--panel);
+}
+
+/* The one actually saved, when it is not the one selected — a quiet marker so a
+   browsed grid still shows what you walk away as if you leave it alone. */
+.option[data-current]:not([data-chosen]) {
+  border-style: dashed;
+  border-color: var(--edge);
 }
 
 .name {
@@ -72,10 +81,21 @@
   text-align: center;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .hint {
   margin: 0;
   font-size: 11px;
+  /* Held open so the row does not jump as the message changes between
+     "selected", "saving" and "saved". */
   min-height: 1.4em;
+  color: var(--muted);
 }
 
 .error { color: var(--bad); }
+.ok { color: var(--good); }
