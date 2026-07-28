@@ -40,6 +40,13 @@ interface Match {
    * socket and the reducer.
    */
   characters: CharacterId[] | undefined;
+  /**
+   * How long the server will wait before it starts accepting words.
+   *
+   * Required, though it may be undefined — the client must not invent this.
+   * See game/countdown.ts for the 750ms window this closes.
+   */
+  countdownMs: number | undefined;
 }
 
 /**
@@ -115,6 +122,7 @@ export default function Game() {
             // existed; nothing on this side read it, so every human duel drew
             // default fighters and made the picker look broken.
             characters: message.characters,
+            countdownMs: message.countdownMs,
           });
           setScreen('duel');
         }
@@ -193,6 +201,7 @@ export default function Game() {
             mySlot: match.mySlot,
             powers: match.powers,
             characters: match.characters,
+            countdownMs: match.countdownMs,
             subscribe,
             onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>
               send({ action: 'wordComplete', word, elapsedMs, accuracy, typos }),

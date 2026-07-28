@@ -11,6 +11,7 @@ import { audio } from '@/game/audio';
 import { saveResult } from '@/game/saveResult';
 import { useAccount } from '@/game/useAccount';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
+import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
@@ -41,6 +42,8 @@ export interface MultiplayerConfig {
    * why an optional key was the thing that let this go missing.
    */
   characters: CharacterId[] | undefined;
+  /** The server's own countdown. The client must not assume its own. */
+  countdownMs: number | undefined;
   /** Subscribe to server messages; returns an unsubscribe function. */
   subscribe: (handler: MessageHandler) => () => void;
   onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) => void;
@@ -138,6 +141,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       // is undefined for everybody and asCharacter falls back to the default.
       characters: multiplayer.characters,
     });
+    // Measured from now, so the wait can only ever be longer than the server's.
+    startsAt.current = Date.now() + (multiplayer.countdownMs ?? FALLBACK_COUNTDOWN_MS);
     // Only re-arm when a genuinely new match arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [multiplayer?.script]);
@@ -190,12 +195,26 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [state.phase, multiplayer, confirmQuit]);
 
+  /**
+   * When the server will start accepting words, as an instant on this clock.
+   *
+   * Stamped on arrival rather than read from a server timestamp: the two clocks
+   * are unrelated, and only a duration means the same thing on both. Transit
+   * time therefore makes this marginally later than the server's own deadline,
+   * which is the safe direction — an early word is silently discarded, a late
+   * one is merely late.
+   */
+  const startsAt = useRef(0);
+
   /** Countdown ticks into the duel. */
   useEffect(() => {
     if (state.phase !== 'countdown') return;
-    const timer = setTimeout(() => dispatch({ type: 'countdown' }), 750);
+    const delay = multiplayer
+      ? tickDelay(startsAt.current - Date.now(), state.countdown)
+      : SOLO_TICK_MS;
+    const timer = setTimeout(() => dispatch({ type: 'countdown' }), delay);
     return () => clearTimeout(timer);
-  }, [state.phase, state.countdown]);
+  }, [state.phase, state.countdown, multiplayer]);
 
   /** The bot only exists in solo play. */
   useEffect(() => {
