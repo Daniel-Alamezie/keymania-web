@@ -8,6 +8,7 @@
  * is what produced every index bug this codebase has had.
  */
 
+import type { CharacterId } from './character';
 import type { BladeTier } from './scoring';
 import type { Difficulty } from './bot';
 import type { PowerKind } from './powers';
@@ -30,6 +31,8 @@ export type Side = 'player' | 'opponent';
 /** One fighter in the duel. */
 export interface Fighter {
   name: string;
+  /** Which sprite draws them. Defaulted for bots and older servers. */
+  character: CharacterId;
   health: number;
   combo: number;
   /** How far through the current sentence they are, 0..1, for the HUD. */
@@ -139,6 +142,8 @@ export type DuelAction =
       script: string[];
       /** Every player's name in slot order. */
       roster: string[];
+      /** Parallel to the roster; defaults fill in for an older server. */
+      characters?: CharacterId[];
       mySlot: number;
       powers: Record<number, PowerKind>;
     }

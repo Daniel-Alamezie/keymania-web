@@ -10,6 +10,7 @@
  * damage or health.
  */
 
+import type { CharacterId } from './character';
 import type { PowerKind } from './powers';
 import type { RoomSize, RoomSummary, Visibility } from './room';
 
@@ -38,6 +39,14 @@ export type ServerMessage =
     you: string;
     /** Every player's name in slot order. */
     roster: string[];
+    /**
+     * Who each player fights as, parallel to the roster.
+     *
+     * Sent with the match because a client only ever learns about other players
+     * through this message — there is no route for asking who somebody is.
+     * Absent from an older server, in which case everyone draws as the default.
+     */
+    characters?: CharacterId[];
     /** Legacy single-opponent name, sent only for two-player rooms. */
     opponent?: string;
   }

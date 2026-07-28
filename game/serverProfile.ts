@@ -2,6 +2,7 @@
 
 // The store owns all the state, so nothing here needs local React state.
 import { useSyncExternalStore } from 'react';
+import { asCharacter, DEFAULT_CHARACTER, type CharacterId } from '@/models/character';
 import type { DuelResult, ServerProfile, Tally } from '@/models/profile';
 
 
@@ -29,6 +30,7 @@ export interface ProfileState {
   anonymous: boolean;
   saveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
   saveHandle: (handle: string) => Promise<{ ok: boolean; error?: string }>;
+  saveCharacter: (character: CharacterId) => Promise<{ ok: boolean; error?: string }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -230,7 +232,7 @@ export function forgetProfile(): void {
  * alongside a new display name would spend a cooldown nobody asked to spend.
  */
 async function savePatch(
-  patch: { displayName?: string; handle?: string },
+  patch: { displayName?: string; handle?: string; character?: CharacterId },
   fallback: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const response = await fetch('/api/me/profile', {
@@ -243,14 +245,21 @@ async function savePatch(
     return { ok: false, error: await readError(response, fallback) };
   }
 
-  const saved = (await response.json()) as { displayName: string; handle?: string };
+  const saved = (await response.json()) as {
+    displayName: string; handle?: string; character?: CharacterId;
+  };
 
   // Trust the server's version: it sanitises and canonicalises, so what came
   // back may differ from what was typed — a handle especially, since it is
   // lowercased and stripped. Writing it straight into the cache updates the
   // account chip and the dashboard immediately, with no refetch.
   if (snapshot.profile) {
-    const profile = { ...snapshot.profile, displayName: saved.displayName, handle: saved.handle };
+    const profile = {
+      ...snapshot.profile,
+      displayName: saved.displayName,
+      handle: saved.handle,
+      character: saved.character,
+    };
     fetchedAt = Date.now();
     persist(profile);
     publish({ profile });
@@ -267,9 +276,12 @@ const saveName = (name: string) =>
 const saveHandle = (handle: string) =>
   savePatch({ handle }, 'Could not save that handle.');
 
+const saveCharacter = (character: CharacterId) =>
+  savePatch({ character }, 'Could not save that character.');
+
 export function useServerProfile(): ProfileState {
   const state = useSyncExternalStore(subscribeToStore, readSnapshot, () => EMPTY);
-  return { ...state, saveName, saveHandle };
+  return { ...state, saveName, saveHandle, saveCharacter };
 }
 
 /**
@@ -302,6 +314,21 @@ export function useDisplayName(): string | null {
  * the leaderboard highlighted both of them as you. A handle is unique by
  * construction, which is the whole reason it exists.
  */
+/**
+ * The character you fight as.
+ *
+ * Falls back rather than returning null, because every caller needs something
+ * to draw — a menu with a hole where a fighter should be is worse than a menu
+ * showing the default for the moment before the profile lands.
+ */
+export function useCharacter(): CharacterId {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => asCharacter(readSnapshot().profile?.character),
+    () => DEFAULT_CHARACTER,
+  );
+}
+
 export function useHandle(): string | null {
   return useSyncExternalStore(
     subscribeToStore,

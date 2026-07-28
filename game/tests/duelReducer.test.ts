@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { accuracy, duelReducer, initialState, type DuelState } from '../duelReducer';
+import {
+  accuracy, duelReducer, initialState, newFighter, type DuelState,
+} from '../duelReducer';
 
 /** A duel already in progress on a known sentence. */
 function playing(sentence = 'the cat sat '): DuelState {
@@ -249,10 +251,10 @@ describe('a four-way free-for-all', () => {
     multiplayer: true,
     mySlot: 2,
     fighters: [
-      { name: 'A', health: 100, combo: 0, progress: 0, target: 2 },
-      { name: 'B', health: 100, combo: 0, progress: 0, target: 0 },
-      { name: 'You', health: 100, combo: 0, progress: 0, target: 0 },
-      { name: 'D', health: 100, combo: 0, progress: 0, target: 0 },
+      newFighter('A', 2),
+      newFighter('B', 0),
+      newFighter('You', 0),
+      newFighter('D', 0),
     ],
   });
 

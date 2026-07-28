@@ -7,13 +7,17 @@ import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
 import type { Difficulty } from '@/models/bot';
 import type { DuelAction, DuelState, DuelStats, Fighter } from '@/models/duel';
 import type { PowerKind } from '@/models/powers';
+import { DEFAULT_CHARACTER, asCharacter, type CharacterId } from '@/models/character';
 import type { BladeTier } from '@/models/scoring';
 
 
 
 
-export const newFighter = (name: string, target = -1): Fighter =>
-  ({ name, health: MAX_HEALTH, combo: 0, progress: 0, target });
+export const newFighter = (
+  name: string,
+  target = -1,
+  character: CharacterId = DEFAULT_CHARACTER,
+): Fighter => ({ name, character, health: MAX_HEALTH, combo: 0, progress: 0, target });
 
 /** You. */
 export const you = (state: DuelState): Fighter => state.fighters[state.mySlot];
@@ -115,7 +119,11 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         scriptIndex: 0,
         // Slot order comes from the server and never shifts, even as fighters
         // are knocked out — every later message addresses players by index.
-        fighters: action.roster.map((name) => newFighter(name)),
+        // asCharacter rather than the raw value: an opponent on a newer
+        // release may send a character this build cannot draw, and a gap in
+        // the arena is worse than a stand-in.
+        fighters: action.roster.map((name, slot) =>
+          newFighter(name, -1, asCharacter(action.characters?.[slot]))),
         mySlot: action.mySlot,
         // The server decides which words are charged; we only render them.
         powers: action.powers,

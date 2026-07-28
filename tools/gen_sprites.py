@@ -19,6 +19,8 @@ import math
 import os
 from PIL import Image
 
+import gen_characters
+
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "public", "sprites")
 MANIFEST = os.path.join(os.path.dirname(__file__), "..", "game", "sprites.generated.json")
 SCALE = 4
@@ -773,6 +775,11 @@ def main() -> None:
     save(make_floor_tile(), "tile-floor.png", scale=3)
     for f in range(3):
         save(make_torch(f), f"torch-{f + 1}.png")
+
+    # Characters are drawn by their own module but land in this manifest, so
+    # one command produces one source of truth for every sprite in the game.
+    print("characters:")
+    SIZES.update(gen_characters.build())
 
     os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
     with open(MANIFEST, "w", encoding="utf-8") as fh:

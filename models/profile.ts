@@ -10,6 +10,7 @@
  * `GET /profile` on keymania-api. See lib/upstream.ts for why it is proxied.
  */
 
+import type { CharacterId } from './character';
 import type { DuelStats } from './duel';
 
 /** One finished duel, as stored in a player's history. */
@@ -57,6 +58,14 @@ export interface ServerProfile {
    * never be used to address anybody.
    */
   handle?: string;
+  /**
+   * Who you fight as.
+   *
+   * Optional on the wire for an older server, never absent in practice — the
+   * API resolves the default before answering, so a player who has never
+   * opened the picker is still told who they currently look like.
+   */
+  character?: CharacterId;
   /** Duels against humans, refereed by the server. The record that counts. */
   ranked: Tally;
   /** Bot practice. Real progress, but the client reported it about itself. */
@@ -77,11 +86,13 @@ export interface ServerProfile {
 export interface UpdateProfileRequest {
   displayName?: string;
   handle?: string;
+  character?: CharacterId;
 }
 
 export interface UpdateProfileResponse {
   displayName: string;
   handle?: string;
+  character?: CharacterId;
   maxLength?: number;
   handleMaxLength?: number;
 }

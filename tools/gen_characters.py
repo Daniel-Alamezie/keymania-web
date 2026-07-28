@@ -25,7 +25,6 @@ import os
 from PIL import Image
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "public", "sprites", "characters")
-MANIFEST = os.path.join(os.path.dirname(__file__), "..", "game", "characters.generated.json")
 SCALE = 4
 TRANSPARENT = (0, 0, 0, 0)
 OUTLINE = (26, 20, 38, 255)
@@ -82,7 +81,10 @@ def save(canvas, name: str) -> None:
     img = render(canvas)
     os.makedirs(OUT_DIR, exist_ok=True)
     img.save(os.path.join(OUT_DIR, name))
-    SIZES[name.replace(".png", "")] = {"width": img.width, "height": img.height}
+    # Registered under the path PixelSprite will ask for, so characters share
+    # the one manifest with every other sprite rather than needing a second
+    # component that knows about a second file.
+    SIZES[f"characters/{name.replace('.png', '')}"] = {"width": img.width, "height": img.height}
     print(f"  {name}  {len(canvas[0])}x{len(canvas)} -> {img.width}x{img.height}")
 
 
@@ -777,7 +779,25 @@ CHARACTERS: dict[str, dict] = {
 }
 
 
-def make_character(p: dict, frame: int):
+def whiteout(canvas) -> None:
+    """
+    Blanch every solid pixel except the outline.
+
+    The flinch frame for taking a blade. Derived from the finished sprite
+    rather than drawn per character, so a new character gets its hit frame for
+    free and can never drift out of register with its normal one — the wraiths
+    do the same thing by passing a flag down through their palette.
+
+    The outline survives so the silhouette still reads at the moment it matters
+    most; a fully white figure against a pale flash is invisible.
+    """
+    for row in canvas:
+        for x, pixel in enumerate(row):
+            if pixel[3] and pixel != OUTLINE:
+                row[x] = (255, 250, 250, 255)
+
+
+def make_character(p: dict, frame: int, hit: bool = False):
     canvas = new_canvas()
     FACES[p.get("_face", "human")](canvas, p)
 
@@ -796,21 +816,30 @@ def make_character(p: dict, frame: int):
     # Overlays sit outside the outline on purpose — see part_steam.
     for over in p["_overlays"]:
         OVERLAYS[over](canvas, p, frame)
+    if hit:
+        whiteout(canvas)
     return canvas
 
 
-def main() -> None:
-    print("characters:")
+def build() -> dict[str, dict[str, int]]:
+    """
+    Draw every character and return their sizes.
+
+    Called by gen_sprites, which owns the manifest — two scripts writing it
+    independently would mean whichever ran last silently erased the other's
+    entries, and the symptom would be sprites that 404 in production.
+    """
+    SIZES.clear()
     for name, palette in CHARACTERS.items():
         for frame in (0, 1):
             save(make_character(palette, frame), f"{name}-{frame + 1}.png")
-
-    os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
-    with open(MANIFEST, "w", encoding="utf-8") as fh:
-        json.dump(dict(sorted(SIZES.items())), fh, indent=2)
-        fh.write("\n")
-    print(f"manifest: {os.path.relpath(MANIFEST)} ({len(SIZES)} sprites)")
+        # One flinch frame per character, not two: a hit lasts a fraction of a
+        # second and nobody has ever seen an idle bob inside one.
+        save(make_character(palette, 0, hit=True), f"{name}-hit.png")
+    return dict(SIZES)
 
 
 if __name__ == "__main__":
-    main()
+    print("characters:")
+    build()
+    print("note: run tools/gen_sprites.py to refresh the shared manifest")

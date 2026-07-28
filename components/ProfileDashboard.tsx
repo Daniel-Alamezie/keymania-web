@@ -8,6 +8,8 @@ import {
   type DuelResult,
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
+import { asCharacter } from '@/models/character';
+import CharacterPicker from './CharacterPicker';
 import FriendsPanel from './FriendsPanel';
 import { useUiSounds } from './SoundToggle';
 import WpmChart, { type ChartPoint } from './WpmChart';
@@ -21,7 +23,9 @@ export default function ProfileDashboard() {
   // Its own route, so it never mounts Game and would otherwise be the one
   // silent screen in the app.
   useUiSounds();
-  const { profile, loading, error, anonymous, saveName, saveHandle } = useServerProfile();
+  const {
+    profile, loading, error, anonymous, saveName, saveHandle, saveCharacter,
+  } = useServerProfile();
   const account = useAccount();
 
   if (loading) {
@@ -188,6 +192,13 @@ export default function ProfileDashboard() {
               />
 
               <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
+
+              {/* Sits with the name and the handle: all three are "who you are
+                  to other players", and none of them is a statistic. */}
+              <CharacterPicker
+                current={asCharacter(profile.character)}
+                onChoose={saveCharacter}
+              />
             </aside>
           </div>
         </div>

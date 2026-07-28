@@ -485,7 +485,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       <ArenaScene className={styles.arena}>
         <div className={styles.lane} data-lane="player">
           <Fighter
-            team="blue"
+            character={you(state).character}
+            label="You"
             facing="right"
             hitTick={impact?.side === 'player' ? impact.tick : 0}
             attackTick={attack?.side === 'player' ? attack.tick : 0}
@@ -514,7 +515,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 data-out={out || undefined}
               >
                 <Fighter
-                  team="red"
+                  character={fighter.character}
+                  label={fighter.name}
                   facing="left"
                   // Only the fighter that actually took the blade flinches.
                   hitTick={impact?.side === 'opponent' && impact.slot === slot ? impact.tick : 0}

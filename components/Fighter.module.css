@@ -61,3 +61,24 @@
 @keyframes drift {
   50% { transform: scaleX(0.88); opacity: 0.75; }
 }
+
+/* ---- flinch ----
+ *
+ * The hit sprite sits exactly over the normal one and is faded out by an
+ * animation that restarts whenever Fighter is re-keyed on a new hit tick.
+ * steps(1) rather than a smooth fade: a blanch that eases out reads as a glow,
+ * where a hard cut reads as an impact.
+ */
+.body { position: relative; }
+
+.blanch {
+  position: absolute;
+  inset: 0;
+  animation: blanch 180ms steps(1) forwards;
+  pointer-events: none;
+}
+
+@keyframes blanch {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}

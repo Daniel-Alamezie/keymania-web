@@ -19,6 +19,78 @@
     "width": 244,
     "height": 80
   },
+  "characters/baron-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/baron-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/baron-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/drifter-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/drifter-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/drifter-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/rookie-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/rookie-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/rookie-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/scholar-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/scholar-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/scholar-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/sprout-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/sprout-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/sprout-hit": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/wanderer-1": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/wanderer-2": {
+    "width": 128,
+    "height": 184
+  },
+  "characters/wanderer-hit": {
+    "width": 128,
+    "height": 184
+  },
   "fighter-blue": {
     "width": 104,
     "height": 128

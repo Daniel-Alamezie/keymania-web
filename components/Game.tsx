@@ -19,6 +19,8 @@ import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
+import { useCharacter } from '@/game/serverProfile';
+import { asCharacter } from '@/models/character';
 import { duelToken } from '@/game/duelToken';
 import styles from './Game.module.css';
 
@@ -284,14 +286,21 @@ export default function Game() {
 
 /** The menu and lobby sit inside the same arena the duel happens in. */
 function Backdrop() {
+  const mine = asCharacter(useCharacter());
+  // Someone other than you to face, so the menu never shows a mirror match.
+  const foil = mine === 'baron' ? 'wanderer' : 'baron';
+
   return (
     <>
       <ArenaScene dim className={styles.backdrop}>
+        {/* Whoever you have chosen stands on the left of your own menu — the
+            cheapest possible confirmation that the picker did something, seen
+            before you go looking for it. */}
         <div className={styles.standLeft}>
-          <Fighter team="blue" facing="right" hitTick={0} />
+          <Fighter character={mine} facing="right" hitTick={0} />
         </div>
         <div className={styles.standRight}>
-          <Fighter team="red" facing="left" hitTick={0} />
+          <Fighter character={foil} facing="left" hitTick={0} />
         </div>
       </ArenaScene>
       {/* Outside the scene, so the dim overlay does not swallow the motes. */}
