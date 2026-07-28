@@ -156,7 +156,17 @@ export type DuelAction =
       /** Every player's name in slot order. */
       roster: string[];
       /** Parallel to the roster; defaults fill in for an older server. */
-      characters?: CharacterId[];
+      /**
+       * Required, though it may be undefined.
+       *
+       * An optional key let three separate layers quietly drop this on the way
+       * from the socket to the reducer, and nothing complained — the server
+       * sent it, the reducer read it, and every hop in between simply did not
+       * mention it. A required key that accepts `undefined` costs a caller one
+       * word and makes forgetting it a type error rather than a bug report
+       * about everybody looking identical.
+       */
+      characters: CharacterId[] | undefined;
       mySlot: number;
       powers: Record<number, PowerKind>;
     }

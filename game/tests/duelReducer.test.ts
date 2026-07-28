@@ -437,3 +437,69 @@ describe('character on a bot duel', () => {
     expect(you(start()).character).toBe(DEFAULT_CHARACTER);
   });
 });
+
+/**
+ * Characters in a human duel.
+ *
+ * The reducer was never the problem here — it has read `action.characters`
+ * since characters existed, and the server has always sent them. Three layers
+ * between the socket and this function each omitted the field, so every player
+ * in every human duel was drawn as the default and the picker looked broken.
+ *
+ * These pin the reducer's half. The wiring's half is held by making the key
+ * required rather than optional, so omitting it is a compile error — a test
+ * here could not have caught it, and it is worth being clear about which
+ * guard does which job.
+ */
+describe('characters in a human duel', () => {
+  const roster = ['You', 'Rival', 'Third'];
+
+  const startMulti = (characters: ('baron' | 'sprout' | 'scholar')[] | undefined) =>
+    duelReducer(initialState('rival'), {
+      type: 'startMulti',
+      script: ['alpha', 'beta'],
+      roster,
+      mySlot: 0,
+      powers: {},
+      characters,
+    });
+
+  it('dresses every player in the character the server sent', () => {
+    const state = startMulti(['baron', 'sprout', 'scholar']);
+    expect(state.fighters.map((f) => f.character)).toEqual(['baron', 'sprout', 'scholar']);
+  });
+
+  it('puts you in yours, whatever slot you are in', () => {
+    const state = duelReducer(initialState('rival'), {
+      type: 'startMulti',
+      script: ['alpha'],
+      roster,
+      mySlot: 2,
+      powers: {},
+      characters: ['baron', 'sprout', 'scholar'],
+    });
+    expect(you(state).character).toBe('scholar');
+  });
+
+  it('falls back to the default when an older server sends none', () => {
+    // Not a crash and not a gap in the arena: everybody is simply somebody
+    // ordinary, which is what asCharacter is for.
+    const state = startMulti(undefined);
+    expect(state.fighters.map((f) => f.character))
+      .toEqual(roster.map(() => DEFAULT_CHARACTER));
+  });
+
+  it('substitutes for a character this build cannot draw', () => {
+    // An opponent on a newer release may send something unknown. A stand-in
+    // is better than a fighter that renders as nothing.
+    const state = duelReducer(initialState('rival'), {
+      type: 'startMulti',
+      script: ['alpha'],
+      roster: ['You', 'Rival'],
+      mySlot: 0,
+      powers: {},
+      characters: ['baron', 'wraith'] as never,
+    });
+    expect(state.fighters[1].character).toBe(DEFAULT_CHARACTER);
+  });
+});

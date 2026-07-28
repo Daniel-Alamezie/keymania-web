@@ -14,6 +14,7 @@ import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
+import type { CharacterId } from '@/models/character';
 import type { Side } from '@/models/duel';
 import type { BladeTier } from '@/models/scoring';
 import SoundToggle from './SoundToggle';
@@ -33,6 +34,13 @@ export interface MultiplayerConfig {
   mySlot: number;
   /** Charged words, decided by the server. */
   powers: Record<number, PowerKind>;
+  /**
+   * Who each player fights as, in the same slot order as `roster`.
+   *
+   * Required, though it may be undefined — see the note in models/duel.ts on
+   * why an optional key was the thing that let this go missing.
+   */
+  characters: CharacterId[] | undefined;
   /** Subscribe to server messages; returns an unsubscribe function. */
   subscribe: (handler: MessageHandler) => () => void;
   onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) => void;
@@ -125,6 +133,10 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       roster: multiplayer.roster,
       mySlot: multiplayer.mySlot,
       powers: multiplayer.powers,
+      // The reducer has always accepted these and the server has always sent
+      // them; this dispatch was the gap. Without it `action.characters?.[slot]`
+      // is undefined for everybody and asCharacter falls back to the default.
+      characters: multiplayer.characters,
     });
     // Only re-arm when a genuinely new match arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -20,7 +20,7 @@ import SoundSettings from './SoundSettings';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
 import { useCharacter } from '@/game/serverProfile';
-import { asCharacter } from '@/models/character';
+import { asCharacter, type CharacterId } from '@/models/character';
 import { duelToken } from '@/game/duelToken';
 import styles from './Game.module.css';
 
@@ -32,6 +32,14 @@ interface Match {
   roster: string[];
   mySlot: number;
   powers: Record<number, PowerKind>;
+  /**
+   * Who each player fights as, parallel to the roster.
+   *
+   * A required key that accepts undefined, not an optional one. Optional is
+   * what let this be dropped silently at three separate hops between the
+   * socket and the reducer.
+   */
+  characters: CharacterId[] | undefined;
 }
 
 /**
@@ -103,6 +111,10 @@ export default function Game() {
             roster: message.roster ?? ['You', message.opponent ?? 'Rival'],
             mySlot: message.slot,
             powers: message.powers ?? {},
+            // Parallel to the roster. The server has sent this since characters
+            // existed; nothing on this side read it, so every human duel drew
+            // default fighters and made the picker look broken.
+            characters: message.characters,
           });
           setScreen('duel');
         }
@@ -180,6 +192,7 @@ export default function Game() {
             roster: match.roster,
             mySlot: match.mySlot,
             powers: match.powers,
+            characters: match.characters,
             subscribe,
             onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>
               send({ action: 'wordComplete', word, elapsedMs, accuracy, typos }),
