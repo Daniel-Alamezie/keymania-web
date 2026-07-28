@@ -187,9 +187,6 @@
   transform: scale(1.18);
   transform-origin: top center;
 }
-.foe[data-targeted] 
-.foe[data-out] 
-
 /* ---------- HUD: a bar per opponent ---------- */
 .foes {
   display: flex;
