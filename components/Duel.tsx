@@ -105,6 +105,29 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmQuit, setConfirmQuit] = useState(false);
 
+  /**
+   * The words.
+   *
+   * Held in a variable because they change place. Normally they lie across the
+   * foot of the arena, where a throw and the word that caused it share one
+   * glance. With a keyboard up there is no foot of the arena worth speaking of
+   * — the keys take the bottom half of the phone — so they move above it
+   * instead, where they stay the first thing on screen under the health bars.
+   */
+  const stream = (
+    <div className={styles.stream}>
+      <SentenceView
+        previous={state.previous}
+        sentence={state.sentence}
+        upcoming={state.upcoming}
+        cursor={state.cursor}
+        missTick={state.missTick}
+        powers={state.powers}
+        wordOffset={state.wordOffset}
+      />
+    </div>
+  );
+
   const isMulti = Boolean(multiplayer);
   /**
    * Who has asked to go again, straight from the server.
@@ -163,10 +186,33 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const sync = () => setKeyboardUp(vv.height < window.innerHeight * 0.75);
+
+    const sync = () => {
+      /**
+       * The visible rectangle, published to CSS.
+       *
+       * An open keyboard shrinks the visual viewport and leaves the layout
+       * viewport alone, and iOS additionally *scrolls* the page to reveal the
+       * focused field — so the top of the screen is no longer the top of what
+       * anybody can see. `offsetTop` is that scroll, and without it a panel
+       * pinned to `top: 0` sits above the fold where it does no good at all.
+       */
+      const root = screenRef.current;
+      if (root) {
+        root.style.setProperty('--vv-height', `${Math.round(vv.height)}px`);
+        root.style.setProperty('--vv-top', `${Math.round(vv.offsetTop)}px`);
+      }
+      setKeyboardUp(vv.height < window.innerHeight * 0.75);
+    };
+
     sync();
     vv.addEventListener('resize', sync);
-    return () => vv.removeEventListener('resize', sync);
+    // iOS moves the visual viewport by scrolling it, which is not a resize.
+    vv.addEventListener('scroll', sync);
+    return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
+    };
   }, []);
 
   const track = (timer: ReturnType<typeof setTimeout>) => {
@@ -201,6 +247,25 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
    * `input` event for the other — and having each drive its own copy of the
    * scoring and reporting is how the two quietly diverge.
    */
+  /**
+   * Open the keyboard, from inside the tap that started the duel.
+   *
+   * iOS refuses a programmatic focus unless it happens during a real user
+   * gesture, so this cannot be done on a timer when the countdown begins — by
+   * then the gesture is over and the call is silently ignored. Doing it in the
+   * same handler as "Fight" or "Rematch" is the one moment it is allowed, and
+   * it means the keyboard is already up while the countdown runs rather than
+   * costing the player their first word.
+   *
+   * "Tap to type" stays as the fallback for every path that has no gesture to
+   * ride on — a human duel starts when the server says so, not when anybody
+   * touches anything.
+   */
+  const openKeyboard = useCallback(() => {
+    if (!touch) return;
+    capture.current?.focus();
+  }, [touch]);
+
   const typeChar = useCallback((raw: string) => {
       const key = raw.toLowerCase();
       const snapshot = stateRef.current;
@@ -640,6 +705,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         )}
       </header>
 
+      {keyboardUp && stream}
+
       <ArenaScene className={styles.arena}>
         <div className={styles.lane} data-lane="player">
           <Fighter
@@ -708,27 +775,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
         <div ref={flashRef} className={styles.flash} aria-hidden="true" />
 
-        {/*
-          * The words live in the arena, not under it.
-          *
-          * They used to sit in the deck below, which put the three things a
-          * player needs -- health, the fight, the sentence -- in three bands
-          * spread over 800-odd pixels. You read the bottom one, so the blade
-          * you just threw crossed a part of the screen you were not looking
-          * at. Laid over the foot of the arena instead, the throw happens in
-          * the same glance as the word that caused it.
-          */}
-        <div className={styles.stream}>
-          <SentenceView
-          previous={state.previous}
-          sentence={state.sentence}
-          upcoming={state.upcoming}
-          cursor={state.cursor}
-          missTick={state.missTick}
-          powers={state.powers}
-          wordOffset={state.wordOffset}
-          />
-        </div>
+        {!keyboardUp && stream}
       </ArenaScene>
 
       {/*
@@ -798,7 +845,10 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 undo a mute the moment the next duel began. */}
             <button
               className="btn btn-primary"
-              onClick={() => dispatch({ type: 'start', difficulty, character: mine })}
+              onClick={() => {
+                openKeyboard();
+                dispatch({ type: 'start', difficulty, character: mine });
+              }}
             >
               Fight {BOT_PROFILES[difficulty].label}
             </button>
@@ -879,7 +929,13 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
             <div className={styles.choices}>
               {!isMulti && (
-                <button className="btn btn-primary" onClick={() => dispatch({ type: 'start', difficulty, character: mine })}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    openKeyboard();
+                    dispatch({ type: 'start', difficulty, character: mine });
+                  }}
+                >
                   Rematch
                 </button>
               )}

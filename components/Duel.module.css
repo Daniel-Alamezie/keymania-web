@@ -584,29 +584,75 @@
 }
 
 /*
- * With the keyboard up, the words are the only thing that matters.
+ * With the keyboard up, the screen becomes the part you can still see.
  *
- * The visual viewport can drop to around 300px, and the arena is the one part
- * that can be spared — you cannot read a sentence you cannot see, but you can
- * play perfectly well glancing at a smaller fighter. Health stays, because it
- * is the other thing a player is actually tracking.
+ * An open keyboard does not resize the window: it shrinks the *visual*
+ * viewport and, on iOS, scrolls the page to reveal the focused field. A layout
+ * sized in `vh` therefore runs on underneath the keys, and one pinned to
+ * `top: 0` sits above the fold. `--vv-height` and `--vv-top` are published from
+ * visualViewport in Duel.tsx and are the only measurements that describe what
+ * the player can actually see.
  */
 .screen[data-keyboard] {
-  height: auto;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-height, 100vh);
+  max-width: 100%;
   padding: 6px 10px 8px;
   gap: 6px;
+  /* Health, then the words, then the fight. Every row sized to its content or
+     to the visible height — never to `1fr`, which competes for space that is
+     already spoken for. */
+  grid-template-rows: auto auto auto;
+  align-content: start;
 }
+
+/*
+ * The words move above the arena and sit still.
+ *
+ * They are normally absolute at the foot of the arena, where a throw and the
+ * word that caused it share a glance. With a keyboard up there is no foot of
+ * the arena worth having, so they become an ordinary row directly under the
+ * health bars — the first thing on screen, and the thing that must never be
+ * the thing that scrolls away.
+ */
+.screen[data-keyboard] .stream {
+  position: static;
+  padding: 0;
+}
+/* The scrim belongs to the arena version; here there is nothing behind it. */
+.screen[data-keyboard] .stream::before { display: none; }
 
 .screen[data-keyboard] .arena {
   min-height: 0;
-  /* Enough to keep the fight legible, little enough to leave the sentence and
-     the health bars on screen above the keys. */
-  height: clamp(90px, 22vh, 150px);
+  /*
+   * A share of what is *visible*, not of the window.
+   *
+   * `vh` is the trap here: an open keyboard does not change it, so a `22vh`
+   * arena stayed the height of a third of the phone while the space it had to
+   * live in was a quarter of that. Everything on this screen is measured
+   * against `--vv-height` for that reason.
+   */
+  height: calc(var(--vv-height, 100vh) * 0.30);
 }
 
-.screen[data-keyboard] .deck { gap: 6px; }
-/* The combo meter and power bar are read between words, not during them. */
-.screen[data-keyboard] .deckRow { display: none; }
+/*
+ * Fighters scaled to the strip they now stand in.
+ *
+ * `--fighter-h` is otherwise a share of the *window*, which an open keyboard
+ * does not change — so full-size fighters would be drawn into a 60px arena and
+ * clipped to a band of torso. Small enough to fit, big enough to still read as
+ * somebody being hit.
+ */
+.screen[data-keyboard] { --fighter-h: calc(var(--vv-height, 100vh) * 0.19); }
+
+/* The ground line rises with them, or they stand in the floor. */
+.screen[data-keyboard] .lane { bottom: 12%; }
+
+.screen[data-keyboard] .deck { display: none; }
+.screen[data-keyboard] .controls { display: none; }
 
 /*
  * On a phone the arena was 399px wide inside a 375px viewport.
