@@ -601,6 +601,85 @@ def make_flame(frame: int, palette: tuple) -> list[list[tuple]]:
     return canvas
 
 
+
+CROWN_W, CROWN_H = 15, 17
+
+# The metal each crown is struck from. Tinted towards its flame so the two
+# read as one object rather than as a fire balanced on a hat.
+CROWN_METALS: dict[str, tuple] = {
+    "gold": ((122, 78, 18), (198, 142, 40), (255, 224, 130)),
+    "azure": ((38, 62, 110), (86, 126, 190), (188, 226, 255)),
+    "ember": ((92, 46, 30), (156, 88, 52), (232, 168, 118)),
+}
+
+
+def make_crown(frame: int, name: str) -> list[list[tuple]]:
+    """A burning crown, for the three players at the top of the standings.
+
+    Earned, and only ever three of them at a time — which is the whole reason
+    it can be a crown at all. A crown beside everybody's name would say the
+    same thing about a beginner as about the best player in the game, and
+    would spend the symbol before anybody had won it.
+
+    Three frames, like the flames and the wall torches, so the fire moves
+    without a second animation system.
+    """
+    dark, mid, light = ((*c, 255) for c in CROWN_METALS[name])
+    outer, core, hot = ((*c, 255) for c in FLAME_PALETTES[name])
+
+    canvas = new_canvas(CROWN_W, CROWN_H)
+    cx = CROWN_W // 2
+    band_top, band_bottom = 11, 15
+
+    # --- the band ---------------------------------------------------------
+    for y in range(band_top, band_bottom):
+        for x in range(2, CROWN_W - 2):
+            put(canvas, x, y, mid if y == band_top else dark if y >= band_bottom - 1 else mid)
+    # A highlight along the top edge, so the band reads as metal rather than
+    # as a painted rectangle.
+    for x in range(3, CROWN_W - 3):
+        put(canvas, x, band_top, light)
+
+    # --- three points, the middle one tallest -----------------------------
+    peaks = ((cx - 4, 7), (cx, 5), (cx + 4, 7))
+    for px, top in peaks:
+        for y in range(top, band_top):
+            # Tapering: wide at the base, a single pixel at the tip.
+            half = 0 if y <= top + 1 else 1
+            for dx in range(-half, half + 1):
+                put(canvas, px + dx, y, mid if dx < 1 else dark)
+        put(canvas, px, top, light)
+
+    # --- a jewel, centred on the band -------------------------------------
+    put(canvas, cx, band_top + 2, hot)
+    put(canvas, cx - 1, band_top + 2, core)
+    put(canvas, cx + 1, band_top + 2, core)
+
+    # --- fire on each point -----------------------------------------------
+    # Each peak leans differently and on its own cycle, so the three do not
+    # flicker in unison — which would read as the whole sprite blinking.
+    for i, (px, top) in enumerate(peaks):
+        lean = (-1, 0, 1)[(frame + i) % 3]
+        # Short and wide rather than tall and thin. Tall fire on a pointed
+        # crown merges with the points into one spiky mass, and at the ~20px
+        # this is actually drawn at, a mass is all you see. A rounded blob of
+        # two or three rows separates from the metal and still reads as fire.
+        reach = (2, 3, 2)[(frame + i) % 3] + (1 if px == cx else 0)
+        for step in range(reach):
+            y = top - 1 - step
+            drift = lean if step == reach - 1 else 0
+            # Widest at the base, closing to a point at the tip.
+            half = 1 if step < reach - 1 else 0
+            colour = core if step < reach - 1 else outer
+            for dx in range(-half, half + 1):
+                put(canvas, px + dx + drift, y, colour)
+        # The hottest pixel sits low, where a real flame is hottest.
+        put(canvas, px, top - 1, hot)
+
+    outline(canvas, OUTLINE)
+    return canvas
+
+
 # --------------------------------------------------------------------------
 # latest marker — a sparkle that sits on the newest point of the trend chart
 #
@@ -759,6 +838,11 @@ def main() -> None:
     for name, palette in FLAME_PALETTES.items():
         for f in range(3):
             save(make_flame(f, palette), f"flame-{name}-{f + 1}.png")
+
+    print("rank crowns:")
+    for name in FLAME_PALETTES:
+        for f in range(3):
+            save(make_crown(f, name), f"crown-{name}-{f + 1}.png")
 
     print("sound toggle:")
     save(make_speaker(muted=False), "sound-on.png")

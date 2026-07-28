@@ -78,7 +78,10 @@
 .track {
   grid-area: bar;
   position: relative;
-  height: 6px;
+  /* Raised from 6px. The liquid needs somewhere to be — at six pixels a
+     travelling highlight is indistinguishable from the bar simply being a
+     slightly different colour. */
+  height: 9px;
   min-width: 0;
   background: var(--bg-deep);
   border: 1px solid var(--edge);
@@ -112,21 +115,70 @@
   color: var(--muted);
 }
 
+
 /*
- * The flame on the leading edge of the bar it is burning up.
+ * The live bar: liquid, still rising.
  *
- * Absolutely placed and lifted clear of the track, so it rides the fill
- * without changing the row's height — a bar that grew taller when a flame
- * appeared would shift every row beneath it the moment progress started.
+ * Only on the challenge you are nearest to. A flame sat here first and was the
+ * wrong read — fire on a progress bar says "burning down", which is the
+ * opposite of what a bar filling up means. Liquid says the thing that is
+ * actually true: there is more coming, and it has not arrived yet.
  *
- * `translate(-50%, -100%)` puts it astride the edge rather than beside it,
- * and it is `pointer-events: none` because there is nothing to click.
+ * Two parts. A sheen travels the length of the fill, which is the motion; and
+ * the leading edge carries a brighter meniscus, which is where the eye lands.
+ * Both are `transform` and `opacity` only, so the browser composites them
+ * without re-laying-out or repainting the row — the reason this is affordable
+ * on a page somebody sits and reads.
  */
-.torch {
+.fill { position: relative; overflow: hidden; }
+
+.fill[data-live]::before {
+  content: '';
   position: absolute;
-  bottom: 4px;
-  transform: translate(-50%, 0);
-  pointer-events: none;
-  line-height: 0;
-  transition: left 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  inset: 0;
+  /* Wider than the bar so the sweep runs off both ends rather than appearing
+     and vanishing mid-track. */
+  width: 60%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: rush 1.9s ease-in-out infinite;
+}
+
+@keyframes rush {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+/* The meniscus: the liquid's own surface, breathing at the leading edge. */
+.fill[data-live]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 3px;
+  background: #fff;
+  box-shadow: 0 0 6px 1px var(--gold);
+  animation: swell 1.9s ease-in-out infinite;
+}
+
+@keyframes swell {
+  0%, 100% { opacity: 0.55; transform: scaleX(1); }
+  50% { opacity: 1; transform: scaleX(1.8); }
+}
+
+/*
+ * Still, for anyone who has asked for it.
+ *
+ * The fill keeps its colour and its width, so the bar still says how far along
+ * it is — only the motion goes. A progress bar that vanished under reduced
+ * motion would be removing the information rather than the animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .fill[data-live]::before { animation: none; opacity: 0; }
+  .fill[data-live]::after { animation: none; opacity: 0.8; }
 }

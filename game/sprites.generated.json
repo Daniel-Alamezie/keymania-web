@@ -91,6 +91,42 @@
     "width": 128,
     "height": 184
   },
+  "crown-azure-1": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-azure-2": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-azure-3": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-ember-1": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-ember-2": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-ember-3": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-gold-1": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-gold-2": {
+    "width": 60,
+    "height": 68
+  },
+  "crown-gold-3": {
+    "width": 60,
+    "height": 68
+  },
   "fighter-blue": {
     "width": 104,
     "height": 128

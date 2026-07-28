@@ -128,7 +128,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
         <Stat
           label="Rating"
           value={profile.rating ?? START_RATING}
-          icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={18} />}
+          icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={38} />}
           highlight
         />
         <Stat label="Best speed" value={profile.bestRankedWpm} unit="wpm" highlight />

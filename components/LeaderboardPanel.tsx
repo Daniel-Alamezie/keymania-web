@@ -102,7 +102,8 @@ export default function LeaderboardPanel() {
                 {/* The slot is always rendered, empty below third, so names
                     stay in one column down the whole board. */}
                 <span className={styles.rankFlame}>
-                  {podium && <RankFlame rank={podium} height={19} />}
+                  {/* 17px is the sprite's own height — see RankFlame on why not 19. */}
+                  {podium && <RankFlame rank={podium} height={17} />}
                 </span>
                 {/* Only a link once a player has a handle. Accounts that
                     reached the board before handles existed have nothing to

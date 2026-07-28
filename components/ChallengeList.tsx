@@ -2,7 +2,6 @@
 
 import { characterById } from '@/models/character';
 import type { ChallengeProgress } from '@/models/profile';
-import { Flame } from './RankFlame';
 import styles from './ChallengeList.module.css';
 
 /**
@@ -92,14 +91,15 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
                   that loses its bar on completion changes height and makes the
                   list jump the moment something good happens. */}
               <div className={styles.track} aria-hidden="true">
-                <span className={styles.fill} style={{ width: `${pct}%` }} />
-                {challenge.id === burning && (
-                  // Riding the leading edge of the fill, so it moves up the bar
-                  // as the number does.
-                  <span className={styles.torch} style={{ left: `${pct}%` }}>
-                    <Flame kind="ember" height={16} />
-                  </span>
-                )}
+                {/* `data-live` on the one bar you are closest to. The liquid
+                    only runs there — a page where every bar flows emphasises
+                    nothing, and this one is saying "still going". */}
+                <span
+                  className={styles.fill}
+                  data-live={challenge.id === burning || undefined}
+                  style={{ width: `${pct}%` }}
+                />
+
               </div>
 
               <span className={styles.note}>

@@ -186,7 +186,7 @@ export default function ProfileDashboard() {
                     value={profile.rating ?? START_RATING}
                     // Ember, azure, then gold. The mark is the progress: a
                     // crown would say the same thing at 300 as at 500.
-                    icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={18} />}
+                    icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={38} />}
                     highlight
                     note={ranked.duels === 0 ? 'unplayed — everyone starts here' : undefined}
                   />
