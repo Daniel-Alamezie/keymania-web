@@ -829,7 +829,16 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       <section className={styles.deck}>
         <div className={styles.deckRow}>
           <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />
-          <PowerBar ward={state.ward} surge={state.surge} blockTick={state.blockTick} />
+          <PowerBar
+            // Derived here rather than stored as a set, so the reducer's shape
+            // is untouched by this change. Moving DuelState itself to a set is
+            // the remaining step — see the note in models/powers.ts.
+            held={[
+              ...(state.ward ? ['ward' as const] : []),
+              ...(state.surge ? ['surge' as const] : []),
+            ]}
+            blockTick={state.blockTick}
+          />
         </div>
       </section>
 

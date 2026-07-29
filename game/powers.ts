@@ -1,6 +1,5 @@
-import type { PowerKind } from '@/models/powers';
-
-export const POWERS: PowerKind[] = ['ward', 'surge', 'mend'];
+import { POWERS, type PowerKind } from '@/models/powers';
+import type { SpriteName } from '@/components/PixelSprite';
 
 export const MEND_AMOUNT = 8;
 export const SURGE_MULTIPLIER = 2;
@@ -24,16 +23,39 @@ const MIN_CHARGED_LENGTH = 4;
  * carries the same information, so the pairing still reads for anyone who cannot
  * separate green from gold.
  */
-export const POWER_META: Record<
-  PowerKind,
-  { icon: string; label: string; blurb: string; tint: string }
-> = {
+export interface PowerMeta {
+  icon: string;
+  label: string;
+  blurb: string;
+  tint: string;
+  /** The sprite the HUD draws. Held powers only — see HELD_POWERS. */
+  sprite: SpriteName;
+}
+
+/**
+ * `Record<PowerKind, …>`, so this cannot be forgotten.
+ *
+ * The one place in the whole feature where TypeScript already refused to let a
+ * new power be half-added: leave a power out of this table and it will not
+ * compile. Everywhere else took a branch and said nothing — which is why the
+ * behaviour now lives here too rather than in four `if` statements.
+ */
+export const POWER_META: Record<PowerKind, PowerMeta> = {
   // Cyan: cold, defensive, the colour of a barrier.
-  ward: { icon: '🛡', label: 'Ward', blurb: 'absorbs the next blade', tint: '#4fe3ff' },
+  ward: {
+    icon: '🛡', label: 'Ward', blurb: 'absorbs the next blade',
+    tint: '#4fe3ff', sprite: 'power-ward',
+  },
   // Gold: the lightning it is named for, and the only offensive power.
-  surge: { icon: '⚡', label: 'Surge', blurb: 'next blade hits double', tint: '#ffd66e' },
+  surge: {
+    icon: '⚡', label: 'Surge', blurb: 'next blade hits double',
+    tint: '#ffd66e', sprite: 'power-surge',
+  },
   // Green: health, borrowed straight from --good so healing reads the same everywhere.
-  mend: { icon: '✚', label: 'Mend', blurb: `restores ${MEND_AMOUNT} health`, tint: '#5ee08a' },
+  mend: {
+    icon: '✚', label: 'Mend', blurb: `restores ${MEND_AMOUNT} health`,
+    tint: '#5ee08a', sprite: 'power-mend',
+  },
 };
 
 /** Charge words across a script, keyed by flat word index. */
@@ -65,4 +87,5 @@ export function chargeSentence(sentence: string): Record<number, PowerKind> {
   return chargeScript([sentence]);
 }
 
+export { POWERS, HELD_POWERS } from '@/models/powers';
 export type { PowerKind } from '@/models/powers';

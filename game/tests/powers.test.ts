@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { chargeScript, chargeSentence, POWERS } from '../powers';
+import {
+  chargeScript, chargeSentence, HELD_POWERS, POWER_META, POWERS,
+} from '../powers';
 
 /**
  * Charged words.
@@ -102,5 +104,49 @@ describe('chargeSentence', () => {
         expect(Number(index)).toBeLessThan(words.length);
       }
     }
+  });
+});
+
+/**
+ * The power roster, pinned on this side of the wire.
+ *
+ * The server decides which words are charged and with what; this side draws the
+ * result. Neither can see the other's list, so the two are a contract held
+ * together by nothing but agreement — the same arrangement as characters and
+ * bot difficulties, pinned the same way.
+ *
+ * A mismatch fails quietly, which is what earns it a test: the server charges a
+ * word with a power this side has no entry for, `POWER_META[kind]` comes back
+ * undefined, and a charged word renders as a blank rather than a colour.
+ */
+describe('the power roster', () => {
+  it('is the three keymania-api ships', () => {
+    expect([...POWERS]).toEqual(['ward', 'surge', 'mend']);
+  });
+
+  /**
+   * The check that makes adding a power safe.
+   *
+   * `POWER_META` is a `Record<PowerKind, …>`, so a missing entry is a compile
+   * error rather than a runtime blank — but only if every kind is really in
+   * the table. This asserts the pair have not been allowed to disagree.
+   */
+  it('describes every power it lists', () => {
+    for (const kind of POWERS) {
+      const meta = POWER_META[kind];
+      expect(meta, kind).toBeDefined();
+      expect(meta.label.length, kind).toBeGreaterThan(0);
+      expect(meta.tint, kind).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(meta.sprite, kind).toBe(`power-${kind}`);
+    }
+  });
+
+  /**
+   * Held powers are the ones the HUD has a slot for. An instant power has
+   * nothing to draw — by the time you could look at it, it has happened.
+   */
+  it('only marks as held the powers that persist', () => {
+    for (const kind of HELD_POWERS) expect(POWERS).toContain(kind);
+    expect(HELD_POWERS).not.toContain('mend');
   });
 });
