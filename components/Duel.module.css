@@ -43,6 +43,24 @@
 @keyframes pulse { 50% { opacity: 0.4; } }
 
 /*
+ * A steady low-health edge instead of a throbbing one.
+ *
+ * Part of the arena-treatment experiment; see game/arenaFx.ts. The pulse is a
+ * 900ms loop that never stops once you are under a quarter health, which is
+ * precisely the moment a player most needs to read well. The state still reads
+ * as urgent because the edge is red and was not there a second ago; the endless
+ * animation adds nothing to that and costs attention continuously.
+ *
+ * Selector carries `[data-danger]` as well as `[data-fx]`, so it only ever
+ * overrides the rule above rather than sitting at the same specificity and
+ * depending on which one the bundler emitted last. That is the production-only
+ * bug this codebase has already had once, in ArenaScene.
+ */
+.screen[data-danger][data-fx='trim']::after,
+.screen[data-danger][data-fx='focus']::after,
+.screen[data-danger][data-fx='stage']::after { animation: none; }
+
+/*
  * Mute and leave, out in the margin.
  *
  * They used to sit at the top-right of the screen, which is the same corner as

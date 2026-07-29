@@ -1,0 +1,105 @@
+/*
+ * The arena-treatment badge.
+ *
+ * Bottom-left, out in the margin the layout already leaves empty either side of
+ * the centred screen, so it overlaps nothing it is meant to be helping you
+ * judge. Fixed rather than in flow for the same reason: a panel that pushed the
+ * arena around would change the thing being compared.
+ *
+ * Temporary. Goes with FxSwitcher.tsx when a treatment wins.
+ */
+.switcher {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 172px;
+  padding: 9px 10px;
+  background: rgba(8, 6, 18, 0.92);
+  border: 1px solid var(--edge);
+  /* Never in a screenshot's way, and never in the shake: it is outside .screen. */
+  pointer-events: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--edge);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.step:hover { color: var(--gold); border-color: var(--gold); }
+
+.blurb {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+
+.dots { display: flex; gap: 5px; }
+
+.dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  background: var(--edge);
+  border: none;
+  cursor: pointer;
+}
+.dot[data-active] { background: var(--gold); }
+
+.hint {
+  font-size: 9px;
+  color: var(--faint);
+  text-align: center;
+}
+
+/*
+ * Out of the way on a phone.
+ *
+ * The arena is the whole screen there, so a fixed panel bottom-left sits on top
+ * of the words. Shrunk and moved to the top, where the health bars already are
+ * and where it costs the reading band nothing.
+ */
+@media (max-width: 640px) {
+  .switcher {
+    left: 6px;
+    top: 6px;
+    bottom: auto;
+    width: 132px;
+    padding: 6px 7px;
+    gap: 3px;
+  }
+  .blurb { display: none; }
+}

@@ -15,6 +15,7 @@ import { saveResult } from '@/game/saveResult';
 import { useAccount } from '@/game/useAccount';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
+import { useArenaFx } from '@/game/useArenaFx';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
@@ -28,6 +29,7 @@ import ArenaScene from './ArenaScene';
 import SentenceView from './SentenceView';
 import ComboMeter from './ComboMeter';
 import PowerBar from './PowerBar';
+import FxSwitcher from './FxSwitcher';
 import { useCharacter } from '@/game/serverProfile';
 import styles from './Duel.module.css';
 
@@ -68,6 +70,15 @@ interface Impact {
   /** Which fighter wore it, so only they flinch in a crowd. */
   slot: number;
   damage: number;
+  /**
+   * The blade that landed.
+   *
+   * Carried so a treatment can decide whether this hit is worth the loud extras.
+   * Required rather than optional: the tier is known at every call site, and an
+   * optional one would silently read as tier 1 wherever somebody forgot it,
+   * quietly turning the gate off for that path.
+   */
+  tier: BladeTier;
   tick: number;
 }
 
@@ -102,6 +113,29 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledHit = useRef(0);
   const flashRef = useRef<HTMLDivElement>(null);
+  /** The words, so a treatment can hold them still while the arena shakes. */
+  const streamRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Which arena de-clutter treatment is running.
+   *
+   * A temporary harness. Without `?fx=` in the URL this resolves to a control
+   * preset that is today's arena exactly, so a normal player is unaffected and
+   * there is nothing to remember to turn off. See game/arenaFx.ts.
+   */
+  const fxControl = useArenaFx();
+  const { fx } = fxControl;
+  /**
+   * The treatment, for callbacks that must not be rebuilt when it changes.
+   *
+   * Written in an effect rather than during render. `land` is reached from the
+   * hit effect, so giving it `fx` in its dependency list would change its
+   * identity and re-run that effect, and re-running it means re-applying a blade
+   * that has already landed. The ref lags by one commit, which for a key press
+   * a human made is not a real delay.
+   */
+  const fxRef = useRef(fx);
+  useEffect(() => { fxRef.current = fx; }, [fx]);
   const [impact, setImpact] = useState<Impact | null>(null);
   const [attack, setAttack] = useState<{ side: Side; tick: number } | null>(null);
   const [liveWpm, setLiveWpm] = useState(0);
@@ -118,7 +152,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
    * instead, where they stay the first thing on screen under the health bars.
    */
   const stream = (
-    <div className={styles.stream}>
+    <div ref={streamRef} className={styles.stream}>
       <SentenceView
         previous={state.previous}
         sentence={state.sentence}
@@ -402,11 +436,19 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     return () => bot.stop();
   }, [isMulti, state.phase, state.difficulty]);
 
+  /**
+   * The live speed readout.
+   *
+   * A digit that changes every 700ms, a few centimetres from the words being
+   * read. `wpmEveryMs` slows that down or stops it entirely until the duel is
+   * over, which is one of the things the treatments are testing.
+   */
   useEffect(() => {
-    if (state.phase !== 'playing') return;
-    const id = setInterval(() => setLiveWpm(overallWpm(stateRef.current.stats, Date.now())), 700);
+    if (state.phase !== 'playing' || fx.wpmEveryMs === null) return;
+    const tick = () => setLiveWpm(overallWpm(stateRef.current.stats, Date.now()));
+    const id = setInterval(tick, fx.wpmEveryMs);
     return () => clearInterval(id);
-  }, [state.phase]);
+  }, [state.phase, fx.wpmEveryMs]);
 
   useEffect(() => {
     if (state.tierUpTick > 0) audio.tierUp();
@@ -486,25 +528,56 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
    */
   useEffect(() => {
     if (!impact) return;
+
+    /**
+     * Whether this hit gets the loud extras at all.
+     *
+     * At `loudFrom: 1` every word does, which is today's behaviour and the
+     * reason a first word and a ten-streak blade look nearly the same. The
+     * damage number and the health drain are outside this gate on purpose: they
+     * are the two channels that carry information, so they fire for every hit
+     * whatever the treatment.
+     */
+    if (impact.tier < fx.loudFrom) return;
+
     const heavy = impact.damage >= 3.5;
-    const amount = heavy ? 10 : 4;
+    const amount = (heavy ? 10 : 4) * fx.shakeScale;
 
     flashRef.current?.animate(
       [{ opacity: heavy ? 0.5 : 0.24 }, { opacity: 0 }],
       { duration: heavy ? 150 : 90, easing: 'ease-out' },
     );
 
-    screenRef.current?.animate(
-      [
-        { transform: 'translate(0, 0)' },
-        { transform: `translate(${-amount}px, ${amount / 2}px)` },
-        { transform: `translate(${amount}px, ${-amount / 2}px)` },
-        { transform: `translate(${-amount / 2}px, ${amount / 3}px)` },
-        { transform: 'translate(0, 0)' },
-      ],
-      { duration: heavy ? 310 : 190, easing: 'ease-out' },
-    );
-  }, [impact]);
+    if (fx.shake === 'none' || amount === 0) return;
+
+    const timing = { duration: heavy ? 310 : 190, easing: 'ease-out' } as const;
+    const path = (sign: 1 | -1) => [
+      { transform: 'translate(0, 0)' },
+      { transform: `translate(${sign * -amount}px, ${sign * amount / 2}px)` },
+      { transform: `translate(${sign * amount}px, ${sign * -amount / 2}px)` },
+      { transform: `translate(${sign * -amount / 2}px, ${sign * amount / 3}px)` },
+      { transform: 'translate(0, 0)' },
+    ];
+
+    screenRef.current?.animate(path(1), timing);
+
+    /**
+     * Holding the words still while everything else shakes.
+     *
+     * The sentence renders *inside* the arena, so there is no element that is
+     * "the arena but not the text" to shake instead. Rather than restructure the
+     * layout for an experiment, the stream is given the exact inverse of the
+     * screen's animation: translations compose, so parent +T and child -T leaves
+     * the child where it was while its surroundings move.
+     *
+     * Same keyframe offsets and the same timing object, or the two would drift
+     * apart and the words would jitter instead of standing still. If a treatment
+     * that does this wins, the honest version is to lift the sentence out of the
+     * arena and shake a wrapper; this is a fast way to find out whether it is
+     * worth doing.
+     */
+    if (fx.shake === 'arena') streamRef.current?.animate(path(-1), timing);
+  }, [impact, fx]);
 
   /**
    * Land a blade: burst, sound and damage popup.
@@ -513,9 +586,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
    * opponent; with three, it decides which of them flinches.
    */
   const land = useCallback((target: Side, slot: number, damage: number, tier: BladeTier) => {
-    effects.current?.burst(target, tier);
+    // Gated with the flash and the shake, so a quiet treatment is quiet in every
+    // channel at once rather than dropping the shake and keeping the confetti.
+    if (tier >= fxRef.current.loudFrom) effects.current?.burst(target, tier);
     audio.impact(tier);
-    setImpact({ side: target, slot, damage, tick: Date.now() });
+    setImpact({ side: target, slot, damage, tier, tick: Date.now() });
   }, []);
 
   /**
@@ -678,11 +753,18 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       className={styles.screen}
       data-heat={state.playerCombo >= HEAT_COMBO || undefined}
       data-danger={playerLow || undefined}
+      // Lets the stylesheet answer the treatment questions that are pure CSS,
+      // like whether the low-health edge throbs, without plumbing props down.
+      data-fx={fx.id}
       // Drives the whole compact layout. When a soft keyboard is up there is
       // perhaps 300px of usable height left, and the words have to win it.
       data-keyboard={keyboardUp || undefined}
       data-touch={touch || undefined}
     >
+      {/* Only when a treatment was asked for by URL, so no normal player meets
+          it. Outside .screen's shake by virtue of being fixed-position. */}
+      {fxControl.testing && <FxSwitcher {...fxControl} />}
+
       <div className={styles.controls}>
         <SoundToggle className={styles.iconBtn} />
         {/* Hidden once decided: there is nothing left to forfeit, and offering
@@ -741,7 +823,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       {keyboardUp && stream}
 
-      <ArenaScene className={styles.arena}>
+      <ArenaScene className={styles.arena} stillTorches={fx.torches === 'still'}>
         <div className={styles.lane} data-lane="player">
           <Fighter
             character={you(state).character}
@@ -753,7 +835,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           />
         </div>
 
-        <EffectsCanvas ref={effects} className={styles.canvas} />
+        <EffectsCanvas ref={effects} className={styles.canvas} fx={fx} />
 
         {/* One fighter per opponent. A duel renders a single figure exactly as
             before; a four-way stands them in a row, with the one you are

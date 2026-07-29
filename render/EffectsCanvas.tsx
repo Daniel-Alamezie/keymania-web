@@ -2,6 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PROJECTILE_FLIGHT_MS } from '@/game/constants';
+import { ARENA_FX, type ArenaFx } from '@/game/arenaFx';
 import type { Side } from '@/models/duel';
 import type { BladeTier } from '@/models/scoring';
 
@@ -39,8 +40,17 @@ const TIER_COLORS: Record<BladeTier, string[]> = {
  */
 const LANE = { player: 0.17, opponent: 0.83 };
 
-const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function EffectsCanvas(
-  { className },
+interface EffectsCanvasProps {
+  className?: string;
+  /**
+   * Which arena treatment is running. Defaults to the control, so nothing here
+   * changes for a caller that does not know about the experiment.
+   */
+  fx?: ArenaFx;
+}
+
+const EffectsCanvas = forwardRef<EffectsHandle, EffectsCanvasProps>(function EffectsCanvas(
+  { className, fx = ARENA_FX.current },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,6 +58,17 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
   const particlesRef = useRef<Particle[]>([]);
   const spritesRef = useRef<Record<number, HTMLImageElement>>({});
   const frameRef = useRef<number>(0);
+
+  /**
+   * The live treatment, in a ref.
+   *
+   * The draw loop is mounted once with an empty dependency list, so it closes
+   * over whatever `fx` was at mount. Reading through a ref is what lets F2
+   * change the arena mid-flight instead of on the next remount, which is the
+   * entire point of doing this at runtime rather than on three branches.
+   */
+  const fxRef = useRef(fx);
+  useEffect(() => { fxRef.current = fx; }, [fx]);
 
   // Preload the blade sprites once.
   useEffect(() => {
@@ -68,7 +89,9 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
       const x = canvas.clientWidth * LANE[at];
       const y = canvas.clientHeight * 0.52;
       const palette = TIER_COLORS[tier];
-      const count = 14 + tier * 4;
+      // Rounded up, so a treatment that thins the burst never silences it: a
+      // hit with no debris at all is a different change from a quieter one.
+      const count = Math.max(1, Math.round((14 + tier * 4) * fxRef.current.particles));
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 60 + Math.random() * (120 + tier * 30);
@@ -112,6 +135,8 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
       ctx.clearRect(0, 0, w, h);
       ctx.imageSmoothingEnabled = false;
 
+      const { arc, trails } = fxRef.current;
+
       // --- blades in flight -------------------------------------------------
       bladesRef.current = bladesRef.current.filter((blade) => {
         const t = (now - blade.startedAt) / PROJECTILE_FLIGHT_MS;
@@ -120,8 +145,10 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
         const fromX = w * LANE[blade.from];
         const toX = w * LANE[blade.from === 'player' ? 'opponent' : 'player'];
         const x = fromX + (toX - fromX) * t;
-        // A shallow arc reads as a throw rather than a slide.
-        const y = h * 0.52 - Math.sin(t * Math.PI) * h * 0.16;
+        // A shallow arc reads as a throw rather than a slide. A tall one also
+        // lifts the flight path clear of the words at the foot of the arena,
+        // which is what the `stage` treatment is testing.
+        const y = h * 0.52 - Math.sin(t * Math.PI) * h * arc;
         const sprite = spritesRef.current[blade.tier];
         if (!sprite?.complete) return true;
 
@@ -130,12 +157,15 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
         const sh = sprite.height * scale;
         const travellingLeft = toX < fromX;
 
-        // Motion trail: a few fading ghosts behind the blade.
-        for (let g = 3; g >= 1; g--) {
+        // Motion trail: a few fading ghosts behind the blade. The alpha ramp is
+        // keyed off the trail count rather than a literal 3, so thinning them
+        // fades the remaining ghosts the same way instead of leaving one faint
+        // straggler with nothing in front of it.
+        for (let g = trails; g >= 1; g--) {
           const gt = Math.max(0, t - g * 0.045);
           const gx = fromX + (toX - fromX) * gt;
-          const gy = h * 0.52 - Math.sin(gt * Math.PI) * h * 0.16;
-          ctx.globalAlpha = 0.1 * (4 - g);
+          const gy = h * 0.52 - Math.sin(gt * Math.PI) * h * arc;
+          ctx.globalAlpha = 0.4 * (1 - g / (trails + 1));
           drawSprite(ctx, sprite, gx, gy, sw, sh, travellingLeft);
         }
 
@@ -143,6 +173,18 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
         drawSprite(ctx, sprite, x, y, sw, sh, travellingLeft);
         return true;
       });
+
+      /**
+       * Where debris stops existing.
+       *
+       * Gravity is 420px/s², so over the ~700ms a particle lives it falls a
+       * long way past the fighters and into the band the sentence occupies at
+       * the foot of the arena. That is the literal mechanism behind "hard to
+       * focus on typing": the confetti lands on the words.
+       *
+       * A floor of 1 keeps every particle, which is today's behaviour.
+       */
+      const floor = h * fxRef.current.particleFloor;
 
       // --- impact particles -------------------------------------------------
       particlesRef.current = particlesRef.current.filter((p) => {
@@ -152,6 +194,7 @@ const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function
         p.x += p.vx * k;
         p.y += p.vy * k;
         p.vy += 420 * k; // gravity
+        if (p.y > floor) return false;
         ctx.globalAlpha = Math.max(0, 1 - p.life / p.maxLife);
         ctx.fillStyle = p.color;
         ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
