@@ -1,0 +1,122 @@
+/*
+ * The board explainer.
+ *
+ * Class names are prefixed rather than reusing `.overlay`, `.head`, `.title`
+ * and friends from HowToPlay.module.css. Those read better, and three separate
+ * bugs this month came from two stylesheets agreeing on a short class name —
+ * `.badge`, `.power` and `.backdrop` — so a few extra characters here are worth
+ * paying. Everything else deliberately matches that guide's look: same
+ * backdrop, same rise, same close button, because they are the same kind of
+ * thing to a player.
+ */
+
+.boardOverlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 6, 18, 0.88);
+  z-index: 40;
+  animation: boardFade 180ms ease-out;
+}
+
+@keyframes boardFade { from { opacity: 0; } }
+
+.boardSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(520px, 94vw);
+  /*
+   * Capped, then scrolled internally.
+   *
+   * This is a reference and it will grow — a third board, a decay rule, a
+   * season. Without the cap it eventually runs off the bottom of a laptop
+   * screen with the close button somewhere below the fold.
+   */
+  max-height: min(82vh, 720px);
+  animation: boardRise 260ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes boardRise {
+  from { transform: translateY(16px) scale(0.97); opacity: 0; }
+}
+
+.boardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+}
+
+.boardTitle { margin: 0; font-size: 14px; color: var(--gold); }
+
+.boardClose {
+  background: transparent;
+  border: none;
+  color: var(--faint);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.boardClose:hover { color: var(--ink); }
+
+/* The only part that scrolls, so the title and the way out stay put. */
+.boardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--muted);
+  /* Room for the scrollbar so text never sits under it. */
+  padding-right: 4px;
+}
+
+.boardBody p { margin: 0 0 8px; }
+.boardBody p:last-child { margin-bottom: 0; }
+.boardBody strong { color: var(--ink); }
+
+.boardSection {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.boardList {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/*
+ * The reasoning, set apart from the rules.
+ *
+ * A player who only wants to know what a win is worth should be able to skip
+ * this; somebody wondering why the board changed should be able to find it.
+ */
+.boardAside {
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--edge-soft);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.boardFoot {
+  display: flex;
+  justify-content: flex-end;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardOverlay,
+  .boardSheet { animation: none; }
+}

@@ -148,6 +148,31 @@
   text-align: center;
 }
 
+/*
+ * The way into the explainer, sized to belong in the footnote.
+ *
+ * A button rather than an anchor: it opens a panel in place rather than going
+ * anywhere, and a link that does not navigate is a lie to anybody reading the
+ * status bar or using a screen reader. It still underlines, because that is
+ * what says "clickable" in a line of grey text.
+ */
+.footLink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--faint);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.footLink:hover,
+.footLink:focus-visible {
+  color: var(--gold);
+}
+
 /* The board name, when it links to a profile.
  *
  * Anchors bring their own colour and underline, neither of which belongs on a

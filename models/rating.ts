@@ -4,12 +4,30 @@
  * The rules live on the server (`src/lib/rating.ts` in keymania-api) and stay
  * there: a rating the browser could compute is a rating the browser could
  * argue about, and the whole point of the number is that one referee decides
- * it. All that is mirrored here is where everybody starts, so a profile can be
- * drawn before the first human duel has ever been played.
+ * it. What is mirrored here are the figures the game has to *say out loud* —
+ * so a profile can be drawn before the first human duel, and so the board's
+ * own explainer can quote the system rather than describe it vaguely.
+ *
+ * Nothing here is used to compute a rating, only to describe one. Every value
+ * is pinned literally by `game/tests/rating.test.ts` against the server's own
+ * test, because a drifted copy here would not break anything — it would just
+ * quietly tell players the wrong rules, which is worse.
  */
 
 /** Where everybody starts, matching START_RATING on the server. */
 export const START_RATING = 300;
+
+/** The lowest a rating can fall, however badly it goes. */
+export const RATING_FLOOR = 100;
+
+/** What winning is worth, before any upset bonus. */
+export const WIN_POINTS = 10;
+
+/** What finishing last costs. Deliberately less than a win pays. */
+export const LOSS_POINTS = -8;
+
+/** The most beating a higher-rated player can add on top of the win. */
+export const MAX_UPSET_BONUS = 3;
 
 /**
  * The flame that burns beside a rating.

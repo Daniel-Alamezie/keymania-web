@@ -306,6 +306,27 @@ Design decisions worth not re-litigating:
 Rating is **public** on profiles. A rating nobody else can see is a private
 score, and a private score is not standing.
 
+### Standings is the default board
+
+There are two boards — `standings` (by rating) and `speed` (best sustained wpm
+in one duel) — and the menu opens on **standings**. That ordering is a
+behavioural decision, not a cosmetic one.
+
+A speed board is a `max()`. Once a player tops it, every further duel can only
+threaten the number, so the rational move on reaching first place is to stop
+playing — the exact opposite of what the board is there to encourage. Rating
+only moves by duelling, so it is what a new arrival sees first.
+
+The speed board is **kept, not dropped**: it is the one that makes this a game
+about typing rather than a game about winning, and the only place a personal
+best is celebrated whether or not anybody was beaten.
+
+`DEFAULT_BOARD` lives in `keymania-web/models/leaderboard.ts` and is pinned by a
+test, because "which board opens first" is the kind of product decision a
+refactor can quietly reverse. `components/BoardGuide.tsx` explains all of the
+above to players and quotes every figure from `models/rating.ts` rather than
+writing them out — those mirrors are pinned by `game/tests/rating.test.ts`.
+
 ---
 
 ## 10. Ranked vs practice — the integrity line
@@ -390,7 +411,7 @@ DynamoDB, four tables.
 |---|---|---|
 | `connections` | `connectionId` | TTL |
 | `rooms` | `roomId` | `OpenRoomsIndex` (sparse) on `openListing`+`createdAt`; TTL |
-| `players` | `userId` | `LeaderboardIndex` on `leaderboard`+`bestRankedWpm` (sparse) |
+| `players` | `userId` | `LeaderboardIndex` on `leaderboard`+`bestRankedWpm`, `RatingIndex` on `leaderboard`+`rating` (both sparse) |
 | `friends` | `userId`+`friendId` | Two rows per friendship, written in a transaction |
 
 **Sparse indexes** throughout: the index attribute is written only when the row
@@ -400,8 +421,10 @@ belongs in the index, so queries need no filtering.
 > refuses outright — *"Cannot update GSI's properties other than Provisioned
 > Throughput and Contributor Insights Specification"* — and the **whole stack
 > update rolls back**, taking unrelated changes with it. Adding a differently
-> keyed index is a separate, deliberate deploy. This is why the leaderboard
-> still orders on `bestRankedWpm` rather than on rating.
+> keyed index is a separate, deliberate deploy, and CFN allows only one GSI
+> change per update. `RatingIndex` was added that way rather than by re-keying
+> `LeaderboardIndex`, which is why both exist and why `handle` and `rating` are
+> read off the base row instead of being projected into either.
 
 ### HTTP rate limits (per user)
 
@@ -443,8 +466,11 @@ nothing. If you add a shared value, add the test.
   and rejects their submissions, but the client has no spectator state:
   `spectating()` in `duelReducer.ts` is defined and never called, and a
   knocked-out player can still type into a void.
-- **The leaderboard orders on speed, not rating** — see the GSI warning above.
-- **Progression** (challenges, character locks, the unlock moment) is not built.
+- **The unlock moment is not built.** Challenges, character locks and the
+  picker's progress display all exist and are server-enforced; what is missing
+  is telling a player on the results screen that they have just earned
+  something. The API already sends a `rating` message that nothing renders, so
+  the `+12 · 312` moment is missing for the same reason.
 - `sanitiseName` has a trailing-space bug of the kind already fixed in
   `sanitiseHandle` (trim after slice, not before).
 
