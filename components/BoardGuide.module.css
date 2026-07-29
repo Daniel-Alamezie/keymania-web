@@ -5,9 +5,11 @@
  * and friends from HowToPlay.module.css. Those read better, and three separate
  * bugs this month came from two stylesheets agreeing on a short class name —
  * `.badge`, `.power` and `.backdrop` — so a few extra characters here are worth
- * paying. Everything else deliberately matches that guide's look: same
- * backdrop, same rise, same close button, because they are the same kind of
- * thing to a player.
+ * paying. Everything else deliberately matches that guide: same backdrop, same
+ * rise, same dots, because they are the same kind of thing to a player.
+ *
+ * Nothing here scrolls. The panel is sized to its tallest page and each page is
+ * one idea, which is what replaced a scrolling column of rules.
  */
 
 .boardOverlay {
@@ -26,16 +28,8 @@
 .boardSheet {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   width: min(520px, 94vw);
-  /*
-   * Capped, then scrolled internally.
-   *
-   * This is a reference and it will grow — a third board, a decay rule, a
-   * season. Without the cap it eventually runs off the bottom of a laptop
-   * screen with the close button somewhere below the fold.
-   */
-  max-height: min(82vh, 720px);
   animation: boardRise 260ms cubic-bezier(0.2, 1.2, 0.4, 1);
 }
 
@@ -43,13 +37,7 @@
   from { transform: translateY(16px) scale(0.97); opacity: 0; }
 }
 
-.boardHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex: none;
-}
-
+.boardHead { display: flex; align-items: center; justify-content: space-between; }
 .boardTitle { margin: 0; font-size: 14px; color: var(--gold); }
 
 .boardClose {
@@ -62,61 +50,271 @@
 }
 .boardClose:hover { color: var(--ink); }
 
-/* The only part that scrolls, so the title and the way out stay put. */
-.boardBody {
+.boardPage {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  min-height: 0;
-  overflow-y: auto;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  animation: boardPageIn 240ms ease-out;
+}
+
+@keyframes boardPageIn { from { transform: translateX(12px); opacity: 0; } }
+
+/*
+ * Fixed height, so paging never makes the panel jump.
+ *
+ * Taller than the guide's own 140px: these visuals carry two figures and a
+ * caption where that one carries a sprite.
+ */
+.boardVisual {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 148px;
+  padding: 14px;
+  background: var(--bg-deep);
+  border: 2px solid var(--edge-soft);
+}
+
+.boardPageTitle { margin: 0; font-size: 12px; color: var(--ink); }
+
+/*
+ * A minimum height on the copy, for the same reason the visual has one: without
+ * it the footer walks up and down as pages of two and three lines alternate,
+ * and the Next button moves out from under the cursor mid-read.
+ *
+ * Three lines, expressed in the line-height so it stays right if the font size
+ * changes. Every page is written to fit inside it — the longest was trimmed to
+ * three rather than the box being grown to four, since a page of rules nobody
+ * finishes reading is the thing this rewrite was undoing.
+ */
+.boardBody {
+  margin: 0;
+  min-height: calc(3 * 1.8em);
   font-size: 13px;
   line-height: 1.8;
   color: var(--muted);
-  /* Room for the scrollbar so text never sits under it. */
-  padding-right: 4px;
 }
-
-.boardBody p { margin: 0 0 8px; }
-.boardBody p:last-child { margin-bottom: 0; }
 .boardBody strong { color: var(--ink); }
 
-.boardSection {
-  margin: 0 0 8px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.boardFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.boardDots { display: flex; gap: 7px; }
+
+.boardDot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  background: var(--edge);
+  border: none;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+.boardDot:hover { background: var(--muted); }
+.boardDot[data-active] { background: var(--gold); transform: scale(1.25); }
+
+/* ---------- Page 1: the two boards ---------- */
+
+.boards {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.mini {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.miniTab {
+  font-size: 9px;
+  letter-spacing: 0.08em;
   color: var(--gold);
 }
 
-.boardList {
-  margin: 0 0 8px;
-  padding-left: 18px;
+.miniRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--gold);
+  font-size: 12px;
+}
+
+.miniName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--ink);
+}
+
+.miniScore { color: var(--gold); font-size: 12px; }
+.miniNote { font-size: 10px; color: var(--faint); font-style: italic; }
+
+/* ---------- Page 2: the swing ---------- */
+
+.swing {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas:
+    'gain now loss'
+    'floor floor floor';
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.swingNow {
+  grid-area: now;
+  font-size: 22px;
+  color: var(--ink);
+}
+
+/*
+ * The two arrows drift instead of sitting still.
+ *
+ * "Moves both ways" is the entire content of this page, and a static pair of
+ * numbers reads as a list rather than as movement. Six seconds, barely a few
+ * pixels — enough to notice, not enough to distract from the sentence below.
+ */
+.swingGain,
+.swingLoss {
+  font-size: 15px;
+  animation: boardDrift 6s ease-in-out infinite;
+}
+
+.swingGain {
+  grid-area: gain;
+  justify-self: end;
+  color: var(--good);
+}
+
+.swingLoss {
+  grid-area: loss;
+  justify-self: start;
+  color: var(--opponent);
+  animation-direction: reverse;
+}
+
+@keyframes boardDrift {
+  0%, 100% { transform: translateY(3px); }
+  50%      { transform: translateY(-3px); }
+}
+
+.swingFloor {
+  grid-area: floor;
+  justify-self: center;
+  font-size: 10px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+/* ---------- Page 3: the upset ---------- */
+
+.upset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.upsetSide {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.upsetRating { font-size: 13px; color: var(--ink); }
+.upsetWho { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); }
+
+.upsetMid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.upsetBonus {
+  padding: 2px 6px;
+  background: var(--good);
+  color: var(--bg-deep);
+  font-size: 11px;
+}
+
+/* ---------- Page 4: what counts ---------- */
+
+.compare {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 26px;
+}
+
+.compareCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 5px;
 }
 
 /*
- * The reasoning, set apart from the rules.
+ * A fixed slot for the flame, empty on the practice side.
  *
- * A player who only wants to know what a win is worth should be able to skip
- * this; somebody wondering why the board changed should be able to find it.
+ * Reserving the space rather than crossing something out is the honest picture:
+ * a bot duel does not have a band taken away from it, it never had one. It also
+ * keeps the two characters standing on the same line.
  */
-.boardAside {
-  padding: 9px 11px;
-  background: var(--panel-2);
-  border-left: 3px solid var(--edge-soft);
-  font-size: 12px;
-  color: var(--faint);
+.compareMark {
+  display: grid;
+  place-items: center;
+  height: 24px;
 }
 
-.boardFoot {
-  display: flex;
-  justify-content: flex-end;
-  flex: none;
+.compareTag {
+  padding: 2px 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-soft);
+  font-size: 10px;
+  color: var(--faint);
 }
+.compareTag[data-counts] { border-color: var(--good); color: var(--good); }
+
+.compareNote { font-size: 9px; color: var(--faint); font-style: italic; }
+
+/* ---------- Page 5: the bands ---------- */
+
+.bands {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 22px;
+}
+
+.band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.bandLabel { font-size: 9px; color: var(--faint); }
 
 @media (prefers-reduced-motion: reduce) {
   .boardOverlay,
-  .boardSheet { animation: none; }
+  .boardSheet,
+  .boardPage { animation: none; }
+  .swingGain,
+  .swingLoss { animation: none; }
+  .boardDot { transition: none; }
 }

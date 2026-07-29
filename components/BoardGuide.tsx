@@ -1,42 +1,116 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  LOSS_POINTS, MAX_UPSET_BONUS, RATING_FLOOR, START_RATING, WIN_POINTS,
-  AZURE_FROM, GOLD_FROM,
+  AZURE_FROM, GOLD_FROM, LOSS_POINTS, MAX_UPSET_BONUS,
+  RATING_FLOOR, START_RATING, WIN_POINTS,
 } from '@/models/rating';
+import PixelSprite from './PixelSprite';
+import RankFlame, { Flame } from './RankFlame';
 import styles from './BoardGuide.module.css';
 
 /**
- * How the boards work, in the player's own words.
+ * How the boards work.
  *
- * Written because a rating that nobody can explain is a rating nobody trusts —
- * and an unexplained one invites the assumption that it is arbitrary, or worse,
- * that the board rewards something other than playing.
+ * Written because a rating nobody can explain is a rating nobody trusts, and an
+ * unexplained one invites the assumption that the board rewards something other
+ * than playing.
  *
- * One scrolling panel rather than the paged treatment `HowToPlay` gets. That
- * guide is the first thing a new player reads and benefits from being drip-fed;
- * this is a reference somebody opens with a specific question, and paging a
- * reference means clicking through three screens to find the number you came
- * for.
+ * **Paged, with a picture on every page.** The first cut was one scrolling
+ * column of prose, which failed twice over: a scrollbar down the side of a
+ * calm-looking panel is the least calm thing on the screen, and a wall of rules
+ * is exactly what somebody opening a five-second question will not read. Each
+ * page now carries one idea and a drawing of it, and no page scrolls.
  *
- * Every figure below is imported, never typed out. A hard-coded `+10` here
- * would survive any change to the scoring and go on confidently describing a
- * system that no longer exists.
+ * The drawings are the game's own sprites — the same animated flames and crowns
+ * the board and profile already use — rather than illustrations, so they cannot
+ * drift out of step with what a player actually sees. `HowToPlay` takes the same
+ * approach for the same reason.
+ *
+ * Every figure is imported, never typed out. A hard-coded `+10` here would
+ * survive any change to the scoring and go on confidently describing a system
+ * that no longer exists.
  */
 interface BoardGuideProps {
   onClose: () => void;
 }
 
-/** Signed, so the sign is part of the number rather than glued on in prose. */
+/** Signed, so the sign belongs to the number rather than to the prose. */
 const signed = (points: number) => (points > 0 ? `+${points}` : `${points}`);
 
+const PAGES = [
+  {
+    title: 'Two boards',
+    body: (
+      <>
+        <strong>Standings</strong> is your rating — it moves every time you duel
+        a person. <strong>Fastest</strong> is the quickest duel you have ever
+        typed, so it only ever goes up.
+      </>
+    ),
+    visual: <TwoBoards />,
+  },
+  {
+    title: 'Rating moves both ways',
+    body: (
+      <>
+        Everybody starts at {START_RATING}. Win a duel and you gain{' '}
+        {WIN_POINTS}; lose one and you drop {Math.abs(LOSS_POINTS)}. It never
+        falls below {RATING_FLOOR}, however badly a run goes.
+      </>
+    ),
+    visual: <RatingSwing />,
+  },
+  {
+    title: 'Beating someone better pays more',
+    body: (
+      <>
+        Win against a player rated above you and you earn up to{' '}
+        {MAX_UPSET_BONUS} extra — more the bigger the gap. The winner gets it and
+        nobody else.
+      </>
+    ),
+    visual: <Upset />,
+  },
+  {
+    title: 'Bots never count',
+    body: (
+      <>
+        Practice builds your own record, but never your rating — a bot duel
+        happens entirely in your browser, so you are its only witness. Duels
+        against people are refereed by the server.
+      </>
+    ),
+    visual: <Refereed />,
+  },
+  {
+    title: 'The flame is your band',
+    body: (
+      <>
+        The flame beside a rating says which band it falls in. On the board
+        itself, the top three get a crown for their position instead — those are
+        the only three there are.
+      </>
+    ),
+    visual: <FlameBands />,
+  },
+];
+
 export default function BoardGuide({ onClose }: BoardGuideProps) {
+  const [page, setPage] = useState(0);
+  const last = PAGES.length - 1;
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') setPage((p) => Math.min(last, p + 1));
+      if (e.key === 'ArrowLeft') setPage((p) => Math.max(0, p - 1));
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, last]);
+
+  const current = PAGES[page];
 
   return (
     <div className={styles.boardOverlay} onClick={onClose}>
@@ -52,81 +126,169 @@ export default function BoardGuide({ onClose }: BoardGuideProps) {
           <button className={styles.boardClose} onClick={onClose} aria-label="Close">✕</button>
         </header>
 
-        <div className={styles.boardBody}>
-          <section>
-            <h3 className={styles.boardSection}>Two boards</h3>
-            <p>
-              <strong>Standings</strong> is your rating — where you sit against
-              everybody else. It moves every time you duel a person, up or down.
-            </p>
-            <p>
-              <strong>Fastest</strong> is the quickest whole duel you have ever
-              typed. It is a personal best, so it never falls.
-            </p>
-            <p className={styles.boardAside}>
-              Standings is shown first on purpose. A best-ever number can only be
-              improved, which makes the safest thing to do after a good run stop
-              playing. Rating rewards the opposite.
-            </p>
-          </section>
-
-          <section>
-            <h3 className={styles.boardSection}>How rating moves</h3>
-            <ul className={styles.boardList}>
-              <li>Everybody starts at <strong>{START_RATING}</strong>.</li>
-              <li>
-                Win a duel: <strong>{signed(WIN_POINTS)}</strong>. Lose one:{' '}
-                <strong>{signed(LOSS_POINTS)}</strong>.
-              </li>
-              <li>
-                Beat somebody rated above you and you get up to{' '}
-                <strong>{signed(MAX_UPSET_BONUS)}</strong> more, depending on how
-                far above you they were. Winner only.
-              </li>
-              <li>
-                It cannot fall below <strong>{RATING_FLOOR}</strong>, however
-                badly a run goes.
-              </li>
-            </ul>
-            <p>
-              In a four-player room the points run in a straight line from first
-              to last, so finishing second is worth more than third even though
-              neither of you won.
-            </p>
-          </section>
-
-          <section>
-            <h3 className={styles.boardSection}>Bots don&apos;t count</h3>
-            <p>
-              Practice against a bot builds your own record and your challenges,
-              but it can never move your rating or reach either board. A bot duel
-              happens entirely in your browser, so the only account of it is your
-              own — and the fastest route to a perfect score would be beating
-              Rookie on a loop.
-            </p>
-            <p>
-              Human duels are refereed by the server. It sends both players the
-              same words, checks every one you finish, and times the duel itself,
-              which is why the numbers here can be trusted.
-            </p>
-          </section>
-
-          <section>
-            <h3 className={styles.boardSection}>The flame</h3>
-            <p>
-              The flame beside a rating is the band it falls in:{' '}
-              <strong>ember</strong> below {AZURE_FROM},{' '}
-              <strong>azure</strong> from {AZURE_FROM}, and{' '}
-              <strong>gold</strong> from {GOLD_FROM}. On the board itself the top
-              three get one for their position instead.
-            </p>
-          </section>
+        {/* Keyed so each page animates in rather than swapping silently. */}
+        <div key={page} className={styles.boardPage}>
+          <div className={styles.boardVisual}>{current.visual}</div>
+          <h3 className={`${styles.boardPageTitle} pixel-font`}>{current.title}</h3>
+          <p className={styles.boardBody}>{current.body}</p>
         </div>
 
         <footer className={styles.boardFoot}>
-          <button className="btn btn-primary" onClick={onClose}>Got it</button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+          >
+            Back
+          </button>
+
+          <div className={styles.boardDots}>
+            {PAGES.map((p, i) => (
+              <button
+                key={p.title}
+                className={styles.boardDot}
+                data-active={i === page || undefined}
+                onClick={() => setPage(i)}
+                aria-label={`Page ${i + 1}`}
+              />
+            ))}
+          </div>
+
+          {page === last ? (
+            <button className="btn btn-primary" onClick={onClose}>Got it</button>
+          ) : (
+            <button className="btn" onClick={() => setPage((p) => Math.min(last, p + 1))}>
+              Next
+            </button>
+          )}
         </footer>
       </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Page visuals.
+   Built from the sprites and components the game already uses, so the guide
+   shows the real thing rather than a drawing of it that can go stale.
+   --------------------------------------------------------------------------- */
+
+/**
+ * The two boards, side by side, as the rows a player will actually see.
+ *
+ * Same name on both on purpose: it is one player on two boards, which is the
+ * point being made. The difference is which number is large and what the note
+ * underneath says happens to it.
+ */
+function TwoBoards() {
+  return (
+    <div className={styles.boards}>
+      {([
+        { tab: 'Standings', score: 312, note: 'moves every duel' },
+        { tab: 'Fastest', score: 128, note: 'only ever climbs' },
+      ] as const).map((board) => (
+        <div key={board.tab} className={styles.mini}>
+          <span className={`${styles.miniTab} pixel-font`}>{board.tab}</span>
+          <div className={styles.miniRow}>
+            <RankFlame rank={1} height={17} />
+            <span className={styles.miniName}>Bill</span>
+            <span className={`${styles.miniScore} pixel-font`}>{board.score}</span>
+          </div>
+          <small className={styles.miniNote}>{board.note}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A rating with the two things that can happen to it.
+ *
+ * The arrows drift rather than sitting still, because "moves both ways" is the
+ * whole content of the page and a static diagram says "here are two numbers".
+ */
+function RatingSwing() {
+  return (
+    <div className={styles.swing}>
+      <span className={styles.swingGain}>{signed(WIN_POINTS)}</span>
+      <span className={`${styles.swingNow} pixel-font`}>{START_RATING}</span>
+      <span className={styles.swingLoss}>{signed(LOSS_POINTS)}</span>
+      <small className={styles.swingFloor}>floor {RATING_FLOOR}</small>
+    </div>
+  );
+}
+
+/**
+ * The upset: a lower rating beating a higher one.
+ *
+ * Two of the game's own characters rather than abstract boxes, and a blade
+ * between them pointing the right way, so which one won is readable before the
+ * numbers are.
+ */
+function Upset() {
+  return (
+    <div className={styles.upset}>
+      <div className={styles.upsetSide}>
+        <PixelSprite name="characters/rookie-1" height={42} />
+        <span className={`${styles.upsetRating} pixel-font`}>300</span>
+        <small className={styles.upsetWho}>you</small>
+      </div>
+
+      <div className={styles.upsetMid}>
+        <PixelSprite name="blade-4" height={16} />
+        <span className={styles.upsetBonus}>{signed(MAX_UPSET_BONUS)}</span>
+      </div>
+
+      <div className={styles.upsetSide}>
+        <PixelSprite name="characters/baron-1" height={42} />
+        <span className={`${styles.upsetRating} pixel-font`}>415</span>
+        <small className={styles.upsetWho}>them</small>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * What counts and what does not.
+ *
+ * The flame on the left is the tell: a duel against a person can move your
+ * band, and the practice column has an empty slot where that would be rather
+ * than a crossed-out one. Nothing is being taken away — it was never there.
+ */
+function Refereed() {
+  return (
+    <div className={styles.compare}>
+      <div className={styles.compareCol} data-counts>
+        <span className={styles.compareMark}><Flame kind="gold" height={22} /></span>
+        <PixelSprite name="characters/wanderer-1" height={42} />
+        <span className={styles.compareTag} data-counts>A person</span>
+        <small className={styles.compareNote}>ranked</small>
+      </div>
+
+      <div className={styles.compareCol}>
+        <span className={styles.compareMark} aria-hidden="true" />
+        <PixelSprite name="characters/rookie-1" height={42} />
+        <span className={styles.compareTag}>A bot</span>
+        <small className={styles.compareNote}>practice only</small>
+      </div>
+    </div>
+  );
+}
+
+/** The three bands, burning, with where each one starts. */
+function FlameBands() {
+  return (
+    <div className={styles.bands}>
+      {([
+        { kind: 'ember', label: `under ${AZURE_FROM}` },
+        { kind: 'azure', label: `${AZURE_FROM}+` },
+        { kind: 'gold', label: `${GOLD_FROM}+` },
+      ] as const).map((band) => (
+        <div key={band.kind} className={styles.band}>
+          <Flame kind={band.kind} height={26} />
+          <span className={`${styles.bandLabel} pixel-font`}>{band.label}</span>
+        </div>
+      ))}
     </div>
   );
 }
