@@ -109,6 +109,8 @@ it grants a power.
 | `MEND_AMOUNT` | 8 |
 | `SURGE_MULTIPLIER` | 2 |
 | `LEECH_SHARE` | 0.5 |
+| `POWER_WEIGHT.stagger` | 0.6 (others 1) |
+| `POWER_LIMIT.stagger` | 2 per script |
 
 | Power | Held? | Effect |
 |---|---|---|
@@ -134,6 +136,30 @@ Two rules that are easy to get backwards:
 
 `leech` draws nothing from a blade a ward absorbed — there is no damage to take
 a share of.
+
+### Stagger is rationed
+
+Charges are not picked uniformly. A script carries roughly eight of them, so an
+even split would break a perfect typist's streak about twice a duel through
+nobody's fault but the dice — in a game whose whole appeal is the long streak.
+
+Two guards, because either alone leaves a hole:
+
+- **Weight.** `stagger` is drawn at 0.6 against 1 for everything else, putting
+  it at roughly one appearance per script. Still a real threat, no longer a tax
+  on playing well.
+- **Cap.** No more than two in a script. The weight fixes the average; this
+  fixes the unlucky script that would otherwise deal four in a row with no play
+  that avoids them.
+
+The cap only bites where a whole script is charged at once, which is
+multiplayer. Solo charges a sentence at a time with no memory between them, so
+there the weight does all the work — acceptable, since a bot duel is practice
+and no rating rides on it.
+
+Any power can declare either: `POWER_WEIGHT` and `POWER_LIMIT` are keyed by
+power, so a future one that needs rationing says so where it is defined rather
+than in the charging code.
 
 The rules live in one place per repo: `keymania-api/src/lib/powerRules.ts` and
 the solo path in `game/duelReducer.ts`. They cannot share code across repos, so

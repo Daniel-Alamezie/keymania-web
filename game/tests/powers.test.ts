@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  chargeScript, chargeSentence, HELD_POWERS, POWER_META, POWERS,
+  chargeScript, chargeSentence, HELD_POWERS, POWER_LIMIT, POWER_META, POWERS, pickPower,
 } from '../powers';
 
 /**
@@ -148,5 +148,56 @@ describe('the power roster', () => {
   it('only marks as held the powers that persist', () => {
     for (const kind of HELD_POWERS) expect(POWERS).toContain(kind);
     expect(HELD_POWERS).not.toContain('mend');
+  });
+});
+
+/**
+ * Stagger is rationed, so a perfect run is still possible.
+ *
+ * Uniform picking gave it a fifth of every script's charges — roughly two
+ * broken streaks a duel through nobody's fault but the dice, in a game whose
+ * whole appeal is the long streak. Two separate guards, because either alone
+ * leaves a hole: the weight fixes the average, the cap fixes the unlucky
+ * script that would otherwise deal four in a row with no play that avoids them.
+ */
+describe('rationing stagger', () => {
+  const SCRIPT = Array.from({ length: 10 }, () => 'the quiet blade guards a hollow tower');
+
+  it('never puts more than the cap in one script', () => {
+    for (let run = 0; run < 400; run += 1) {
+      const staggers = Object.values(chargeScript(SCRIPT)).filter((k) => k === 'stagger');
+      expect(staggers.length).toBeLessThanOrEqual(POWER_LIMIT.stagger!);
+    }
+  });
+
+  it('comes up markedly less often than the unrationed powers', () => {
+    const counts: Record<string, number> = {};
+    for (let run = 0; run < 400; run += 1) {
+      for (const kind of Object.values(chargeScript(SCRIPT))) {
+        counts[kind] = (counts[kind] ?? 0) + 1;
+      }
+    }
+    // Not a precise ratio — the cap bites on top of the weight, and pinning a
+    // distribution to two decimal places makes a flaky test out of a die roll.
+    expect(counts.stagger ?? 0).toBeLessThan(counts.ward ?? 0);
+    expect(counts.stagger ?? 0).toBeLessThan(counts.mend ?? 0);
+    // Rationed, not removed: it still has to turn up.
+    expect(counts.stagger ?? 0).toBeGreaterThan(0);
+  });
+
+  it('still charges every word it used to — rationing removes powers, not charges', () => {
+    // The cap must never leave a charged word without a power on it.
+    for (let run = 0; run < 200; run += 1) {
+      for (const kind of Object.values(chargeScript(SCRIPT))) {
+        expect(POWERS).toContain(kind);
+      }
+    }
+  });
+
+  it('falls back rather than returning nothing when everything is capped', () => {
+    // Contrived, but the branch exists and a charged word with no power is a
+    // word that lies about being charged.
+    const spent = Object.fromEntries(POWERS.map((k) => [k, 99]));
+    expect(POWERS).toContain(pickPower(spent));
   });
 });
