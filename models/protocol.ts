@@ -69,6 +69,17 @@ export type ServerMessage =
     surged?: boolean;
     wards?: boolean[];
     surges?: boolean[];
+    /** Health the thrower drew back from this blade, if it leeched. */
+    drained?: number;
+    /**
+     * Whose streak a stagger broke, if any.
+     *
+     * A slot rather than a boolean, because the victim's own client is the one
+     * that must act: every client counts its own combo locally, so a staggered
+     * player left untold would keep a streak the server had already ended and
+     * their damage would run ahead of the referee's.
+     */
+    staggeredSlot?: number;
     /** Who each fighter now aims at, recomputed after the damage. */
     targets?: number[];
     /** Set when this blow knocked somebody out. */

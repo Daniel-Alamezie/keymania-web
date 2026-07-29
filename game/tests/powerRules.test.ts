@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { duelReducer, initialState, you, type DuelState } from '../duelReducer';
-import { MEND_AMOUNT, SURGE_MULTIPLIER } from '../powers';
+import { LEECH_SHARE, MEND_AMOUNT, SURGE_MULTIPLIER } from '../powers';
 import { MAX_HEALTH } from '../constants';
 import type { PowerKind } from '@/models/powers';
 
@@ -143,5 +143,78 @@ describe('ward, on the blade coming at you', () => {
     expect(state.fighters[1].health).toBe(MAX_HEALTH - 30);
     // And the ward is still in hand, because it was never called upon.
     expect(state.ward).toBe(true);
+  });
+});
+
+/**
+ * Leech — a share of the damage dealt, returned as health.
+ *
+ * Mirrors `leech, on the blade you just threw` in
+ * keymania-api/src/lib/tests/powerRules.test.ts. The distinction from mend is
+ * the whole reason it exists: mend is a flat eight whether you are at x1 or
+ * x15, and this scales with the combo behind the throw.
+ */
+describe('leech, on the blade you just threw', () => {
+  const hurt = (charge?: PowerKind) => playing(charge, {
+    fighters: initialState('rival').fighters.map((f) => ({ ...f, health: 50 })),
+  });
+
+  it('returns a share of the damage as health', () => {
+    const state = type(hurt('leech'), 'the ');
+    expect(you(state).health).toBeCloseTo(50 + state.lastHit!.damage * LEECH_SHARE, 1);
+  });
+
+  it('scales with the blade, so a combo is worth more than a flat heal', () => {
+    // Same word, same timing; only the combo behind it differs.
+    const slow = type(hurt('leech'), 'the ');
+    const fast = type({ ...hurt('leech'), playerCombo: 12 }, 'the ');
+    expect(you(fast).health - 50).toBeGreaterThan(you(slow).health - 50);
+  });
+
+  it('cannot push anybody above full health', () => {
+    const state = type(playing('leech'), 'the ');
+    expect(you(state).health).toBe(MAX_HEALTH);
+  });
+
+  it('is not held — there is nothing to carry', () => {
+    const state = type(playing('leech'), 'the ');
+    expect(state.ward).toBe(false);
+    expect(state.surge).toBe(false);
+  });
+});
+
+/**
+ * Stagger — the mirror of a typo, aimed at somebody else.
+ *
+ * Mirrors `stagger, on the target` on the server.
+ */
+describe('stagger, on the target', () => {
+  const withBotCombo = (combo: number, charge?: PowerKind) => playing(charge, {
+    fighters: initialState('rival').fighters.map((f, slot) => (
+      slot === 1 ? { ...f, combo } : f
+    )),
+  });
+
+  it('breaks the streak outright', () => {
+    const state = type(withBotCombo(14, 'stagger'), 'the ');
+    expect(state.fighters[1].combo).toBe(0);
+  });
+
+  it('leaves health alone — it is not a blade', () => {
+    const state = type(withBotCombo(9, 'stagger'), 'the ');
+    // The blade itself still lands later, through `land`; the power did not
+    // touch anybody's health on the way out.
+    expect(state.fighters[1].health).toBe(MAX_HEALTH);
+  });
+
+  it('leaves the target alone when the word was not charged', () => {
+    const state = type(withBotCombo(9), 'the ');
+    expect(state.fighters[1].combo).toBe(9);
+  });
+
+  it('is not held — there is nothing to carry', () => {
+    const state = type(withBotCombo(5, 'stagger'), 'the ');
+    expect(state.ward).toBe(false);
+    expect(state.surge).toBe(false);
   });
 });

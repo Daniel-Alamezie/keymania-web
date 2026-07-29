@@ -564,6 +564,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           // The whole board at once, so no index has to be derived.
           dispatch({ type: 'setHealths', healths: message.healths });
           if (message.targets) dispatch({ type: 'setTargets', targets: message.targets });
+          // Only sent when a streak was actually broken, so this never fires
+          // for a stagger that landed on somebody already at zero.
+          if (message.staggeredSlot !== undefined) {
+            dispatch({ type: 'staggered', slot: message.staggeredSlot });
+          }
           // The server owns power state; overwrite whatever we predicted.
           dispatch({
             type: 'setPowers',

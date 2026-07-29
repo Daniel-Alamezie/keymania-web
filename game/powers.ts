@@ -2,6 +2,8 @@ import { POWERS, type PowerKind } from '@/models/powers';
 import type { SpriteName } from '@/components/PixelSprite';
 
 export const MEND_AMOUNT = 8;
+/** Share of a leeched blade's damage returned to the thrower as health. */
+export const LEECH_SHARE = 0.5;
 export const SURGE_MULTIPLIER = 2;
 
 /** Roughly one word in this many is charged. */
@@ -55,6 +57,18 @@ export const POWER_META: Record<PowerKind, PowerMeta> = {
   mend: {
     icon: '✚', label: 'Mend', blurb: `restores ${MEND_AMOUNT} health`,
     tint: '#5ee08a', sprite: 'power-mend',
+  },
+  // Rose: blood drawn back. Close enough to the opponent red to read as taking
+  // rather than giving, far enough from it not to be mistaken for damage.
+  leech: {
+    icon: '🩸', label: 'Leech', blurb: 'the next blade drinks',
+    tint: '#e86084', sprite: 'power-leech',
+  },
+  // Violet: the only hue not already spoken for, and the only power aimed at
+  // somebody else's streak rather than at anybody's health.
+  stagger: {
+    icon: '💢', label: 'Stagger', blurb: "breaks your target's streak",
+    tint: '#c696ff', sprite: 'power-stagger',
   },
 };
 

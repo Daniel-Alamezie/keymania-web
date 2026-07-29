@@ -178,6 +178,15 @@ export type DuelAction =
   /** Authoritative health from the server — never computed locally in multiplayer. */
   | { type: 'setHealths'; healths: number[] }
   /** Who each fighter is currently aiming at, recomputed by the server. */
+  | {
+      /**
+       * A stagger broke somebody's streak. Slot-addressed because it may be
+       * yours — in which case the local combo, not a fighter's, is the one
+       * that has to stop.
+       */
+      type: 'staggered';
+      slot: number;
+    }
   | { type: 'setTargets'; targets: number[] }
   | { type: 'setProgress'; slot: number; progress: number }
   /** Authoritative power state from the server. */

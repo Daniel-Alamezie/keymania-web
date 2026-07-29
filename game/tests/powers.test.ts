@@ -120,8 +120,8 @@ describe('chargeSentence', () => {
  * undefined, and a charged word renders as a blank rather than a colour.
  */
 describe('the power roster', () => {
-  it('is the three keymania-api ships', () => {
-    expect([...POWERS]).toEqual(['ward', 'surge', 'mend']);
+  it('is the five keymania-api ships', () => {
+    expect([...POWERS]).toEqual(['ward', 'surge', 'mend', 'leech', 'stagger']);
   });
 
   /**

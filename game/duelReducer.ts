@@ -3,7 +3,7 @@ import {
 } from './engine';
 import { BOT_CHARACTERS, COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
-import { chargeSentence, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
+import { chargeSentence, LEECH_SHARE, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
 import type { Difficulty } from '@/models/bot';
 import type { DuelAction, DuelState, DuelStats, Fighter } from '@/models/duel';
 import type { PowerKind } from '@/models/powers';
@@ -236,9 +236,39 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
 
       // Surge is spent on this throw, unless it is the power we just picked up.
       const spendSurge = state.surge && granted !== 'surge';
+
       const damage = spendSurge
         ? Math.round(result.damage * SURGE_MULTIPLIER * 10) / 10
         : result.damage;
+      /**
+       * Powers that resolve on the blade this word throws, in solo.
+       *
+       * Multiplayer never reaches this: the server applies all of it and sends
+       * the result back, and `setHealths` overwrites whatever was predicted
+       * here. This is the bot path, and it has to agree with
+       * keymania-api/src/lib/powerRules.ts — the pair of powerRules test files
+       * is what holds the two to the same rules.
+       *
+       * A bot holds no ward, so a blade in solo is never blocked and a leech
+       * always draws.
+       */
+      const target = you(state).target;
+      const soloFighters = (() => {
+        if (granted === 'mend') return healSlot(state.fighters, state.mySlot);
+        if (granted === 'leech') {
+          const me = state.fighters[state.mySlot];
+          return withSlot(state.fighters, state.mySlot, {
+            health: Math.min(MAX_HEALTH, me.health + Math.round(damage * LEECH_SHARE * 10) / 10),
+          });
+        }
+        // Breaks the streak, not the health — and the bot's combo is the only
+        // one this reducer can reach.
+        if (granted === 'stagger' && target >= 0) {
+          return withSlot(state.fighters, target, { combo: 0 });
+        }
+        return state.fighters;
+      })();
+
 
       // Multiplayer walks the server's script in order so both sides stay in
       // step; solo play just picks another sentence at random.
@@ -323,9 +353,7 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         ward: granted === 'ward' ? true : state.ward,
         surge: granted === 'surge' ? true : spendSurge ? false : state.surge,
         lastPower: granted ? { kind: granted, tick: action.now } : state.lastPower,
-        fighters: granted === 'mend'
-          ? healSlot(state.fighters, state.mySlot)
-          : state.fighters,
+        fighters: soloFighters,
         lastHit: {
           id: state.hitSeq + 1,
           fromSlot: state.mySlot,
@@ -414,6 +442,21 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         )),
       };
     }
+
+    case 'staggered':
+      /**
+       * The server has already broken this streak; this is the client catching
+       * up with it.
+       *
+       * Your own combo lives in `playerCombo` and everybody else's on their
+       * fighter, so the slot decides which one stops. Without this the victim
+       * would keep counting a streak the referee had ended, and every blade
+       * after it would be scored locally at a multiplier the server has
+       * already refused.
+       */
+      return action.slot === state.mySlot
+        ? { ...state, playerCombo: 0 }
+        : { ...state, fighters: withSlot(state.fighters, action.slot, { combo: 0 }) };
 
     case 'setTargets':
       return {

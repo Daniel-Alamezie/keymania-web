@@ -499,6 +499,49 @@ MEND_MAP = [
     "................",
 ]
 
+
+# A droplet, for the blade that drinks. Deliberately not a heart or a cross —
+# mend already owns healing, and this is health taken rather than restored.
+LEECH_MAP = [
+    "................",
+    ".......XX.......",
+    ".......XX.......",
+    "......XLLX......",
+    "......XLLX......",
+    ".....XLLLLX.....",
+    ".....XLLLLX.....",
+    "....XLLLLLLX....",
+    "....XLLSSLLX....",
+    "....XLLSSLLX....",
+    "....XLLLLLLX....",
+    ".....XLLLLX.....",
+    "......XXXX......",
+    "................",
+    "................",
+    "................",
+]
+
+# A broken bar, for the streak that snaps. Read as a fracture rather than an
+# X, because an X already means "wrong" everywhere else in this game.
+STAGGER_MAP = [
+    "................",
+    "................",
+    "..XXXX..........",
+    "..XLLXX.........",
+    "...XLLXX........",
+    "....XLLXX.......",
+    ".....XXXX.......",
+    "................",
+    "................",
+    ".......XXXX.....",
+    ".......XSSXX....",
+    "........XSSXX...",
+    ".........XSSXX..",
+    "..........XXXX..",
+    "................",
+    "................",
+]
+
 POWER_ICONS = {
     "ward": (WARD_MAP, {
         "X": (22, 18, 34, 255),
@@ -509,6 +552,16 @@ POWER_ICONS = {
         "X": (22, 18, 34, 255),
         "L": (255, 214, 110, 255),
         "S": (214, 160, 50, 255),
+    }),
+    "leech": (LEECH_MAP, {
+        "X": (22, 18, 34, 255),
+        "L": (232, 96, 132, 255),
+        "S": (168, 48, 84, 255),
+    }),
+    "stagger": (STAGGER_MAP, {
+        "X": (22, 18, 34, 255),
+        "L": (198, 150, 255, 255),
+        "S": (132, 88, 200, 255),
     }),
     "mend": (MEND_MAP, {
         "X": (22, 18, 34, 255),

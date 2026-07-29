@@ -18,7 +18,7 @@
  * Deriving the type means the array is the only thing to edit, and a contract
  * test pins it against the server's copy.
  */
-export const POWERS = ['ward', 'surge', 'mend'] as const;
+export const POWERS = ['ward', 'surge', 'mend', 'leech', 'stagger'] as const;
 
 export type PowerKind = (typeof POWERS)[number];
 

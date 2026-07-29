@@ -263,7 +263,15 @@
     "width": 52,
     "height": 52
   },
+  "power-leech": {
+    "width": 64,
+    "height": 64
+  },
   "power-mend": {
+    "width": 64,
+    "height": 64
+  },
+  "power-stagger": {
     "width": 64,
     "height": 64
   },

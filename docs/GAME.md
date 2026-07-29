@@ -108,12 +108,37 @@ it grants a power.
 | `MIN_CHARGED_LENGTH` | 4 (short words are never charged) |
 | `MEND_AMOUNT` | 8 |
 | `SURGE_MULTIPLIER` | 2 |
+| `LEECH_SHARE` | 0.5 |
 
-| Power | Effect |
-|---|---|
-| `ward` | Absorbs the next blade aimed at you |
-| `surge` | Doubles your next blade |
-| `mend` | Heals 8, capped at `MAX_HEALTH` |
+| Power | Held? | Effect |
+|---|---|---|
+| `ward` | **Yes** | Absorbs the next blade aimed at you, entirely |
+| `surge` | **Yes** | Doubles your next blade |
+| `mend` | No | Heals 8, capped at `MAX_HEALTH` |
+| `leech` | No | This word's blade returns half its damage to you as health |
+| `stagger` | No | Resets your target's combo to zero |
+
+**Held or instant** is the structural distinction. A held power waits in hand
+and the HUD draws a slot for it (`HELD_POWERS`); an instant one resolves on the
+blade this word throws and has nothing to show, because by the time you could
+look at it, it has happened.
+
+Two rules that are easy to get backwards:
+
+- **A surge is not spent on the word that granted it.** Otherwise picking one
+  up would silently double the throw that earned it, and it would be gone
+  before the player knew they had it.
+- **A ward does not stop a stagger.** A ward is armour against a blade and a
+  stagger is not a blade. If it blocked, a warded player would be immune to
+  both at once and the two powers would be quietly redundant.
+
+`leech` draws nothing from a blade a ward absorbed — there is no damage to take
+a share of.
+
+The rules live in one place per repo: `keymania-api/src/lib/powerRules.ts` and
+the solo path in `game/duelReducer.ts`. They cannot share code across repos, so
+`powerRules.test.ts` on each side asserts the same facts in the same order —
+that pairing is what holds the two implementations together.
 
 Charges are decided **one sentence ahead**, while a sentence is still
 `upcoming`, and never revised. This is not an optimisation — a charged word is
