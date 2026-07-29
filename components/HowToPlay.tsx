@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { POWER_META, POWERS } from '@/game/powers';
 import PixelSprite from './PixelSprite';
 import styles from './HowToPlay.module.css';
 
@@ -185,22 +186,39 @@ function ComboBreak() {
   );
 }
 
+/**
+ * Every power there is, read from the one table that describes them.
+ *
+ * This used to carry its own hand-written list of names and blurbs — a fourth
+ * copy of what `POWER_META` already held, and one that would quietly have gone
+ * stale the moment a power was added or reworded. Two of them were already out
+ * of date with the HUD's own wording before this was noticed.
+ *
+ * Scrolls sideways rather than wrapping. Wrapping looks fine at five and turns
+ * into two ragged rows at seven, which is a layout that has to be redesigned
+ * every time the roster grows. A row that scrolls stays the same shape at any
+ * length, and on a phone it is the gesture people already expect.
+ */
 function PowerRow() {
-  const powers = [
-    { name: 'power-ward', label: 'Ward', blurb: 'blocks the next blade' },
-    { name: 'power-surge', label: 'Surge', blurb: 'next blade hits double' },
-    { name: 'power-mend', label: 'Mend', blurb: 'restores health' },
-  ] as const;
-
   return (
-    <div className={styles.powers}>
-      {powers.map((power) => (
-        <div key={power.name} className={styles.power}>
-          <PixelSprite name={power.name as 'power-ward'} height={30} />
-          <span className={`${styles.powerLabel} pixel-font`}>{power.label}</span>
-          <small className={styles.powerBlurb}>{power.blurb}</small>
-        </div>
-      ))}
+    <div
+      className={styles.powers}
+      // Focusable and labelled, because a scrolling region that can only be
+      // reached by dragging is unreachable to anybody using a keyboard.
+      tabIndex={0}
+      role="group"
+      aria-label="Every power, scroll for more"
+    >
+      {POWERS.map((kind) => {
+        const meta = POWER_META[kind];
+        return (
+          <div key={kind} className={styles.power}>
+            <PixelSprite name={meta.sprite} height={30} />
+            <span className={`${styles.powerLabel} pixel-font`}>{meta.label}</span>
+            <small className={styles.powerBlurb}>{meta.blurb}</small>
+          </div>
+        );
+      })}
     </div>
   );
 }
