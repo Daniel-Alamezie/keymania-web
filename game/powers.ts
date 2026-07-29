@@ -61,13 +61,15 @@ export const POWER_META: Record<PowerKind, PowerMeta> = {
   // Rose: blood drawn back. Close enough to the opponent red to read as taking
   // rather than giving, far enough from it not to be mistaken for damage.
   leech: {
-    icon: '🩸', label: 'Leech', blurb: 'the next blade drinks',
+    // "the next blade drinks" was both unclear and wrong: it is *this* word's
+    // blade, and nothing about drinking says what a player gets out of it.
+    icon: '🩸', label: 'Leech', blurb: 'steals half its damage as health',
     tint: '#e86084', sprite: 'power-leech',
   },
   // Violet: the only hue not already spoken for, and the only power aimed at
   // somebody else's streak rather than at anybody's health.
   stagger: {
-    icon: '💢', label: 'Stagger', blurb: "breaks your target's streak",
+    icon: '💢', label: 'Stagger', blurb: "breaks your opponent's streak",
     tint: '#c696ff', sprite: 'power-stagger',
   },
 };

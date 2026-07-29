@@ -1,0 +1,146 @@
+/*
+ * The frame has to be constrained too, not just the track inside it.
+ *
+ * Putting `max-width: 100%` on the track alone was not enough once it sat in
+ * this flex row: the frame then sized itself to its content, so 100% of it was
+ * still the full width of the cards and the overflow never engaged. Both
+ * levels need bounding, and the track needs a zero basis so it takes the space
+ * left over rather than asking for the space it wants.
+ */
+.frame {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.track {
+  display: flex;
+  gap: 18px;
+  /* Zero basis: take what is left, rather than asking for what fits. */
+  flex: 1 1 0%;
+  /*
+   * Both of these, or the overflow never engages.
+   *
+   * A flex row sizes itself to its content, so without them it simply grows
+   * wider than the panel — `scrollWidth` equal to `clientWidth`, nothing to
+   * scroll, and the last cards cut off with no way to reach them. `max-width`
+   * gives it an edge to overflow against; `min-width: 0` stops it refusing to
+   * shrink below its content, which is a flex item's default.
+   */
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* One card per stop, so a swipe lands on a power rather than between two. */
+  scroll-snap-type: x proximity;
+  /* Room for the focus ring, which a clipped overflow would otherwise cut. */
+  padding: 4px 2px;
+}
+
+/*
+ * The scrollbar goes, and nothing replaces it in the layout.
+ *
+ * A native horizontal bar under a row of five icons is the least calm thing on
+ * the screen, and it also changes the row's height when it appears — so the
+ * panel jumped by a few pixels the moment the roster outgrew the width. The
+ * arrows say the same thing without either cost.
+ *
+ * Every way of moving the row survives this: drag, wheel, arrow keys and tab.
+ */
+.track {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* legacy Edge */
+}
+.track::-webkit-scrollbar { width: 0; height: 0; }
+
+.track:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/*
+ * The fade means "there is more this way", so it appears only when there is.
+ *
+ * A permanent fade on the right dimmed the last card even once it had been
+ * scrolled to — the one power somebody had gone looking for was the one they
+ * could not read. Each edge is masked only while that direction still has
+ * something in it, and both are masked in the middle of a long row.
+ */
+.track[data-fade-start][data-fade-end] {
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.track[data-fade-start]:not([data-fade-end]) {
+  mask-image: linear-gradient(90deg, transparent, #000 8%);
+}
+.track[data-fade-end]:not([data-fade-start]) {
+  mask-image: linear-gradient(90deg, #000 92%, transparent);
+}
+
+/*
+ * Trailing room, so the last card can clear the fade entirely.
+ *
+ * Without it the final card sits hard against the edge and stays under the
+ * gradient at full scroll, however the mask is written. `scroll-padding` makes
+ * snapping respect the same gap, so the card the row settles on is never the
+ * one half under a fade.
+ */
+.frame[data-interactive] .track {
+  padding-right: 18px;
+  scroll-padding-inline: 18px;
+}
+
+.arrow {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 2px solid var(--edge);
+  color: var(--muted);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+
+.arrow:hover:not(:disabled) {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+/*
+ * A spent arrow dims rather than disappearing.
+ *
+ * Removing it would shift the row sideways every time you reached an end,
+ * which is the opposite of calm — and a greyed arrow still says which way
+ * there is more to see.
+ */
+.arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow { transition: none; }
+}
+
+/*
+ * Nothing snaps while the pointer is down.
+ *
+ * With snapping on, the browser pulls toward the nearest card on every scroll
+ * event a drag produces, so the row moves in notches and feels like it is
+ * resisting the hand. Released, snapping returns and the row settles on a card.
+ */
+.frame[data-dragging] .track {
+  scroll-snap-type: none;
+  /* A grabbed row should say so. */
+  cursor: grabbing;
+  /* Text selection during a drag turns the whole gesture into a highlight. */
+  user-select: none;
+}
+
+.frame[data-interactive] .track { cursor: grab; }

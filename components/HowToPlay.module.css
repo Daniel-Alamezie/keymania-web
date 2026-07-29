@@ -143,62 +143,8 @@
 .comboNow { color: var(--bad); }
 
 /* ---- Page 4: powers ---- */
-/*
- * A row that scrolls rather than wraps.
- *
- * Wrapping is fine at three and turns into two ragged rows at seven, which
- * means redesigning this panel every time the roster grows. Scrolling keeps
- * one shape at any length — and on a phone it is the gesture people reach for
- * anyway, so it needs no affordance beyond the cards being visibly cut off.
- *
- * `justify-content: center` is deliberately not here. It centres a short row
- * nicely and then makes a long one impossible to scroll back to the start of
- * in some browsers; `safe center` would do both, and is not supported widely
- * enough to rely on. Padding does the centring job well enough at three cards
- * and stays correct at ten.
- */
-.powers {
-  display: flex;
-  gap: 18px;
-  /*
-   * Both of these, or the overflow never engages.
-   *
-   * A flex row sizes itself to its content by default, so at five cards this
-   * measured 556px wide inside a 375px phone — `scrollWidth` equal to
-   * `clientWidth`, nothing to scroll, and the last two powers simply cut off
-   * with no way to reach them. `max-width` gives it an edge to overflow
-   * against; `min-width: 0` stops it refusing to shrink below its content,
-   * which is a flex item's default and the reason the first fix did nothing.
-   */
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  /* One card per stop, so a swipe lands on a power rather than between two. */
-  scroll-snap-type: x proximity;
-  /* Room for the focus ring, which a clipped overflow would otherwise cut. */
-  padding: 4px 2px 10px;
-  /* Thin on the platforms that offer it, and out of the way where they do not. */
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
+/* The row itself is SwipeRow; only the card is described here. */
 
-.powers:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
-/*
- * A hint that there is more, drawn only when there is.
- *
- * `mask-image` fades the right edge of the row, so the last visible card is
- * cut off softly rather than at a hard border where it could read as the end
- * of the list.
- */
-@supports (mask-image: linear-gradient(90deg, #000, transparent)) {
-  .powers {
-    mask-image: linear-gradient(90deg, #000 88%, transparent);
-  }
-}
 
 .power {
   display: flex;

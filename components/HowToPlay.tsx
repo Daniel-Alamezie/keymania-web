@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { POWER_META, POWERS } from '@/game/powers';
 import PixelSprite from './PixelSprite';
+import SwipeRow from './SwipeRow';
 import styles from './HowToPlay.module.css';
 
 /**
@@ -201,14 +202,7 @@ function ComboBreak() {
  */
 function PowerRow() {
   return (
-    <div
-      className={styles.powers}
-      // Focusable and labelled, because a scrolling region that can only be
-      // reached by dragging is unreachable to anybody using a keyboard.
-      tabIndex={0}
-      role="group"
-      aria-label="Every power, scroll for more"
-    >
+    <SwipeRow label="Every power, scroll for more" interactive>
       {POWERS.map((kind) => {
         const meta = POWER_META[kind];
         return (
@@ -219,7 +213,7 @@ function PowerRow() {
           </div>
         );
       })}
-    </div>
+    </SwipeRow>
   );
 }
 
