@@ -25,6 +25,14 @@ interface ArenaSceneProps {
    * are testing, so it is a prop rather than a decision made here.
    */
   stillTorches?: boolean;
+  /**
+   * Drop the room entirely: no wall, no torches, no floor, no vignette.
+   *
+   * For the stripped-down layout, where the premise is that the stage was the
+   * problem rather than its volume. What is left is the frame and whatever the
+   * caller puts inside it, which in that layout is the sentence and nothing else.
+   */
+  bare?: boolean;
   className?: string;
 }
 
@@ -53,19 +61,24 @@ function Torch({ side, still }: { side: 'left' | 'right'; still?: boolean }) {
  * place rather than two separately designed pages.
  */
 export default function ArenaScene({
-  children, dim, fixed, stillTorches, className,
+  children, dim, fixed, stillTorches, bare, className,
 }: ArenaSceneProps) {
   return (
     <div
       className={`${styles.scene} ${className ?? ''}`}
       data-dim={dim || undefined}
       data-fixed={fixed || undefined}
+      data-bare={bare || undefined}
     >
-      <div className={styles.wall} aria-hidden="true" />
-      <Torch side="left" still={stillTorches} />
-      <Torch side="right" still={stillTorches} />
-      <div className={styles.floor} aria-hidden="true" />
-      <div className={styles.vignette} aria-hidden="true" />
+      {!bare && (
+        <>
+          <div className={styles.wall} aria-hidden="true" />
+          <Torch side="left" still={stillTorches} />
+          <Torch side="right" still={stillTorches} />
+          <div className={styles.floor} aria-hidden="true" />
+          <div className={styles.vignette} aria-hidden="true" />
+        </>
+      )}
       {children}
     </div>
   );

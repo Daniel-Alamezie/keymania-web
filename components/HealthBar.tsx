@@ -1,7 +1,7 @@
 'use client';
 
 import PixelSprite from './PixelSprite';
-import { characterFrame, type CharacterId } from '@/models/character';
+import { characterFrame, characterHit, type CharacterId } from '@/models/character';
 import { MAX_HEALTH } from '@/game/constants';
 import styles from './HealthBar.module.css';
 
@@ -38,6 +38,26 @@ interface HealthBarProps {
   targeted?: boolean;
   /** Knocked out. Stays on the board so the slot order never shifts. */
   defeated?: boolean;
+  /**
+   * Bumped whenever this fighter takes a hit, to retrigger the flinch.
+   *
+   * Only used by the stripped-down layout, where the plate is the only body a
+   * duellist has left: with no sprite in an arena to blanch and stagger, the
+   * portrait has to do that job or a landed word has nothing to land on.
+   *
+   * A counter rather than a boolean for the same reason `Fighter` uses one. Two
+   * blades arriving in quick succession each need their own flash, and a boolean
+   * that is already true cannot restart an animation.
+   */
+  hitTick?: number;
+  /**
+   * Give the plate the room it needs to be the main event.
+   *
+   * A 44px thumbnail is right when a full-height fighter is standing underneath
+   * it and this is a legend. When the plate *is* the fighter it has to carry the
+   * weight the sprite used to.
+   */
+  big?: boolean;
 }
 
 /**
@@ -46,6 +66,7 @@ interface HealthBarProps {
  */
 export default function HealthBar({
   name, value, team, align, character, caption, compact, targeted, defeated,
+  hitTick = 0, big,
 }: HealthBarProps) {
   const pct = Math.max(0, Math.min(100, (value / MAX_HEALTH) * 100));
   const state = pct > 55 ? 'high' : pct > 25 ? 'mid' : 'low';
@@ -58,10 +79,35 @@ export default function HealthBar({
       data-targeted={targeted || undefined}
       data-defeated={defeated || undefined}
       data-compact={compact || undefined}
+      data-big={big || undefined}
     >
       {!compact && (
-        <div className={styles.portrait} data-team={team}>
-          <PixelSprite name={characterFrame(character, 1)} height={44} />
+        // Keyed on the tick so a hit remounts this and restarts the flinch from
+        // the top, which is what lets two quick blades read as two hits rather
+        // than the second being swallowed by the first. Same trick as Fighter.
+        // `data-hit` gates the flinch, so the plate does not jiggle once on the
+        // initial mount before anybody has been hit.
+        <div
+          key={`h${hitTick}`}
+          className={styles.portrait}
+          data-team={team}
+          data-hit={hitTick > 0 || undefined}
+        >
+          <PixelSprite name={characterFrame(character, 1)} height={big ? 72 : 44} />
+
+          {/*
+            * The blanched frame, laid over and faded out by CSS.
+            *
+            * No state and no timer: the wrapper above is already keyed on
+            * hitTick, so a new tick restarts the animation by remounting. The
+            * arena's fighters take exactly this approach, and driving it from an
+            * effect there meant setting state synchronously inside one.
+            */}
+          {hitTick > 0 && (
+            <div className={styles.blanch} aria-hidden="true">
+              <PixelSprite name={characterHit(character)} height={big ? 72 : 44} />
+            </div>
+          )}
         </div>
       )}
 

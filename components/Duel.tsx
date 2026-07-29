@@ -30,6 +30,7 @@ import SentenceView from './SentenceView';
 import ComboMeter from './ComboMeter';
 import PowerBar from './PowerBar';
 import FxSwitcher from './FxSwitcher';
+import WordFlight, { type WordFlightHandle } from './WordFlight';
 import { useCharacter } from '@/game/serverProfile';
 import styles from './Duel.module.css';
 
@@ -115,6 +116,16 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const flashRef = useRef<HTMLDivElement>(null);
   /** The words, so a treatment can hold them still while the arena shakes. */
   const streamRef = useRef<HTMLDivElement>(null);
+  /** The layer committed words fly across, in the stripped-down layout. */
+  const flight = useRef<WordFlightHandle>(null);
+  /**
+   * The opponent's plate, which is where a thrown word is aimed.
+   *
+   * One ref rather than one per slot: the stripped-down layout is being tried on
+   * a duel first, and a four-way needs a different answer to "where does the word
+   * go" anyway, since there are three plates it could be going to.
+   */
+  const foePlate = useRef<HTMLDivElement>(null);
 
   /**
    * Which arena de-clutter treatment is running.
@@ -605,7 +616,33 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     // The arena still has two sides — yours and everyone else's — so a slot is
     // mapped onto a side for the visuals, while damage stays addressed by slot.
     const fromSide: Side = hit.fromSlot === state.mySlot ? 'player' : 'opponent';
-    effects.current?.launch(fromSide, hit.tier);
+
+    if (fxRef.current.blade === 'word') {
+      /**
+       * Throw the word itself.
+       *
+       * Only for your own throws: the opponent's word is not on your screen, so
+       * there is nothing of theirs to lift off a line. Their attack reads from
+       * their plate and from yours flinching instead, which is the weakest part
+       * of this layout and the thing most worth judging.
+       *
+       * The token is found in the DOM rather than threaded out of SentenceView.
+       * The word just committed is the sibling before whichever token is now
+       * active, and this effect runs after the render that moved the cursor. It
+       * is a query into somebody else's markup and it is prototype-grade for
+       * exactly that reason; if this layout wins, SentenceView should hand out
+       * the node instead of having it looked up behind its back.
+       */
+      if (fromSide === 'player') {
+        const active = screenRef.current?.querySelector('[data-word="active"]');
+        const thrown = active?.previousElementSibling;
+        const target = foePlate.current?.getBoundingClientRect();
+        if (thrown && target) flight.current?.send(thrown, target, hit.tier >= 3);
+      }
+    } else {
+      effects.current?.launch(fromSide, hit.tier);
+    }
+
     setAttack({ side: fromSide, tick: Date.now() });
     if (fromSide === 'player') audio.throwBlade(hit.tier);
     if (isMulti) return;
@@ -747,6 +784,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const labelFor = (fighter: FighterState) =>
     (isMulti ? fighter.name || 'RIVAL' : BOT_PROFILES[state.difficulty].label).toUpperCase();
 
+  /**
+   * Whether the status plate is all the body anybody has.
+   *
+   * True only in the stripped-down layout. It decides three things at once: the
+   * plate grows, it flinches when hit, and the arena stops drawing fighters. They
+   * belong together, since a plate that flinches under a fighter that also
+   * flinches reports one hit twice, and a fighterless arena with a thumbnail
+   * plate has nothing to hit at all.
+   */
+  const plateIsTheFighter = fx.layout === 'plain';
+
   return (
     <main
       ref={screenRef}
@@ -756,6 +804,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       // Lets the stylesheet answer the treatment questions that are pure CSS,
       // like whether the low-health edge throbs, without plumbing props down.
       data-fx={fx.id}
+      // Separate from data-fx because it is a different kind of answer: one is
+      // "how loud", this is "which screen". A later preset could reuse either.
+      data-layout={fx.layout}
       // Drives the whole compact layout. When a soft keyboard is up there is
       // perhaps 300px of usable height left, and the words have to win it.
       data-keyboard={keyboardUp || undefined}
@@ -789,6 +840,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           align="left"
           character={me.character}
           caption={state.phase === 'playing' ? `${liveWpm} wpm` : undefined}
+          // Only in the stripped-down layout. In the arena the fighter standing
+          // below already flinches, and a plate doing it too would be the same
+          // hit reported twice in one glance.
+          big={plateIsTheFighter}
+          hitTick={plateIsTheFighter && impact?.side === 'player' ? impact.tick : 0}
         />
         {/* "VS" needs something on the other side of it. Past two players the
             opponents are in the arena, so it would be pointing at nothing. */}
@@ -804,7 +860,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           * place rather than a legend to read.
           */}
         {foes.length === 1 && (
-          <div className={styles.foes}>
+          // The ref is what a thrown word aims at, so it goes on the element that
+          // actually encloses the plate rather than on the plate component.
+          <div className={styles.foes} ref={foePlate}>
             {foes.map(({ slot, fighter }) => (
               <HealthBar
                 key={slot}
@@ -815,6 +873,12 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 character={fighter.character}
                 defeated={isOut(fighter)}
                 caption={isMulti ? 'player' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`}
+                big={plateIsTheFighter}
+                hitTick={
+                  plateIsTheFighter && impact?.side === 'opponent' && impact.slot === slot
+                    ? impact.tick
+                    : 0
+                }
               />
             ))}
           </div>
@@ -823,19 +887,30 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       {keyboardUp && stream}
 
-      <ArenaScene className={styles.arena} stillTorches={fx.torches === 'still'}>
-        <div className={styles.lane} data-lane="player">
-          <Fighter
-            character={you(state).character}
-            label="You"
-            facing="right"
-            hitTick={impact?.side === 'player' ? impact.tick : 0}
-            attackTick={attack?.side === 'player' ? attack.tick : 0}
-            defeated={(state.winner !== null && state.winner !== state.mySlot)}
-          />
-        </div>
+      <ArenaScene
+        className={styles.arena}
+        stillTorches={fx.torches === 'still'}
+        bare={plateIsTheFighter}
+      >
+        {!plateIsTheFighter && (
+          <div className={styles.lane} data-lane="player">
+            <Fighter
+              character={you(state).character}
+              label="You"
+              facing="right"
+              hitTick={impact?.side === 'player' ? impact.tick : 0}
+              attackTick={attack?.side === 'player' ? attack.tick : 0}
+              defeated={(state.winner !== null && state.winner !== state.mySlot)}
+            />
+          </div>
+        )}
 
-        <EffectsCanvas ref={effects} className={styles.canvas} fx={fx} />
+        {/* One or the other, never both. The canvas draws a blade between two
+            lane positions, which in the stripped-down layout means straight
+            through the sentence sitting in the middle of the screen. */}
+        {fx.blade === 'canvas'
+          ? <EffectsCanvas ref={effects} className={styles.canvas} fx={fx} />
+          : <WordFlight ref={flight} />}
 
         {/* One fighter per opponent. A duel renders a single figure exactly as
             before; a four-way stands them in a row, with the one you are
@@ -844,6 +919,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             Slots keep their place even after a knockout — a fallen fighter
             stays where they fell rather than the survivors sliding along, so
             the row you learned at the start is the row you keep reading. */}
+        {/* The lane stays mounted even with no bodies in it: past two players it
+            also carries each opponent's compact health bar, which is the only
+            readout three of the four have. Only the figures are dropped. */}
         <div className={styles.lane} data-lane="opponent" data-many={foes.length > 1 || undefined}>
           {foes.map(({ slot, fighter }) => {
             const out = isOut(fighter);
@@ -855,15 +933,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 data-targeted={marked || undefined}
                 data-out={out || undefined}
               >
-                <Fighter
-                  character={fighter.character}
-                  label={fighter.name}
-                  facing="left"
-                  // Only the fighter that actually took the blade flinches.
-                  hitTick={impact?.side === 'opponent' && impact.slot === slot ? impact.tick : 0}
-                  attackTick={attack?.side === 'opponent' ? attack.tick : 0}
-                  defeated={out || state.winner === state.mySlot}
-                />
+                {!plateIsTheFighter && (
+                  <Fighter
+                    character={fighter.character}
+                    label={fighter.name}
+                    facing="left"
+                    // Only the fighter that actually took the blade flinches.
+                    hitTick={impact?.side === 'opponent' && impact.slot === slot ? impact.tick : 0}
+                    attackTick={attack?.side === 'opponent' ? attack.tick : 0}
+                    defeated={out || state.winner === state.mySlot}
+                  />
+                )}
                 {foes.length > 1 && (
                   <div className={styles.foeBar}>
                     <HealthBar

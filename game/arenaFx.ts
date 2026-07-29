@@ -24,7 +24,7 @@ import type { BladeTier } from '@/models/scoring';
  *   focus  Small hits go quiet so big hits land.
  *   stage  Everything stays loud, but nothing crosses the words.
  */
-export const FX_IDS = ['current', 'trim', 'focus', 'stage'] as const;
+export const FX_IDS = ['current', 'trim', 'focus', 'stage', 'plain'] as const;
 export type FxId = (typeof FX_IDS)[number];
 
 export interface ArenaFx {
@@ -33,6 +33,32 @@ export interface ArenaFx {
   label: string;
   /** The idea behind it, in one line. */
   blurb: string;
+
+  /**
+   * The arrangement, not just the intensity.
+   *
+   * `arena` is the stage this game was built around: two full-height fighters,
+   * a stone room, and the sentence lying across the foot of it. `plain` throws
+   * all of that out and asks the opposite question, which is what happens if the
+   * words *are* the arena: no bodies, no room, the line dead centre and large,
+   * and both fighters reduced to a portrait plate in a corner.
+   *
+   * The first four presets are the same layout at different volumes. This is the
+   * one that is a different screen.
+   */
+  layout: 'arena' | 'plain';
+
+  /**
+   * What carries damage across the screen.
+   *
+   * `canvas` is the pixel blade flying between two lane positions. `word` sends
+   * the word you just committed instead: it lifts off the line where your eyes
+   * already are and lands on the opponent's plate. That answers the "make it
+   * obvious the words are doing damage" question by showing the causal link
+   * rather than implying it, and it means nothing has to cross the reading band,
+   * because the thing that moves *starts* there and leaves.
+   */
+  blade: 'canvas' | 'word';
 
   /**
    * What an impact moves.
@@ -85,6 +111,8 @@ const CURRENT: ArenaFx = {
   id: 'current',
   label: 'As it is now',
   blurb: 'The control. Nothing changed.',
+  layout: 'arena',
+  blade: 'canvas',
   shake: 'screen',
   shakeScale: 1,
   particles: 1,
@@ -155,11 +183,42 @@ const STAGE: ArenaFx = {
   arc: 0.34,
 };
 
+/**
+ * Strip it to the bones and let the words be the arena.
+ *
+ * Not a quieter version of the other four. It asks whether the stage was the
+ * problem rather than its volume: the fighters go, the stone room goes, the line
+ * moves to the middle of the screen and grows, and each duellist is reduced to a
+ * portrait plate in a corner.
+ *
+ * The damage has to survive that, which is what `blade: 'word'` is for. The word
+ * you commit lifts off the line and lands on the opponent's plate, the portrait
+ * flinches, and the bar drops. Every piece of that happens either where your eyes
+ * already are or out at the edge of vision, and nothing crosses the text.
+ *
+ * Your own condition stops being a number in a corner too. The reading surface
+ * takes on the wound: its edges darken and redden as your health falls, so how
+ * you are doing arrives without a glance away from the word you are typing.
+ */
+const PLAIN: ArenaFx = {
+  ...TRIM,
+  id: 'plain',
+  label: 'Plain',
+  blurb: 'No fighters, no room. The words are the arena.',
+  layout: 'plain',
+  blade: 'word',
+  // The canvas is not drawn at all in this layout, so these only describe what
+  // would happen if it were. Left at Trim's values so switching layout is the
+  // only difference between the two.
+  wpmEveryMs: 2000,
+};
+
 export const ARENA_FX: Record<FxId, ArenaFx> = {
   current: CURRENT,
   trim: TRIM,
   focus: FOCUS,
   stage: STAGE,
+  plain: PLAIN,
 };
 
 /**

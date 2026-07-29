@@ -1,0 +1,47 @@
+/*
+ * The layer committed words fly across.
+ *
+ * Fixed and viewport-sized because the flight starts inside the sentence and
+ * ends on a plate in a different part of the layout, so it belongs to neither.
+ * Coordinates come from getBoundingClientRect, which is viewport-relative, so a
+ * fixed container is also the one place those numbers can be used unchanged.
+ */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  /* Never a scrollbar, however far out a flight strays mid-animation. */
+  overflow: hidden;
+}
+
+/*
+ * A word in flight.
+ *
+ * Inherits everything else from the token it was cloned from, which is the whole
+ * trick: the glyphs, the pixel font, the letter spacing and a charged word's tint
+ * all come along without being restated here, so a flying word cannot drift out
+ * of step with how the same word looked on the line a moment ago.
+ */
+.flyer {
+  position: fixed;
+  margin: 0;
+  opacity: 1;
+  /* Above its own start position, so it lifts clear of the line it came from. */
+  z-index: 1;
+  white-space: nowrap;
+  /* Cloned tokens keep their transition, which would fight the animation. */
+  transition: none;
+  will-change: transform, opacity;
+}
+
+/*
+ * Nothing flies for anybody who asked for stillness.
+ *
+ * The word still counts and the health still drops; what goes is the travel. The
+ * damage number and the bar are doing the informing, so this can be dropped
+ * wholesale without taking any meaning with it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .layer { display: none; }
+}

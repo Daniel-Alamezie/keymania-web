@@ -21,6 +21,65 @@
 .portrait[data-team='red'] { border-color: var(--opponent); }
 .plate[data-align='right'] .portrait { transform: scaleX(-1); }
 
+/* ---------- The plate as the fighter ---------- */
+
+/*
+ * A bigger plate, for the layout where this is the only body anyone has.
+ *
+ * See game/arenaFx.ts. With no sprite standing in an arena, everything the
+ * fighter used to do has to happen here, and a 52px thumbnail cannot carry it.
+ */
+.plate[data-big] .portrait { width: 84px; height: 88px; }
+.plate[data-big] .name { font-size: 13px; }
+.plate[data-big] .value { font-size: 20px; }
+.plate[data-big] .track { height: 16px; }
+
+/*
+ * The flinch, driven by remount rather than by a timer.
+ *
+ * Note the property: `translate`, not `transform`. The right-hand plate mirrors
+ * its portrait with `transform: scaleX(-1)`, and a `transform` keyframe would
+ * replace that outright, so the opponent's portrait would flip the correct way
+ * round for the length of every flinch. The standalone `translate` property
+ * composes with an existing `transform` instead of overwriting it.
+ */
+.portrait[data-hit] { animation: plateFlinch 260ms ease-out; }
+
+@keyframes plateFlinch {
+  0%   { translate: 0 0; }
+  25%  { translate: -5px 2px; }
+  55%  { translate: 4px -1px; }
+  80%  { translate: -2px 1px; }
+  100% { translate: 0 0; }
+}
+
+/*
+ * The blanched frame over the normal one.
+ *
+ * The same overlay the arena's fighters use, so a hit reads identically whether
+ * it lands on a body or on a plate.
+ */
+.blanch {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  animation: plateBlanch 260ms ease-out forwards;
+}
+
+@keyframes plateBlanch {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* The overlay needs a positioned parent, and the plate must not clip it. */
+.portrait { position: relative; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .portrait[data-hit] { animation: none; }
+  .blanch { animation: plateBlanch 120ms linear forwards; }
+}
+
 .info {
   display: flex;
   flex-direction: column;

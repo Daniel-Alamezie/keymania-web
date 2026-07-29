@@ -12,7 +12,16 @@
   /* Held open so the line never changes height — a stream that jumps vertically
      as words come and go is worse than one that does not move at all. */
   height: 2.1em;
-  font-size: clamp(22px, 3.4vw, 38px);
+  /*
+   * Sized from outside when a layout wants to, via an inherited custom property.
+   *
+   * A variable rather than a prop because CSS modules scope class names per file:
+   * a layout in Duel.module.css cannot reach `.viewport` to restyle it, and
+   * threading a size prop down would make every caller of this component
+   * responsible for a decision only one of them cares about. Custom properties
+   * cascade straight through the module boundary.
+   */
+  font-size: var(--stream-size, clamp(22px, 3.4vw, 38px));
   user-select: none;
   /* Room for the charged-word icon, which sits above the line. */
   padding-top: 0.55em;

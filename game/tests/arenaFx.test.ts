@@ -15,6 +15,11 @@ describe('the control preset', () => {
       id: 'current',
       label: 'As it is now',
       blurb: 'The control. Nothing changed.',
+      // The arena with fighters in it, and a pixel blade on the canvas. Pinned
+      // because a layout knob that drifted here would silently redesign the
+      // baseline every treatment is judged against.
+      layout: 'arena',
+      blade: 'canvas',
       // Shakes the whole screen, words included. This is the behaviour a player
       // called "so much going on", and it is the thing being measured against.
       shake: 'screen',
@@ -56,6 +61,7 @@ describe('the three treatments', () => {
   const knobsOf = (id: FxId) => {
     const fx = ARENA_FX[id];
     return JSON.stringify([
+      fx.layout, fx.blade,
       fx.shake, fx.shakeScale, fx.particles, fx.particleFloor,
       fx.trails, fx.arc, fx.loudFrom, fx.torches, fx.danger, fx.wpmEveryMs,
     ]);
@@ -71,9 +77,24 @@ describe('the three treatments', () => {
     }
   });
 
-  /** All three exist to answer the same complaint, so none may shake the text. */
+  /** They all exist to answer the same complaint, so none may shake the text. */
   it('none of them shake the words', () => {
     for (const id of variants) expect(ARENA_FX[id].shake).not.toBe('screen');
+  });
+
+  /**
+   * The canvas draws its blade between two fixed lane positions at mid height,
+   * which in a layout with the sentence in the middle of the screen means driving
+   * it straight through the words. A layout without fighters therefore cannot use
+   * the canvas, and pairing them wrongly would reintroduce the exact problem the
+   * layout exists to solve.
+   */
+  it('never put a canvas blade in a layout with no fighters', () => {
+    for (const id of FX_IDS) {
+      const fx = ARENA_FX[id];
+      if (fx.layout === 'plain') expect(fx.blade).toBe('word');
+      if (fx.blade === 'canvas') expect(fx.layout).toBe('arena');
+    }
   });
 
   /**

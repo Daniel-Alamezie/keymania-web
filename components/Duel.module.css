@@ -60,6 +60,153 @@
 .screen[data-danger][data-fx='focus']::after,
 .screen[data-danger][data-fx='stage']::after { animation: none; }
 
+/* ==========================================================================
+   The stripped-down layout: the words are the arena.
+   ==========================================================================
+
+   Prototype, driven by data-layout="plain". See game/arenaFx.ts for the idea.
+   No fighters, no stone room, the line dead centre and large, and each duellist
+   reduced to a portrait plate in a corner.
+
+   Every rule here is scoped to the attribute, so nothing in it can reach the
+   arena layout. That matters more than usual: this branch exists to be compared
+   against the arena, and a rule that leaked would change both sides of the
+   comparison at once. */
+
+/*
+ * The stream, resized from outside.
+ *
+ * A custom property rather than a prop, because CSS module class names are
+ * scoped per file and this stylesheet cannot see `.viewport` inside
+ * SentenceView.module.css. Custom properties cross that boundary by inheriting.
+ */
+.screen[data-layout='plain'] { --stream-size: clamp(28px, 4.6vw, 58px); }
+
+/*
+ * The frame stops pretending to be a room.
+ *
+ * The border and the min-height both go: what is left should read as open space
+ * with words in it, not as an empty stage with the set removed. Centring is done
+ * here rather than by the sentence, which pins its own cursor with a transform
+ * and has no opinion about where the line sits vertically.
+ */
+.screen[data-layout='plain'] .arena {
+  display: grid;
+  /*
+   * `align-content`, not `place-items: center`.
+   *
+   * Centring both axes would shrink the stream to its content width, and the
+   * sentence viewport is sized at 100% of its parent, so the two would be asking
+   * each other how wide to be. This centres vertically and lets the default
+   * stretch keep the line full width.
+   */
+  align-content: center;
+  border: none;
+  min-height: 0;
+  background: transparent;
+}
+
+/*
+ * The line moves off the floor and into the middle.
+ *
+ * It is absolutely pinned to `bottom: 0` in the arena, where sitting on the
+ * flagstones is the point: a throw and the word that caused it share one glance.
+ * With no floor to sit on it becomes a normal grid item so the centring above can
+ * reach it.
+ */
+.screen[data-layout='plain'] .stream {
+  position: static;
+  width: 100%;
+  padding: 0 18px;
+}
+
+/*
+ * And the scrim goes with it.
+ *
+ * It exists to hold the words readable over a repeating flagstone tile with
+ * enough contrast in it to fight the letterforms. There is no tile here, so it
+ * would be a dark panel floating in open space for no reason.
+ */
+.screen[data-layout='plain'] .stream::before { display: none; }
+
+/*
+ * Your own condition, in the surface you are already reading.
+ *
+ * This is the half of the idea that stops the layout being merely emptier. With
+ * the fighters gone there is nothing left to look wounded, so the reading area
+ * takes the wound: a red bloom closes in from the edges as health falls. It costs
+ * no glance away from the word, because it arrives in peripheral vision around
+ * the thing already being looked at.
+ *
+ * Opacity is driven by the same data-danger the arena uses, so the threshold is
+ * shared rather than invented twice.
+ */
+.screen[data-layout='plain'] .arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 42%,
+    rgba(239, 68, 68, 0.22) 100%
+  );
+}
+.screen[data-layout='plain'][data-danger] .arena::before { opacity: 1; }
+
+/*
+ * And the streak, in the same surface.
+ *
+ * Warm rather than red, and it grows with the combo, so the two ambient signals
+ * cannot be confused: heat closes in when you are winning, red when you are not.
+ */
+.screen[data-layout='plain'] .arena::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 214, 110, 0.10) 0%,
+    transparent 62%
+  );
+}
+.screen[data-layout='plain'][data-heat] .arena::after { opacity: 1; }
+
+/*
+ * The plates move to the corners and stop sharing a row.
+ *
+ * In the arena they are a HUD strip above the action. Here they are the only
+ * bodies on screen, so they want the far corners: as much distance from the
+ * reading line as the layout can give them, which is what makes them peripheral
+ * rather than adjacent.
+ */
+.screen[data-layout='plain'] .hud {
+  align-items: flex-start;
+  gap: 24px;
+}
+
+/* Nothing needs pointing at when there is nothing between the two plates. */
+.screen[data-layout='plain'] .vs { display: none; }
+
+/*
+ * The damage number lands on the plate, not in the middle of the screen.
+ *
+ * In the arena it rises from the fighter that was hit, which here would put it
+ * squarely over the sentence. Moved out to whichever corner wore the blow, where
+ * it is next to the bar that is draining for the same reason.
+ */
+.screen[data-layout='plain'] .damage {
+  top: 92px;
+  bottom: auto;
+}
+.screen[data-layout='plain'] .damage[data-side='player'] { left: 7%; right: auto; }
+.screen[data-layout='plain'] .damage[data-side='opponent'] { right: 7%; left: auto; }
+
 /*
  * Mute and leave, out in the margin.
  *
