@@ -15,6 +15,10 @@ Type fast, strike hard.
 This is the game client. The serverless backend (AWS Lambda + API Gateway
 WebSocket) lives in [`keymania`](https://github.com/Daniel-Alamezie/keymania).
 
+> **[docs/ANALYTICS.md](docs/ANALYTICS.md) — PostHog setup and what is
+> tracked.** Inert until a key is configured; the doc covers getting one and
+> the three questions worth asking on launch day.
+>
 > **[docs/INTERESTING-PROBLEMS.md](docs/INTERESTING-PROBLEMS.md) — what went
 > wrong on the way, and what it taught us.** The bugs whose cause was somewhere
 > surprising, or where every tool said the code was fine.

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Press_Start_2P, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import Analytics from '@/components/Analytics';
 
 const pixel = Press_Start_2P({
   weight: '400',
@@ -26,7 +27,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${pixel.variable} ${body.variable}`}>
       {/* No Kinde provider needed: useKindeBrowserClient resolves the session
           on its own, so the layout stays a plain server component. */}
-      <body>{children}</body>
+      <body>
+        {/* Renders nothing; it exists to start analytics and follow the route.
+            Inert unless a PostHog key is configured — see game/analytics.ts. */}
+        <Analytics />
+        {children}
+      </body>
     </html>
   );
 }

@@ -5,6 +5,7 @@ import {
   CHARACTER_LIST, characterById, characterFrame, type CharacterId,
 } from '@/models/character';
 import type { ChallengeProgress } from '@/models/profile';
+import { track } from '@/game/analytics';
 import PixelSprite from './PixelSprite';
 import styles from './CharacterPicker.module.css';
 
@@ -58,6 +59,7 @@ export default function CharacterPicker({ current, onChoose, unlocked, challenge
 
     const result = await onChoose(selected);
     if (result.ok) {
+      track({ name: 'character_saved', character: selected });
       setStatus('saved');
     } else {
       setStatus('idle');

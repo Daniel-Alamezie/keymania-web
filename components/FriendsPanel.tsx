@@ -40,7 +40,9 @@ export default function FriendsPanel() {
   }
 
   return (
-    <section className={styles.section}>
+    // `ph-no-capture` masks this in session replays: it is a list of other
+    // people's names, and nothing about watching a replay needs them.
+    <section className={`${styles.section} ph-no-capture`}>
       <h2 className={`${styles.heading} pixel-font`}>Friends</h2>
       <p className={styles.muted}>
         Add someone by their handle. They have to accept before you appear on each

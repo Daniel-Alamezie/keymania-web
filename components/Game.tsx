@@ -21,6 +21,7 @@ import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
 import { useCharacter } from '@/game/serverProfile';
 import { asCharacter, type CharacterId } from '@/models/character';
+import { track } from '@/game/analytics';
 import { duelToken } from '@/game/duelToken';
 import styles from './Game.module.css';
 
@@ -293,7 +294,7 @@ export default function Game() {
             </LoginLink>
           )}
 
-          <button className={styles.guideLink} onClick={() => setShowGuide(true)}>
+          <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
             New here? Read how to play
           </button>
         </div>

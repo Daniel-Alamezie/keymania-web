@@ -8,6 +8,9 @@ import {
 } from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
 import { audio } from '@/game/audio';
+// `trackEvent`, not `track`: this file already has a `track` that collects
+// timers for cleanup, and the two silently compiled into each other.
+import { track as trackEvent } from '@/game/analytics';
 import { saveResult } from '@/game/saveResult';
 import { useAccount } from '@/game/useAccount';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
@@ -233,6 +236,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       // is undefined for everybody and asCharacter falls back to the default.
       characters: multiplayer.characters,
     });
+    // A human duel begins on the server's word rather than a button, so this
+    // is the only honest place to count one starting.
+    trackEvent({ name: 'duel_started', mode: 'human', difficulty, touch });
     // Measured from now, so the wait can only ever be longer than the server's.
     startsAt.current = Date.now() + (multiplayer.countdownMs ?? FALLBACK_COUNTDOWN_MS);
     // Only re-arm when a genuinely new match arrives.
@@ -426,6 +432,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         multiplayer: Boolean(multiplayer),
         // Which bot. Meaningless when multiplayer, and ignored there.
         difficulty,
+      });
+
+      trackEvent({
+        name: 'duel_finished',
+        mode: multiplayer ? 'human' : 'bot',
+        won: state.winner === state.mySlot,
+        wpm: finalWpm(stats),
+        accuracy: accuracy(stats),
+        seconds: Math.round((stats.endedAt - stats.startedAt) / 1000),
       });
     }
     // account/multiplayer are read, not tracked: the effect must fire once, on
@@ -631,6 +646,20 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
    */
   const quit = () => {
     setConfirmQuit(false);
+    /**
+     * Only counted when there was a duel to abandon.
+     *
+     * Backing out of the ready screen is not a player giving up on the game,
+     * and counting it as one would quietly inflate the single most important
+     * negative number on the dashboard.
+     */
+    if (stateRef.current.phase === 'playing') {
+      trackEvent({
+        name: 'duel_abandoned',
+        mode: multiplayer ? 'human' : 'bot',
+        at_word: stateRef.current.stats.wordsTyped,
+      });
+    }
     if (multiplayer) multiplayer.onResign();
     else onExit();
   };
@@ -861,6 +890,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
               className="btn btn-primary"
               onClick={() => {
                 openKeyboard();
+                trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
                 dispatch({ type: 'start', difficulty, character: mine });
               }}
             >
@@ -947,6 +977,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                   className="btn btn-primary"
                   onClick={() => {
                     openKeyboard();
+                    trackEvent({ name: 'rematch_taken', mode: 'bot' });
+                    trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
                     dispatch({ type: 'start', difficulty, character: mine });
                   }}
                 >
