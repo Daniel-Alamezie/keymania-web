@@ -43,9 +43,9 @@ const PAGES = [
     title: 'Two boards',
     body: (
       <>
-        <strong>Standings</strong> is your rating — it moves every time you duel
-        a person. <strong>Fastest</strong> is the quickest duel you have ever
-        typed, so it only ever goes up.
+        <strong>Standings</strong> is your rating, and it moves every time you
+        duel a person. <strong>Fastest</strong> is the quickest duel you have
+        ever typed, so it only ever goes up.
       </>
     ),
     visual: <TwoBoards />,
@@ -66,8 +66,8 @@ const PAGES = [
     body: (
       <>
         Win against a player rated above you and you earn up to{' '}
-        {MAX_UPSET_BONUS} extra — more the bigger the gap. The winner gets it and
-        nobody else.
+        {MAX_UPSET_BONUS} extra points. The bigger the gap, the more you get,
+        and only the winner gets any of it.
       </>
     ),
     visual: <Upset />,
@@ -76,7 +76,7 @@ const PAGES = [
     title: 'Bots never count',
     body: (
       <>
-        Practice builds your own record, but never your rating — a bot duel
+        Practice builds your own record but never your rating. A bot duel
         happens entirely in your browser, so you are its only witness. Duels
         against people are refereed by the server.
       </>
@@ -87,9 +87,9 @@ const PAGES = [
     title: 'The flame is your band',
     body: (
       <>
-        The flame beside a rating says which band it falls in. On the board
-        itself, the top three get a crown for their position instead — those are
-        the only three there are.
+        The flame beside a rating says which band it falls in, so everybody on
+        the board has one. The top three get a crown for their position instead.
+        There are only ever three of those.
       </>
     ),
     visual: <FlameBands />,
@@ -179,6 +179,12 @@ export default function BoardGuide({ onClose }: BoardGuideProps) {
  * Same name on both on purpose: it is one player on two boards, which is the
  * point being made. The difference is which number is large and what the note
  * underneath says happens to it.
+ *
+ * The name is "You" rather than a plausible handle. The first version borrowed
+ * a real name off the live board, which is worse than untidy: it puts a
+ * specific player into an explanation of the rules, with numbers that are not
+ * theirs, and it starts colliding the moment somebody claims that handle.
+ * "You" cannot be anybody else.
  */
 function TwoBoards() {
   return (
@@ -191,7 +197,7 @@ function TwoBoards() {
           <span className={`${styles.miniTab} pixel-font`}>{board.tab}</span>
           <div className={styles.miniRow}>
             <RankFlame rank={1} height={17} />
-            <span className={styles.miniName}>Bill</span>
+            <span className={styles.miniName}>You</span>
             <span className={`${styles.miniScore} pixel-font`}>{board.score}</span>
           </div>
           <small className={styles.miniNote}>{board.note}</small>

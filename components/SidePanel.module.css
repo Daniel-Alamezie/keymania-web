@@ -118,14 +118,15 @@
   color: var(--faint);
 }
 
-/* Fixed slot so a podium flame does not shunt the name out of line with the
-   rows beneath it. */
+/* Fixed slot so a crown does not shunt the name out of line with the band
+   flames beneath it. 16px because the widest thing in it is a 17px-tall crown,
+   which is 15px across at that height; a flame is 11px. */
 .rankFlame {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 14px;
+  width: 16px;
   height: 19px;
 }
 .rank[data-top] .rankPos { color: var(--gold); }
@@ -149,28 +150,44 @@
 }
 
 /*
- * The way into the explainer, sized to belong in the footnote.
+ * The way into the board explainer.
  *
- * A button rather than an anchor: it opens a panel in place rather than going
- * anywhere, and a link that does not navigate is a lie to anybody reading the
- * status bar or using a screen reader. It still underlines, because that is
- * what says "clickable" in a line of grey text.
+ * Shaped like a control rather than like text. The first attempt was an
+ * underlined phrase tacked onto the end of the footnote in the same faint
+ * grey, and it read as small print: an underline surrounded by more small
+ * print is camouflage. A border, a bit of padding and the chevron every other
+ * "there is more this way" control on the screen uses do the job instead.
  */
 .footLink {
-  padding: 0;
-  background: none;
-  border: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: transparent;
+  border: 1px solid var(--edge);
+  color: var(--muted);
   font: inherit;
-  color: var(--faint);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  font-size: 11px;
   cursor: pointer;
-  transition: color 140ms ease;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+/* Not a character in the label, so it is never read out as punctuation. */
+.footLink::after {
+  content: '›';
+  font-size: 13px;
+  line-height: 1;
 }
 
 .footLink:hover,
 .footLink:focus-visible {
   color: var(--gold);
+  border-color: var(--gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footLink { transition: none; }
 }
 
 /* The board name, when it links to a profile.

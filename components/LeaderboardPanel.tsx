@@ -7,8 +7,8 @@ import {
   BOARDS, BOARD_META, DEFAULT_BOARD,
   type BoardEntry, type BoardKind, type LeaderboardResponse,
 } from '@/models/leaderboard';
-import { START_RATING } from '@/models/rating';
-import RankFlame, { type Podium } from './RankFlame';
+import { ratingFlame, START_RATING } from '@/models/rating';
+import RankFlame, { Flame, type Podium } from './RankFlame';
 import BoardGuide from './BoardGuide';
 import styles from './SidePanel.module.css';
 
@@ -132,7 +132,8 @@ export default function LeaderboardPanel() {
              * is the other figure — so a row still tells you both things and
              * the ordering is never ambiguous about which it followed.
              */
-            const score = board === 'standings' ? entry.rating ?? START_RATING : entry.wpm;
+            const rating = entry.rating ?? START_RATING;
+            const score = board === 'standings' ? rating : entry.wpm;
             const sub = board === 'standings' ? `${entry.wpm} wpm` : `${entry.accuracy}%`;
 
             return (
@@ -158,11 +159,28 @@ export default function LeaderboardPanel() {
                 data-top={entry.position === 1 || undefined}
               >
                 <span className={`${styles.rankPos} pixel-font`}>{entry.position}</span>
-                {/* The slot is always rendered, empty below third, so names
-                    stay in one column down the whole board. */}
+                {/*
+                  * A crown for the podium, a band flame for everybody else.
+                  *
+                  * The slot used to be empty below third, which read as "you
+                  * have nothing" rather than "you are not top three" — and it
+                  * left most of the board looking unranked when every one of
+                  * those players has a rating and therefore a band.
+                  *
+                  * Standings only. The flame means a rating band, and putting
+                  * one on a board that is *not* ordered by rating invites the
+                  * reading that it ranks something about the speed board.
+                  *
+                  * Both sizes are exact quarter-scale: the crown sprite is 68
+                  * tall and the flame 76, so 17 and 19 land on whole source
+                  * pixels. A fraction between them maps some rows to two screen
+                  * pixels and their neighbours to one, which at this size is
+                  * visible as a wobble.
+                  */}
                 <span className={styles.rankFlame}>
-                  {/* 17px is the sprite's own height — see RankFlame on why not 19. */}
-                  {podium && <RankFlame rank={podium} height={17} />}
+                  {podium
+                    ? <RankFlame rank={podium} height={17} />
+                    : board === 'standings' && <Flame kind={ratingFlame(rating)} height={19} />}
                 </span>
                 {/* Only a link once a player has a handle. Accounts that
                     reached the board before handles existed have nothing to
@@ -193,15 +211,24 @@ export default function LeaderboardPanel() {
         </ul>
       )}
 
-      <p className={styles.footnote}>
-        {meta.footnote}{' '}
-        {/* A link rather than a paragraph of rules in the panel. Somebody who
-            already understands the board should not have to scroll past an
-            explanation of it every time they check their position. */}
-        <button type="button" className={styles.footLink} onClick={() => setShowGuide(true)}>
-          How the boards work
-        </button>
-      </p>
+      <p className={styles.footnote}>{meta.footnote}</p>
+
+      {/*
+        * Its own control, below the footnote rather than inside it.
+        *
+        * It started as an underlined phrase at the end of that sentence, in the
+        * same faint grey, and nobody read it as clickable — an underline inside
+        * a run of small print is camouflage, not an affordance. Out of the
+        * paragraph and given a border, it is shaped like the buttons everywhere
+        * else on the screen.
+        *
+        * Still a button and not an anchor: it opens a panel in place rather
+        * than going anywhere, and a link that does not navigate misleads the
+        * status bar and anybody listening to the page.
+        */}
+      <button type="button" className={styles.footLink} onClick={() => setShowGuide(true)}>
+        How the boards work
+      </button>
 
       {showGuide && <BoardGuide onClose={() => setShowGuide(false)} />}
     </aside>
