@@ -227,6 +227,54 @@
 
 .screen[data-layout='plain'] .hud > * { flex: 0 1 340px; }
 
+/*
+ * Three opponents stack where one used to stand.
+ *
+ * A column rather than a row across the top. A row would put three plates
+ * shoulder to shoulder with your own and make the screen read as four equal
+ * competitors, which is not what the game is: it is you against a field. A
+ * column in the opposite corner keeps "me here, them there" true at any number.
+ */
+.screen[data-layout='plain'] .foes {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.screen[data-layout='plain'] .foeSlot { width: 100%; }
+
+/*
+ * Three plates cannot each be as big as one.
+ *
+ * Scaled down rather than scrolled or truncated: every player in the room has to
+ * be visible at once, because "who is left" is the question a four-way is
+ * constantly asking. The portrait shrinks most, since three faces at full size
+ * would take more height than the top of the screen has.
+ */
+.screen[data-layout='plain'] .foes[data-many] .foeSlot { font-size: 11px; }
+
+/*
+ * Whoever your next blade is going to.
+ *
+ * The rule is that nobody aims: it goes to the healthiest opponent still
+ * standing, so it moves as the lead does. Unmarked, that reads as damage landing
+ * on whoever it likes. The target is lit and the others step back, and because
+ * the thrown word flies to this plate, the rule gets taught by watching rather
+ * than by being told.
+ *
+ * Brightness and a border rather than a badge, so it survives being read out of
+ * the corner of an eye while the player is looking at a word.
+ */
+.screen[data-layout='plain'] .foes[data-many] .foeSlot {
+  opacity: 0.62;
+  transition: opacity 200ms ease;
+}
+.screen[data-layout='plain'] .foes[data-many] .foeSlot:has([data-targeted]) { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen[data-layout='plain'] .foes[data-many] .foeSlot { transition: none; }
+}
+
 /* Nothing needs pointing at when there is nothing between the two plates. */
 .screen[data-layout='plain'] .vs { display: none; }
 

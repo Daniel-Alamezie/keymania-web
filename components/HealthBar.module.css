@@ -35,6 +35,33 @@
 .plate[data-big] .track { height: 16px; }
 
 /*
+ * The plate you are currently throwing at.
+ *
+ * Marked here rather than only by the parent's opacity, because a lit border is
+ * what makes it findable at a glance: opacity separates it from the others, and
+ * the border says which one it is. Both are needed, since a player reading a
+ * word sees this in the corner of their eye and has no attention spare for
+ * comparing three similar rectangles.
+ *
+ * Only ever set past two players. In a duel there is one opponent and marking
+ * them would be pointing at the only thing there is.
+ */
+.plate[data-big][data-targeted] .portrait {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(255, 214, 110, 0.45);
+}
+.plate[data-big][data-targeted] .track { border-color: var(--gold); }
+
+/*
+ * A player who is out stays on the board, spent.
+ *
+ * Removing them would repack the column and move everybody else, and the order
+ * you learned at the start is the order you keep reading. Draining the colour
+ * says "not in this any more" without taking the row away.
+ */
+.plate[data-big][data-defeated] { filter: grayscale(1); opacity: 0.45; }
+
+/*
  * The flinch, driven by remount rather than by a timer.
  *
  * Note the property: `translate`, not `transform`. The right-hand plate mirrors

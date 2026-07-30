@@ -119,13 +119,16 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   /** The layer committed words fly across, in the stripped-down layout. */
   const flight = useRef<WordFlightHandle>(null);
   /**
-   * The opponent's plate, which is where a thrown word is aimed.
+   * Every opponent's plate, by slot.
    *
-   * One ref rather than one per slot: the stripped-down layout is being tried on
-   * a duel first, and a four-way needs a different answer to "where does the word
-   * go" anyway, since there are three plates it could be going to.
+   * One per slot rather than one for the room, because a four-way has three
+   * places a word could land and which one it lands on is the rule the game most
+   * needs to teach. Nobody aims: your blade goes to the healthiest opponent
+   * still standing, so it changes target as the lead changes. Sending the word
+   * to the plate the server says you are hitting makes that visible instead of
+   * something a player has to be told.
    */
-  const foePlate = useRef<HTMLDivElement>(null);
+  const foePlates = useRef<Record<number, HTMLDivElement | null>>({});
 
   /**
    * Which arena de-clutter treatment is running.
@@ -636,7 +639,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       if (fromSide === 'player') {
         const active = screenRef.current?.querySelector('[data-word="active"]');
         const thrown = active?.previousElementSibling;
-        const target = foePlate.current?.getBoundingClientRect();
+        // Aimed at whoever the server says this blade is going to, so a
+        // four-way shows the target changing as the lead does.
+        const target = foePlates.current[hit.toSlot]?.getBoundingClientRect();
         if (thrown && target) flight.current?.send(thrown, target, hit.tier >= 3);
       }
     } else {
@@ -875,27 +880,59 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           * under the fighters they belong to, where "who is hurt" becomes a
           * place rather than a legend to read.
           */}
-        {foes.length === 1 && (
-          // The ref is what a thrown word aims at, so it goes on the element that
-          // actually encloses the plate rather than on the plate component.
-          <div className={styles.foes} ref={foePlate}>
+        {/*
+          * Everybody you are up against, in the corner opposite you.
+          *
+          * One opponent or three, the same place and the same shape: at two
+          * players it is a plate facing yours, at four it is three stacked
+          * where the one used to be. That generalises the duel rather than
+          * inventing a second layout for a four-way, and it keeps every readout
+          * out at the edges where the reading band stays clear.
+          *
+          * They used to be here only in a duel, with a four-way's opponents
+          * drawn as compact bars under the fighters in the arena. With no
+          * fighters left to sit under, that left three players in the room with
+          * no plate, no face and no name.
+          */}
+        {foes.length > 0 && (
+          <div className={styles.foes} data-many={foes.length > 1 || undefined}>
             {foes.map(({ slot, fighter }) => (
-              <HealthBar
+              <div
                 key={slot}
-                name={labelFor(fighter)}
-                value={fighter.health}
-                team="red"
-                align="right"
-                character={fighter.character}
-                defeated={isOut(fighter)}
-                caption={isMulti ? 'player' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`}
-                big={plateIsTheFighter}
-                hitTick={
-                  plateIsTheFighter && impact?.side === 'opponent' && impact.slot === slot
-                    ? impact.tick
-                    : 0
-                }
-              />
+                // The ref is what a thrown word aims at, so it goes on the
+                // element that encloses the plate rather than on the component.
+                ref={(node) => { foePlates.current[slot] = node; }}
+                className={styles.foeSlot}
+              >
+                <HealthBar
+                  name={labelFor(fighter)}
+                  value={fighter.health}
+                  team="red"
+                  align="right"
+                  character={fighter.character}
+                  defeated={isOut(fighter)}
+                  caption={
+                    foes.length > 1
+                      ? undefined
+                      : isMulti ? 'player' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
+                  }
+                  big={plateIsTheFighter}
+                  /*
+                   * Who your next blade is going to.
+                   *
+                   * Only meaningful past two players, where the choice is made
+                   * for you and moves as the lead does. Marking it is how that
+                   * rule gets taught: without it, damage looks like it lands on
+                   * whoever it feels like.
+                   */
+                  targeted={foes.length > 1 && slot === myTarget}
+                  hitTick={
+                    plateIsTheFighter && impact?.side === 'opponent' && impact.slot === slot
+                      ? impact.tick
+                      : 0
+                  }
+                />
+              </div>
             ))}
           </div>
         )}
@@ -960,7 +997,11 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                     defeated={out || state.winner === state.mySlot}
                   />
                 )}
-                {foes.length > 1 && (
+                {/* Only where there are fighters for them to sit under. The
+                    stripped-down layout gives every opponent a full plate in the
+                    corner instead, and two bars for one player would be the same
+                    number reported twice. */}
+                {foes.length > 1 && !plateIsTheFighter && (
                   <div className={styles.foeBar}>
                     <HealthBar
                       name={labelFor(fighter)}
