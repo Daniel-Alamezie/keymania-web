@@ -118,6 +118,35 @@ describe('what the server says', () => {
     expect(state.script).toEqual([...SCRIPT, 'seven eight']);
   });
 
+  /**
+   * The bug that killed the first playtest, from the client's side of it.
+   *
+   * The server sent its judgement nested inside `withRoom`'s `{ room, result }`
+   * wrapper, so `heat`, `cooling` and `wordIndex` were all `undefined` at the top
+   * level of the message. The type said `number`, this reducer believed it, and
+   * the undefined went into state, out to the bar, and into `element.animate()`,
+   * which threw on a duration of `NaN` and took the run screen with it.
+   *
+   * The seam is fixed on the server. This is the client refusing to be the reason
+   * next time: a message it cannot use leaves the forge where it was, and the run
+   * carries on against a slightly stale number, which is what happens between
+   * words anyway.
+   */
+  it('keeps the forge it had rather than taking a number it cannot use', () => {
+    const good = survivalReducer(running(), {
+      type: 'confirm', heat: 4_000, cooling: 1.2, words: 5,
+    });
+    const broken = survivalReducer(good, {
+      type: 'confirm',
+      heat: undefined as unknown as number,
+      cooling: undefined as unknown as number,
+      words: undefined as unknown as number,
+    });
+    expect(broken.heat).toBe(4_000);
+    expect(broken.cooling).toBe(1.2);
+    expect(broken.words).toBe(5);
+  });
+
   it('ignores a late confirmation for a run already over', () => {
     const dead = type(running(), 'x');
     const after = survivalReducer(dead, {
@@ -161,6 +190,26 @@ describe('the clock', () => {
     let state = type(running(), 'o', 4_000);
     state = survivalReducer(state, { type: 'typed', char: 'n', now: 9_999 });
     expect(state.startedAt).toBe(4_000);
+  });
+
+  /**
+   * The word clock starts with the word, including the very first one.
+   *
+   * A duel stamps this when its countdown ends; survival's `countdown` action
+   * carries no `now`, so it cannot. Left at zero, the first word's elapsed time
+   * was measured from the Unix epoch, the server clamped that to its ceiling,
+   * and the opening word of every run scored as the slowest ever typed.
+   */
+  it('starts the word clock on the first key of the first word', () => {
+    expect(running().wordStartedAt).toBe(0);
+    expect(type(running(), 'o', 4_000).wordStartedAt).toBe(4_000);
+  });
+
+  it('restarts the word clock on each word after that', () => {
+    const state = type(running(), 'one ', 4_000);
+    expect(state.wordStartedAt).toBe(4_000);
+    expect(survivalReducer(state, { type: 'typed', char: 't', now: 9_000 }).wordStartedAt)
+      .toBe(4_000);
   });
 
   /** Stamped at the end, so the figure on the result screen stops moving. */

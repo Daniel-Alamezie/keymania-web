@@ -97,6 +97,22 @@ export function initialSurvival(): SurvivalState {
 /** Sentences carry a trailing space, so the committing key is always a space. */
 const withSpace = (sentence: string) => `${sentence} `;
 
+/**
+ * A number the server sent, or the one we already had.
+ *
+ * The confirmation arrives over a socket, from a different repo, on its own
+ * deploy schedule. The type says `number` and the type is a promise about a
+ * message this file never validated: the server shipped sending its judgement
+ * nested one level down, `heat` arrived as `undefined`, and it went straight
+ * into state, out to the bar, and into `element.animate()`, which threw and took
+ * the whole run screen with it.
+ *
+ * Keeping the last good value is the right failure: the run carries on against
+ * a slightly stale forge, which is what happens between words anyway, instead of
+ * ending on a number that was never really there.
+ */
+const orKeep = (sent: number, current: number) => (Number.isFinite(sent) ? sent : current);
+
 export function survivalReducer(state: SurvivalState, action: SurvivalAction): SurvivalState {
   switch (action.type) {
     case 'begin':
@@ -147,9 +163,21 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
        * types, and counting them would report a speed nobody achieved.
        */
       const startedAt = state.startedAt || action.now;
+      /**
+       * The first word's clock starts on its first key too.
+       *
+       * A duel stamps this when the countdown ends, which survival cannot copy:
+       * its `countdown` action carries no `now`, deliberately, so the reducer
+       * stays pure. Left at zero, the first word's elapsed time came out as the
+       * whole of the Unix epoch, and the server clamped that to its ceiling and
+       * scored the opening word of every run as the slowest one ever typed.
+       */
+      const wordStartedAt = state.wordStartedAt || action.now;
 
       // Mid-word: nothing to report, just move.
-      if (expected !== ' ') return { ...state, cursor: advanced, charsTyped, startedAt };
+      if (expected !== ' ') {
+        return { ...state, cursor: advanced, charsTyped, startedAt, wordStartedAt };
+      }
 
       /**
        * A space committed the word.
@@ -200,9 +228,9 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
       if (state.phase === 'over') return state;
       return {
         ...state,
-        heat: action.heat,
-        cooling: action.cooling,
-        words: action.words,
+        heat: orKeep(action.heat, state.heat),
+        cooling: orKeep(action.cooling, state.cooling),
+        words: orKeep(action.words, state.words),
         script: action.appended ? [...state.script, action.appended] : state.script,
         // A sentence that arrived after the stream had already rolled onto it.
         upcoming: state.upcoming.trim() === '' && action.appended

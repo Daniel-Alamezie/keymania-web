@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CAPACITY_MS, COOL_PER_WORDS, MS_PER_CHAR,
-  coolingFor, requiredWpm, secondsLeft, stokeFor,
+  coolingFor, heatFraction, requiredWpm, secondsLeft, stokeFor,
 } from '../heat';
 
 /**
@@ -81,5 +81,45 @@ describe('secondsLeft', () => {
   it('is never negative, however cold the forge is', () => {
     expect(secondsLeft(0, 10)).toBe(0);
     expect(secondsLeft(-500, 10)).toBe(0);
+  });
+
+  /**
+   * The crash, as a test.
+   *
+   * The server was sending its judgement nested a level down, so `heat` arrived
+   * as `undefined`. `Math.max(0, undefined)` is `NaN`, `NaN <= 0` is false, and
+   * every guard between here and `element.animate()` waved it through. The bar
+   * asked the browser to run an animation over `NaN` milliseconds and the whole
+   * run screen died on the first word.
+   *
+   * The seam is fixed and so is the reducer. This is the line that decides what
+   * a future version of the same mistake costs: a bar that stops moving, not a
+   * game that stops running.
+   */
+  it('gives an animation something it can actually use, whatever it is handed', () => {
+    const rubbish = [NaN, Infinity, -Infinity, undefined, null] as unknown as number[];
+    for (const value of rubbish) {
+      expect(secondsLeft(value, 0)).toBe(0);
+      expect(secondsLeft(CAPACITY_MS, value)).toBe(0);
+    }
+  });
+});
+
+describe('heatFraction', () => {
+  it('reads the forge as a proportion of what it can hold', () => {
+    expect(heatFraction(CAPACITY_MS)).toBe(1);
+    expect(heatFraction(CAPACITY_MS / 2)).toBe(0.5);
+    expect(heatFraction(0)).toBe(0);
+  });
+
+  /** A bar cannot be more than full or less than empty, whatever arrives. */
+  it('clamps rather than overflowing the rail', () => {
+    expect(heatFraction(CAPACITY_MS * 3)).toBe(1);
+    expect(heatFraction(-200)).toBe(0);
+  });
+
+  it('reads nonsense as empty rather than passing it to a stylesheet', () => {
+    expect(heatFraction(NaN)).toBe(0);
+    expect(heatFraction(undefined as unknown as number)).toBe(0);
   });
 });

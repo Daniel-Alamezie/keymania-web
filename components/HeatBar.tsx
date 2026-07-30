@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { CAPACITY_MS, secondsLeft } from '@/game/heat';
+import { heatFraction, secondsLeft } from '@/game/heat';
 import styles from './HeatBar.module.css';
 
 /**
@@ -40,12 +40,21 @@ export default function HeatBar({ heat, wordsSurvived, tick, alive }: {
     const bar = fill.current;
     if (!bar) return;
 
-    const width = Math.max(0, Math.min(1, heat / CAPACITY_MS)) * 100;
+    const width = heatFraction(heat) * 100;
     const seconds = secondsLeft(heat, wordsSurvived);
 
-    // A run that is over holds its last frame. Draining an ended run to zero
-    // would say the forge went cold when a typo is what actually killed it.
-    if (!alive || seconds <= 0) {
+    /**
+     * A run that is over holds its last frame. Draining an ended run to zero
+     * would say the forge went cold when a typo is what actually killed it.
+     *
+     * `!(seconds > 0)` rather than `seconds <= 0`, which is not a stylistic
+     * choice: the two agree on every number and disagree on `NaN`, where the
+     * comparison is false both ways round and the second spelling therefore
+     * lets it past. It did, and `animate()` threw on the duration. A bar drawn
+     * from a number off the wire should be able to fail to move; it should not
+     * be able to take the screen down with it.
+     */
+    if (!alive || !(seconds > 0)) {
       bar.style.width = `${width}%`;
       return;
     }
@@ -73,7 +82,7 @@ export default function HeatBar({ heat, wordsSurvived, tick, alive }: {
       aria-label="Forge heat"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round((heat / CAPACITY_MS) * 100)}
+      aria-valuenow={Math.round(heatFraction(heat) * 100)}
     >
       <div ref={fill} className={styles.fill} data-cold={!alive || undefined} />
     </div>

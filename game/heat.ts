@@ -37,12 +37,39 @@ export function requiredWpm(wordsSurvived: number): number {
 }
 
 /**
+ * How full the forge is, from 0 to 1.
+ *
+ * The bar's width and its `aria-valuenow` both want this, and both used to do
+ * their own arithmetic on `heat` directly, so a `NaN` off the wire became a
+ * `width: NaN%` the browser silently dropped and an announced value of `NaN`.
+ * Neither crashed, which is worse: the bar simply sat at whatever width it had
+ * and the run looked fine while its clock was gone.
+ */
+export function heatFraction(heat: number): number {
+  if (!Number.isFinite(heat)) return 0;
+  return Math.max(0, Math.min(1, heat / CAPACITY_MS));
+}
+
+/**
  * How long the bar has left, in real seconds, at the current cooling.
  *
  * Heat is stored as milliseconds of *typing* rather than of clock, because it is
  * spent faster than real time as the run goes on. This converts one to the other
  * so the bar can be animated over an actual duration.
+ *
+ * Never negative, because a bar cannot be less than empty, and **never `NaN`**,
+ * because its only caller feeds the answer straight to `element.animate()` and
+ * that throws on a duration it cannot use. It threw for real: the server was
+ * sending the judgement nested a level down, `heat` arrived as `undefined`,
+ * `Math.max(0, undefined)` is `NaN`, and `NaN <= 0` is false, so every guard
+ * downstream waved it through and the run screen died on the first word.
+ *
+ * The server bug is fixed and so is the reducer that accepted it. This is the
+ * third line of the same defence, and it is the one that turns any future
+ * version of that mistake into a bar that stops moving rather than a game that
+ * stops running.
  */
 export function secondsLeft(heat: number, wordsSurvived: number): number {
+  if (!Number.isFinite(heat) || !Number.isFinite(wordsSurvived)) return 0;
   return Math.max(0, heat) / coolingFor(wordsSurvived) / 1000;
 }
