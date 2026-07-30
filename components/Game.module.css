@@ -14,25 +14,10 @@
   z-index: 0;
 }
 
-/* The duellists wait in the room while you pick a mode. They are wraiths, so
-   they float rather than stand — a still sprite was what made the whole
-   backdrop read as a flat image instead of a place. */
-.standLeft, .standRight {
-  position: absolute;
-  bottom: 17%;
-  z-index: 1;
-  opacity: 0.5;
-  transform: translateX(-50%);
-  animation: idle 4.6s ease-in-out infinite;
-}
-.standLeft { left: 17%; }
-/* Offset by half a cycle so the two never bob in lockstep, which would look
-   mechanical rather than alive. */
-.standRight { left: 83%; animation-delay: -2.3s; }
-
-@keyframes idle {
-  50% { transform: translateX(-50%) translateY(-11px); }
-}
+/* The two duellists who used to wait in this room have gone; see Backdrop in
+   Game.tsx. Their positions and the idle bob went with them rather than being
+   left behind as rules nothing matches, which is how a stylesheet fills up with
+   selectors nobody dares delete. */
 
 /* Menu flanked by the player's record and the standings. The side panels are
    dropped on narrow screens rather than stacked, so a phone still opens
@@ -104,6 +89,52 @@
 
 .grow { flex: 1; min-width: 110px; }
 .full { width: 100%; }
+
+/* ---------- Choosing an opponent ----------
+ *
+ * This is the most consequential button on the menu and it used to behave like
+ * a tab: click, and the screen was simply somewhere else on the same frame.
+ * Now the one you picked catches light and holds for a beat before the duel
+ * takes over, so the choice reads as starting something.
+ */
+.grow[data-igniting] {
+  animation: ignite 320ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  border-color: var(--gold);
+  color: var(--gold);
+  z-index: 1;
+}
+
+@keyframes ignite {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 214, 110, 0.55);
+  }
+  35% {
+    transform: scale(1.05);
+    box-shadow: 0 0 26px 4px rgba(255, 214, 110, 0.75);
+  }
+  100% {
+    transform: scale(1.02);
+    box-shadow: 0 0 60px 10px rgba(255, 214, 110, 0);
+  }
+}
+
+/*
+ * The two you did not pick step back rather than greying out.
+ *
+ * They are disabled for the length of the ignition so a second click cannot
+ * queue a second duel, and `:disabled` on its own would paint them as broken.
+ * Fading them is the same information with the opposite tone: not unavailable,
+ * just not the one.
+ */
+.grow:disabled:not([data-igniting]) {
+  opacity: 0.32;
+  transition: opacity 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grow[data-igniting] { animation: none; }
+}
 
 @media (max-height: 620px) {
   .menu { gap: 9px; padding: 18px 22px; }

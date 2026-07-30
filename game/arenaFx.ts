@@ -244,14 +244,29 @@ export const ARENA_FX: Record<FxId, ArenaFx> = {
 };
 
 /**
+ * What everybody gets.
+ *
+ * The experiment is over and `plain` won, so it is no longer something you have
+ * to ask for by URL. `current` stays reachable at `?fx=current` for a little
+ * while, because two people on Reddit were shown the old screen and may want to
+ * compare, and because "it looked better before" is a claim worth being able to
+ * check rather than argue about.
+ *
+ * When that stops being useful, this whole file goes with the switcher and the
+ * four other presets, and the plain layout stops being a branch in Duel.tsx and
+ * becomes the only thing it draws.
+ */
+export const DEFAULT_FX: FxId = 'plain';
+
+/**
  * Read a preset name off a query string.
  *
- * Unknown values fall back to the control rather than erroring: this arrives on
+ * Unknown values fall back to the default rather than erroring: this arrives on
  * a URL that is going to be pasted into Reddit replies and typed by hand, and a
  * typo should cost a tester the experiment rather than the game.
  */
 export function asFx(value: string | null | undefined): FxId {
-  return FX_IDS.includes(value as FxId) ? (value as FxId) : 'current';
+  return FX_IDS.includes(value as FxId) ? (value as FxId) : DEFAULT_FX;
 }
 
 /** The next preset along, wrapping, so one key can walk the whole set. */

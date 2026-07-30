@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
+import { audio } from '@/game/audio';
 import { BOT_PROFILES } from '@/game/constants';
 import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
 import type { PowerKind } from '@/game/powers';
@@ -10,7 +11,6 @@ import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
 import ArenaScene from './ArenaScene';
 import Embers from './Embers';
-import Fighter from './Fighter';
 import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
@@ -19,13 +19,21 @@ import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
 import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useAccount } from '@/game/useAccount';
-import { useCharacter } from '@/game/serverProfile';
-import { asCharacter, type CharacterId } from '@/models/character';
+import type { CharacterId } from '@/models/character';
 import { track } from '@/game/analytics';
 import { duelToken } from '@/game/duelToken';
 import styles from './Game.module.css';
 
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
+
+/**
+ * How long a chosen bot burns before the duel takes the screen.
+ *
+ * Short enough that it reads as the button responding rather than the app
+ * hesitating. Without any pause the ignition is real but invisible, because the
+ * menu is replaced on the same frame that starts it.
+ */
+const IGNITE_MS = 320;
 
 interface Match {
   script: string[];
@@ -64,6 +72,36 @@ export default function Game() {
   const { status, subscribe, connect, disconnect, send, configured } = useDuelSocket();
   const [screen, setScreen] = useState<Screen>('menu');
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
+  /** Which bot has been chosen and is mid-ignition, if any. */
+  const [igniting, setIgniting] = useState<Difficulty | null>(null);
+  const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Choosing a bot lights it, then starts the duel.
+   *
+   * Picking an opponent used to swap the screen on the same frame as the click,
+   * so the most consequential button on the menu felt like a tab. The button now
+   * burns for a moment and takes the rising note the blade uses when it tiers
+   * up, which is the sound this game already means "something just grew" with.
+   *
+   * The others are disabled for the duration rather than left live: a second
+   * click during the wait would queue a second duel behind the first.
+   */
+  const ignite = useCallback((key: Difficulty) => {
+    setIgniting(key);
+    setDifficulty(key);
+    audio.tierUp();
+    igniteTimer.current = setTimeout(() => {
+      setScreen('solo');
+      setIgniting(null);
+    }, IGNITE_MS);
+  }, []);
+
+  // A duel started from a menu that has gone leaves a timer holding a reference
+  // to a screen nobody is looking at.
+  useEffect(() => () => {
+    if (igniteTimer.current) clearTimeout(igniteTimer.current);
+  }, []);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -271,7 +309,11 @@ export default function Game() {
             <button
               key={key}
               className={`btn ${styles.grow}`}
-              onClick={() => { setDifficulty(key); setScreen('solo'); }}
+              // Marks the one chosen, so the ignition plays on that button and
+              // not on all three at once.
+              data-igniting={igniting === key || undefined}
+              disabled={igniting !== null}
+              onClick={() => ignite(key)}
             >
               {BOT_PROFILES[key].label}
               <small className="btn-sub">{BOT_PROFILES[key].wpm} wpm</small>
@@ -307,25 +349,24 @@ export default function Game() {
   );
 }
 
-/** The menu and lobby sit inside the same arena the duel happens in. */
+/**
+ * The room the menu and lobby stand in.
+ *
+ * The two fighters are gone. They were there as the cheapest possible
+ * confirmation that the character picker had done something, which was a good
+ * reason right up until the duel stopped drawing fighters at all. A menu that
+ * introduces two figures the game then never shows again is worse than one that
+ * never promised them, and they were the largest thing on a screen whose panels
+ * are the actual content.
+ *
+ * The room itself stays: wall, torches, floor and embers. Nobody asked for the
+ * menu to be as bare as the arena, and the atmosphere costs nothing here because
+ * there is no word to read through it.
+ */
 function Backdrop() {
-  const mine = asCharacter(useCharacter());
-  // Someone other than you to face, so the menu never shows a mirror match.
-  const foil = mine === 'baron' ? 'wanderer' : 'baron';
-
   return (
     <>
-      <ArenaScene dim fixed className={styles.backdrop}>
-        {/* Whoever you have chosen stands on the left of your own menu — the
-            cheapest possible confirmation that the picker did something, seen
-            before you go looking for it. */}
-        <div className={styles.standLeft}>
-          <Fighter character={mine} facing="right" hitTick={0} />
-        </div>
-        <div className={styles.standRight}>
-          <Fighter character={foil} facing="left" hitTick={0} />
-        </div>
-      </ArenaScene>
+      <ArenaScene dim fixed className={styles.backdrop} />
       {/* Outside the scene, so the dim overlay does not swallow the motes. */}
       <Embers />
     </>

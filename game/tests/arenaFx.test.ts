@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARENA_FX, asFx, FX_IDS, nextFx, type FxId } from '../arenaFx';
+import { ARENA_FX, asFx, DEFAULT_FX, FX_IDS, nextFx, type FxId } from '../arenaFx';
 
 /**
  * The arena-treatment harness.
@@ -36,12 +36,37 @@ describe('the control preset', () => {
     });
   });
 
+  /**
+   * The control is still pinned above, but it is no longer what you get.
+   *
+   * `plain` won and is the default, so `current` is now only reachable at
+   * `?fx=current`. It stays because two people were shown the old screen on
+   * Reddit and "it looked better before" should be checkable rather than
+   * arguable.
+   */
+  it('is no longer the default, but is still reachable', () => {
+    expect(DEFAULT_FX).toBe('plain');
+    expect(asFx('current')).toBe('current');
+  });
+});
+
+describe('the default', () => {
   it('is what an absent or unknown preset resolves to', () => {
-    expect(asFx(null)).toBe('current');
-    expect(asFx(undefined)).toBe('current');
-    expect(asFx('')).toBe('current');
-    expect(asFx('calm')).toBe('current');
-    expect(asFx('TRIM')).toBe('current');
+    expect(asFx(null)).toBe(DEFAULT_FX);
+    expect(asFx(undefined)).toBe(DEFAULT_FX);
+    expect(asFx('')).toBe(DEFAULT_FX);
+    expect(asFx('calm')).toBe(DEFAULT_FX);
+    expect(asFx('PLAIN')).toBe(DEFAULT_FX);
+  });
+
+  /**
+   * Whatever the default is has to be a real preset. A typo here would resolve
+   * every visitor to an entry that does not exist, and `ARENA_FX[id]` would hand
+   * the duel `undefined` for every knob it reads.
+   */
+  it('names a preset that exists', () => {
+    expect(FX_IDS).toContain(DEFAULT_FX);
+    expect(ARENA_FX[DEFAULT_FX]).toBeDefined();
   });
 });
 

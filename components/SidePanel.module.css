@@ -52,8 +52,28 @@
   color: var(--faint);
 }
 
-.statValue { margin: 0; font-size: 15px; color: var(--ink); }
+.statValue {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .stat[data-highlight] .statValue { color: var(--gold); }
+
+/*
+ * The blade beside a best-ever streak.
+ *
+ * `margin-left: auto` so it sits against the right edge of the cell rather than
+ * hard against the number: the figure is what is being read, and the blade is a
+ * mark on the row, not part of the value.
+ */
+.statMark {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
 
 .unit { font-size: 9px; margin-left: 3px; color: var(--faint); }
 

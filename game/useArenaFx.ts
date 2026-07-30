@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import { ARENA_FX, asFx, nextFx, type ArenaFx, type FxId } from './arenaFx';
+import { ARENA_FX, asFx, DEFAULT_FX, nextFx, type ArenaFx, type FxId } from './arenaFx';
 
 export interface ArenaFxControl {
   fx: ArenaFx;
@@ -70,7 +70,8 @@ function write(id: FxId) {
 export function useArenaFx(): ArenaFxControl {
   // Primitives, so referential stability costs nothing and no snapshot cache is
   // needed. Two subscriptions to the same store rather than one object.
-  const id = useSyncExternalStore(subscribe, readId, () => 'current' as FxId);
+  // The server has no query string, so it renders what an absent one means.
+  const id = useSyncExternalStore(subscribe, readId, () => DEFAULT_FX);
   const testing = useSyncExternalStore(subscribe, readTesting, () => false);
 
   const set = useCallback((next: FxId) => write(next), []);
