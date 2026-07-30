@@ -67,6 +67,15 @@ export type ServerMessage =
      * telling apart, because only one of them is a fact.
      */
     ended?: 'typo' | 'cold';
+    /**
+     * A sentence the server added to the script while judging this word.
+     *
+     * The run has no end, so the script is topped up as it goes. Without this
+     * the client walks off the end of the ten sentences it was handed at the
+     * start, somewhere around word eighty, and every word after that disagrees
+     * with the referee.
+     */
+    appended?: string;
   }
   /** A room filling up, before it is full enough to start. */
   | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
