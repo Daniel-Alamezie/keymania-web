@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES } from '@/game/constants';
@@ -26,6 +26,7 @@ import { useAccount } from '@/game/useAccount';
 import type { CharacterId } from '@/models/character';
 import { track } from '@/game/analytics';
 import { duelToken } from '@/game/duelToken';
+import { previewMatch } from '@/game/previewMatch';
 import styles from './Game.module.css';
 
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching';
@@ -123,6 +124,39 @@ export default function Game() {
   }, []);
   /** The rating the queue is looking around, once the server has confirmed. */
   const [queuedAt, setQueuedAt] = useState<number | null>(null);
+
+  /**
+   * A room with nobody in it, for looking at.
+   *
+   * `?preview=4` renders the duel as four players would see it, without a server
+   * and without three other people. It is the only way to check that layout: a
+   * bot duel is always 1v1, and a real four-way needs four accounts connected at
+   * once, which is why the three-opponent arena went unlooked-at long enough to
+   * break when the fighters were removed.
+   *
+   * Read after mount rather than during render, for the same hydration reason as
+   * `useArenaFx`: the server has no query string, so resolving this while
+   * rendering would produce different markup on each side.
+   */
+  const asked = useSyncExternalStore(
+    // The query string cannot change without a reload here, so there is nothing
+    // to subscribe to. Reading it through the store is what keeps the server
+    // render (no query string) and the client render from disagreeing.
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get('preview'),
+    () => null,
+  );
+  const [previewClosed, setPreviewClosed] = useState(false);
+
+  /**
+   * Built once per requested size rather than on every render, because the
+   * script is randomly chosen and a fresh one each time would reshuffle the
+   * words under the cursor.
+   */
+  const preview = useMemo(
+    () => (asked ? previewMatch({ players: Number(asked) || 4 }) : null),
+    [asked],
+  );
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -326,6 +360,22 @@ export default function Game() {
 
   if (screen === 'solo') {
     return <Duel difficulty={difficulty} onExit={() => setScreen('menu')} />;
+  }
+
+  /**
+   * The preview wins over everything, including the menu.
+   *
+   * Checked first so `?preview=4` needs no clicking through: the point is to
+   * land straight on the arrangement being judged.
+   */
+  if (preview && !previewClosed) {
+    return (
+      <Duel
+        difficulty={difficulty}
+        multiplayer={preview}
+        onExit={() => setPreviewClosed(true)}
+      />
+    );
   }
 
   if (screen === 'searching') {
