@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import { useProfile } from '@/game/profile';
 import ChallengeList from './ChallengeList';
-import PixelSprite, { type SpriteName } from './PixelSprite';
 import { useServerProfile, winRate } from '@/game/serverProfile';
-import { bladeTier } from '@/game/engine';
-import type { BladeTier } from '@/models/scoring';
 import type { DuelResult, Tally } from '@/models/profile';
 import type { ChallengeProgress } from '@/models/profile';
 import styles from './SidePanel.module.css';
@@ -162,21 +159,7 @@ function Body({ tally, recent }: { tally: Tally; recent: DuelResult[] }) {
       <dl className={styles.stats}>
         <Stat label="Best speed" value={`${tally.bestWpm}`} unit="wpm" highlight />
         <Stat label="Best accuracy" value={`${tally.bestAccuracy}`} unit="%" />
-        {/*
-          * The blade that streak reached, kept beside it.
-          *
-          * A blade rather than a flame, deliberately. The game has three marks
-          * and each means one thing: a crown is a podium finish, a flame is a
-          * rating band, a blade is a chain. The forge in the arena already says
-          * a streak in blades, so a best-ever chain shown as anything else would
-          * be the same idea in a second language. This is the trophy for the
-          * number the forge was building towards.
-          */}
-        <Stat
-          label="Best combo"
-          value={`x${tally.bestCombo}`}
-          mark={tally.bestCombo > 0 ? bladeTier(tally.bestCombo) : undefined}
-        />
+        <Stat label="Best combo" value={`x${tally.bestCombo}`} />
         <Stat label="Win rate" value={rate === null ? '—' : `${rate}`} unit={rate === null ? undefined : '%'} />
       </dl>
 
@@ -200,22 +183,14 @@ function Body({ tally, recent }: { tally: Tally; recent: DuelResult[] }) {
   );
 }
 
-function Stat({ label, value, unit, highlight, mark }: {
+function Stat({ label, value, unit, highlight }: {
   label: string; value: string; unit?: string; highlight?: boolean;
-  /** A blade tier to show beside the figure, for stats that earned one. */
-  mark?: BladeTier;
 }) {
   return (
     <div className={styles.stat} data-highlight={highlight || undefined}>
       <dt className={styles.statLabel}>{label}</dt>
       <dd className={`${styles.statValue} pixel-font`}>
         {value}{unit && <small className={styles.unit}>{unit}</small>}
-        {mark && (
-          <span className={styles.statMark}>
-            {/* Quarter of the sprite's own height, so the pixels land whole. */}
-            <PixelSprite name={`blade-${mark}` as SpriteName} height={14 + mark * 2} />
-          </span>
-        )}
       </dd>
     </div>
   );
