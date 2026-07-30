@@ -22,6 +22,14 @@ export interface SurvivalConfig {
   onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) => void;
   onExit: () => void;
   onAgain: () => void;
+  /**
+   * Another run has been asked for and the server has not armed it yet.
+   *
+   * A run needs a room, and a room is a round trip. Without something to show
+   * for that, "Go again" is a button that swallows a click, which is precisely
+   * how a player learns to press it four more times.
+   */
+  starting: boolean;
 }
 
 /**
@@ -39,7 +47,7 @@ export interface SurvivalConfig {
  * with the reasons kept, and the two unify after this has actually been played.
  */
 export default function Survival({
-  script, countdownMs, subscribe, onWord, onExit, onAgain,
+  script, countdownMs, subscribe, onWord, onExit, onAgain, starting,
 }: SurvivalConfig) {
   /**
    * Armed from the script in the initialiser rather than in an effect.
@@ -304,7 +312,18 @@ export default function Survival({
             <p className={styles.stat}>
               {survivalWpm(state, state.finishedAt)} wpm
             </p>
-            <button className="btn btn-primary" onClick={onAgain}>Go again</button>
+            {/* Disabled while it works, because a second click is a second
+                room, and the label says which of the two it is doing rather
+                than leaving the player to guess from a button that went
+                quiet. */}
+            <button
+              className="btn btn-primary"
+              onClick={onAgain}
+              disabled={starting}
+              data-working={starting || undefined}
+            >
+              {starting ? 'Stoking the forge' : 'Go again'}
+            </button>
             <button className="btn btn-ghost" onClick={onExit}>Back</button>
           </div>
         </div>

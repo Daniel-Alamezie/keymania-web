@@ -125,8 +125,26 @@ export default function Game() {
   }, []);
   /** The rating the queue is looking around, once the server has confirmed. */
   const [queuedAt, setQueuedAt] = useState<number | null>(null);
-  /** The survival run in progress, once the server has armed one. */
-  const [run, setRun] = useState<{ script: string[]; countdownMs: number | undefined } | null>(null);
+  /**
+   * The survival run in progress, once the server has armed one.
+   *
+   * `id` counts runs rather than identifying rooms. `Survival` is keyed on it,
+   * so arming the next run remounts the screen and a run genuinely starts from
+   * nothing. It was keyed on the first sentence of the script before, which is
+   * the same thing right up to the day two runs open on the same sentence and
+   * the second one inherits the first one's corpse.
+   */
+  const [run, setRun] = useState<
+    { id: number; script: string[]; countdownMs: number | undefined } | null
+  >(null);
+  /**
+   * A run has been asked for and the server has not answered yet.
+   *
+   * Kept so "Go again" can stay on the result screen and say it is working.
+   * It used to clear the run and let the screen fall through to the menu while
+   * the next one was arranged, which reads as being thrown out of the game.
+   */
+  const [starting, setStarting] = useState(false);
 
   /**
    * Which mode is open, if any.
@@ -188,6 +206,9 @@ export default function Game() {
           // A refused search leaves the player staring at a spinner that will
           // never resolve, because the server is not looking for them.
           setScreen((current) => (current === 'searching' ? 'menu' : current));
+          // Same for a refused run: the button has to come back, or the result
+          // screen sits there saying "forging" at somebody forever.
+          setStarting(false);
         }
         // Confirmation that a seat was opened. The screen is already showing the
         // search, so this only carries the rating it queued at.
@@ -237,7 +258,12 @@ export default function Game() {
            * What tells them apart is `mode`, and nothing else.
            */
           if (message.mode === 'survival') {
-            setRun({ script: message.script, countdownMs: message.countdownMs });
+            setStarting(false);
+            setRun((previous) => ({
+              id: (previous?.id ?? 0) + 1,
+              script: message.script,
+              countdownMs: message.countdownMs,
+            }));
             setScreen('survival');
             return;
           }
@@ -288,11 +314,13 @@ export default function Game() {
    */
   const startSurvival = useCallback(async () => {
     setError(null);
+    setStarting(true);
     connect();
 
     const token = await duelToken();
     if (!token) {
       setError('Your session expired. Sign in again to play.');
+      setStarting(false);
       return;
     }
     send({ action: 'createRoom', name: account.displayName ?? '', visibility: 'private', token, mode: 'survival' });
@@ -374,6 +402,8 @@ export default function Game() {
     setMatch(null);
     setWaiting(null);
     setRooms([]);
+    setRun(null);
+    setStarting(false);
     setScreen('menu');
     try {
       disconnect();
@@ -432,15 +462,25 @@ export default function Game() {
   if (screen === 'survival' && run) {
     return (
       <Survival
-        // Keyed on the script so "Go again" mounts a genuinely fresh run rather
-        // than leaving the previous one's state to be reset piece by piece.
-        key={run.script[0]}
+        // Keyed on the run so "Go again" mounts a genuinely fresh one rather
+        // than leaving the previous run's state to be reset piece by piece.
+        key={run.id}
         script={run.script}
         countdownMs={run.countdownMs}
         subscribe={subscribe}
         onWord={(word, elapsedMs, accuracy, typos) =>
           send({ action: 'survivalWord', word, elapsedMs, accuracy, typos })}
-        onAgain={() => { setRun(null); void startSurvival(); }}
+        /**
+         * The run stays on screen while the next one is being arranged.
+         *
+         * Clearing it here is what sent the player back to the menu: with no
+         * run, this branch falls through to the menu render, so "Go again"
+         * flashed the main screen before the server answered — and if the
+         * server refused, which it did every time because the finished room
+         * was never closed, that was simply where they ended up.
+         */
+        starting={starting}
+        onAgain={() => void startSurvival()}
         onExit={leave}
       />
     );
@@ -563,6 +603,17 @@ export default function Game() {
           * anyway has agreed to the terms, which is the difference between hard
           * and unfair.
           */}
+        {/*
+          * Whatever the server refused, said out loud.
+          *
+          * `error` has been set on this screen since quick play existed and only
+          * ever rendered inside the lobby, so a refusal on the menu was
+          * swallowed whole. "You are already hosting a duel" was arriving on
+          * every attempt to start a second run and going nowhere, which is why
+          * the button looked broken rather than blocked.
+          */}
+        {error && <p className={styles.error} role="status">{error}</p>}
+
         {mode === 'survival' && (
           <div className={styles.modePanel}>
             <p className={styles.modeBlurb}>
@@ -571,8 +622,13 @@ export default function Game() {
               got.
             </p>
             {account.signedIn ? (
-              <button className={`btn btn-primary ${styles.full}`} onClick={() => void startSurvival()}>
-                Start a run
+              <button
+                className={`btn btn-primary ${styles.full}`}
+                onClick={() => void startSurvival()}
+                disabled={starting}
+                data-working={starting || undefined}
+              >
+                {starting ? 'Stoking the forge' : 'Start a run'}
               </button>
             ) : (
               <LoginLink className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
