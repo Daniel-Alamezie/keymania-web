@@ -33,8 +33,23 @@ export default function BoardRows({ entries, board }: {
          * never ambiguous about which it followed.
          */
         const rating = entry.rating ?? START_RATING;
-        const score = board === 'standings' ? rating : entry.wpm;
-        const sub = board === 'standings' ? `${entry.wpm} wpm` : `${entry.accuracy}%`;
+        /**
+         * A lookup rather than chained ternaries, which is what this was and
+         * what stopped scaling at the third board: with two entries the reader
+         * can hold both branches, with three the else-arm is doing double duty
+         * and the pairing between a score and its sub-figure is implicit.
+         *
+         * Survival shows speed underneath rather than accuracy, and that is the
+         * point of the row rather than a leftover: one wrong letter ends a run,
+         * so every run on this board was perfect and an accuracy column would
+         * read 100% all the way down. The speed is the figure that says how the
+         * distance was earned.
+         */
+        const { score, sub } = ({
+          standings: { score: rating, sub: `${entry.wpm} wpm` },
+          speed: { score: entry.wpm, sub: `${entry.accuracy}%` },
+          streak: { score: entry.streak ?? 0, sub: `${entry.wpm} wpm` },
+        } satisfies Record<BoardKind, { score: number; sub: string }>)[board];
 
         return (
           <li

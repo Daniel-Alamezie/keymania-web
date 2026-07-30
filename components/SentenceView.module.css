@@ -135,15 +135,48 @@
  *
  * The stream continues past the viewport, so it fades out rather than being
  * sliced off — a hard cut reads as a container, a fade reads as more text.
+ *
+ * **Masked by default, painted only on request.** A mask takes the content's own
+ * opacity down and therefore works over anything; the gradients below fade the
+ * line by painting `--panel` across each end, which only disappears on a
+ * background that is already `--panel`. Exactly one screen has that, and it was
+ * the default, so every other screen got two lighter slabs with hard vertical
+ * edges and the words sat on a panel nobody put there. The duel's plain layout
+ * fixed it for itself; survival rendered the same component on the same kind of
+ * background and inherited the problem without the fix.
+ *
+ * Turned round so the version that works everywhere is what you get for free,
+ * and the one with a prerequisite has to ask. `layout` is only ever `arena` or
+ * `plain`, so asking is a single named condition rather than a list of preset
+ * names to keep in step.
  */
+.viewport {
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
+
 .fadeLeft,
 .fadeRight {
+  display: none;
   position: absolute;
   top: 0;
   bottom: 0;
   width: 12%;
   pointer-events: none;
 }
+
+/*
+ * The arena floor asks for the painted version.
+ *
+ * Over a repeating flagstone tile a mask is not enough: fading the text out
+ * leaves the stone showing through at full strength right where the line
+ * disappears, so the end of the stream competes with the floor instead of
+ * receding into it. There the scrim colour is the background colour, which is
+ * the condition the gradients need and the only place it holds.
+ */
+[data-layout='arena'] .viewport { mask-image: none; }
+
+[data-layout='arena'] .fadeLeft,
+[data-layout='arena'] .fadeRight { display: block; }
 
 .fadeLeft {
   left: 0;
@@ -163,20 +196,11 @@
  */
 
 /*
- * Fade the text, do not paint over it.
- *
- * The two gradients above fade the line by drawing `--panel` across each end.
- * That is invisible against the arena's floor, which is the colour they were
- * matched to, and on a bare background it paints two lighter slabs with hard
- * vertical edges: the words end up sitting on a panel nobody put there. A mask
- * takes the content's own opacity down instead, so there is nothing to match.
+ * Nothing here turns the edges off any more. Fading the text rather than
+ * painting over it is what every screen gets by default now — see Edges above
+ * — so the rule that used to live here would only be restating it, and a rule
+ * that restates the default is one more place to have to keep in step.
  */
-[data-layout='plain'] .fadeLeft,
-[data-layout='plain'] .fadeRight { display: none; }
-
-[data-layout='plain'] .viewport {
-  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
-}
 
 /*
  * A charged word marked rather than boxed.

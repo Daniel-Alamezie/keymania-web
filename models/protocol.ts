@@ -13,6 +13,7 @@
 import type { CharacterId } from './character';
 import type { PowerKind } from './powers';
 import type { RoomSize, RoomSummary, Visibility } from './room';
+import type { BladeTier } from './scoring';
 
 export type SocketStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';
 
@@ -37,10 +38,58 @@ export type ServerMessage =
   | { type: 'searching'; roomId: string; rating: number }
   /** The search was called off, by you. */
   | { type: 'searchStopped' }
+  /**
+   * One word of a survival run, judged.
+   *
+   * Sent for every word, surviving or not, because the two carry the same
+   * information and the client needs the last one most of all: `ended` is how a
+   * run finishes, and a message that stopped arriving would be indistinguishable
+   * from a dropped connection.
+   */
+  | {
+    type: 'survivalWord';
+    survived: boolean;
+    combo: number;
+    maxCombo: number;
+    tier: BladeTier;
+    wpm: number;
+    /** Words survived, which in sudden death is also the score. */
+    wordIndex: number;
+    /** Milliseconds of heat the forge holds, for the bar to drain from. */
+    heat: number;
+    /** How fast that heat is being spent, which rises through a run. */
+    cooling: number;
+    /**
+     * Why the run ended, absent while it continues.
+     *
+     * `typo` is reported by the client and taken on trust; `cold` is the
+     * server's own call, measured between two timestamps it wrote itself. Worth
+     * telling apart, because only one of them is a fact.
+     */
+    ended?: 'typo' | 'cold';
+    /**
+     * A sentence the server added to the script while judging this word.
+     *
+     * The run has no end, so the script is topped up as it goes. Without this
+     * the client walks off the end of the ten sentences it was handed at the
+     * start, somewhere around word eighty, and every word after that disagrees
+     * with the referee.
+     */
+    appended?: string;
+  }
   /** A room filling up, before it is full enough to start. */
   | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
   | {
     type: 'matchStart';
+    /**
+     * What is starting.
+     *
+     * Absent means a duel, which is what every release before survival sent and
+     * what every duel still sends. The client routes on this rather than on the
+     * roster length, because a room of one is a legitimate thing for a duel to
+     * become mid-match and a survival run is not something to fall into.
+     */
+    mode?: 'duel' | 'survival';
     roomId: string;
     script: string[];
     /** Charged words keyed by flat word index. */
@@ -127,6 +176,14 @@ export type ClientMessage =
     token: string;
     /** How many players the room waits for. Omitted means a duel. */
     capacity?: RoomSize;
+    /**
+     * A room of one, refereed against the clock rather than an opponent.
+     *
+     * Omitted means a duel, which is what every release before survival sent.
+     * The server starts a survival room the moment it exists, so the reply is
+     * `matchStart` rather than `roomCreated`.
+     */
+    mode?: 'survival';
   }
   | { action: 'joinRoom'; roomId: string; name: string; token: string }
   | { action: 'listRooms' }
@@ -143,6 +200,15 @@ export type ClientMessage =
   | { action: 'quickPlay'; name: string; token: string }
   /** Stop looking, and tear down the seat that was opened for you. */
   | { action: 'cancelQueue' }
+  /**
+   * One word of a survival run.
+   *
+   * The same shape as `wordComplete` and a different route, because the two are
+   * judged by different referees: a duel word is scored against an opponent, and
+   * this one against the clock. Sharing a route would have meant a mode branch
+   * inside the handler carrying the lost-update, countdown and stagger fixes.
+   */
+  | { action: 'survivalWord'; word: string; elapsedMs: number; accuracy?: number; typos?: number }
   // Running accuracy rides along here rather than on its own route. The server
   // cannot verify it, so it is stored for the player's record but never ranked.
   //

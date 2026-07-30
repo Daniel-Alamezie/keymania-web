@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
+import { invalidateBoards } from '@/game/useBoard';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES } from '@/game/constants';
 import { BOT_UNLOCK_WPM, bestSpeed, isBotUnlocked, suggestedBot } from '@/game/botLadder';
@@ -18,6 +19,7 @@ import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
 import Searching from './Searching';
+import Survival from './Survival';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
@@ -29,7 +31,7 @@ import { duelToken } from '@/game/duelToken';
 import { previewMatch } from '@/game/previewMatch';
 import styles from './Game.module.css';
 
-type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching';
+type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival';
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -124,6 +126,36 @@ export default function Game() {
   }, []);
   /** The rating the queue is looking around, once the server has confirmed. */
   const [queuedAt, setQueuedAt] = useState<number | null>(null);
+  /**
+   * The survival run in progress, once the server has armed one.
+   *
+   * `id` counts runs rather than identifying rooms. `Survival` is keyed on it,
+   * so arming the next run remounts the screen and a run genuinely starts from
+   * nothing. It was keyed on the first sentence of the script before, which is
+   * the same thing right up to the day two runs open on the same sentence and
+   * the second one inherits the first one's corpse.
+   */
+  const [run, setRun] = useState<
+    { id: number; script: string[]; countdownMs: number | undefined } | null
+  >(null);
+  /**
+   * A run has been asked for and the server has not answered yet.
+   *
+   * Kept so "Go again" can stay on the result screen and say it is working.
+   * It used to clear the run and let the screen fall through to the menu while
+   * the next one was arranged, which reads as being thrown out of the game.
+   */
+  const [starting, setStarting] = useState(false);
+
+  /**
+   * Which mode is open, if any.
+   *
+   * Closed by default, so the menu at rest is Play and two labels rather than
+   * Play and eight buttons. Practice unfolds the ladder in place; survival
+   * unfolds what it is about to do to you. Clicking the open one closes it,
+   * because a player who opened it to look should be able to put it back.
+   */
+  const [mode, setMode] = useState<'practice' | 'survival' | null>(null);
 
   /**
    * A room with nobody in it, for looking at.
@@ -170,11 +202,39 @@ export default function Game() {
     () =>
       subscribe((message) => {
         if (message.type === 'roomList') setRooms(message.rooms);
+
+        /**
+         * Anything this player just did that a board would want to know about.
+         *
+         * The cache's staleness window exists for other people's results, which
+         * nothing in this browser can hear about. It is the wrong instrument for
+         * your own: coming back from the best run of your life to a board that
+         * had not noticed reads as the board being broken, and half a minute is
+         * a long time to sit looking at that.
+         *
+         * `gameOver` only ever comes from a duel this server refereed — a bot
+         * duel never touches the socket — so it is exactly the set of duels that
+         * can move a board. A `survivalWord` carrying `ended` is a run
+         * finishing, which the server has by then already written to the record.
+         *
+         * The obvious third case is `rating`, which the server sends each player
+         * after a refereed duel. It is not here because this client has never
+         * declared that message and nothing reads it, so keying on it would be
+         * writing against a shape nothing enforces — the mistake that has been
+         * the theme of this whole stretch of work. `gameOver` arrives alongside
+         * it and is already in the protocol.
+         */
+        if (message.type === 'gameOver' || (message.type === 'survivalWord' && message.ended)) {
+          invalidateBoards();
+        }
         if (message.type === 'error') {
           setError(message.message);
           // A refused search leaves the player staring at a spinner that will
           // never resolve, because the server is not looking for them.
           setScreen((current) => (current === 'searching' ? 'menu' : current));
+          // Same for a refused run: the button has to come back, or the result
+          // screen sits there saying "forging" at somebody forever.
+          setStarting(false);
         }
         // Confirmation that a seat was opened. The screen is already showing the
         // search, so this only carries the rating it queued at.
@@ -214,6 +274,26 @@ export default function Game() {
         if (message.type === 'matchStart') {
           setError(null);
           setWaiting(null);
+
+          /**
+           * A survival run arrives on the same message a duel does.
+           *
+           * Deliberately the same shape: the client already knows how to take a
+           * script, a slot and a countdown and begin, and a parallel start
+           * message would be two ways of starting a game that can drift apart.
+           * What tells them apart is `mode`, and nothing else.
+           */
+          if (message.mode === 'survival') {
+            setStarting(false);
+            setRun((previous) => ({
+              id: (previous?.id ?? 0) + 1,
+              script: message.script,
+              countdownMs: message.countdownMs,
+            }));
+            setScreen('survival');
+            return;
+          }
+
           setMatch({
             script: message.script,
             // Falls back to the legacy single-opponent field so an older
@@ -246,6 +326,31 @@ export default function Game() {
     connect();
     setScreen('lobby');
   };
+
+  /**
+   * Open a survival run.
+   *
+   * A room of one, which the server starts the moment it exists rather than
+   * waiting for anybody, so the reply is `matchStart` rather than `roomCreated`.
+   *
+   * Signed in only, and that is not about ranking: the run needs a server to
+   * referee it, and a room needs an account to belong to. The mode is playable
+   * by anyone in the sense that nothing about a run is gated, but there is no
+   * offline path the way there is against a bot.
+   */
+  const startSurvival = useCallback(async () => {
+    setError(null);
+    setStarting(true);
+    connect();
+
+    const token = await duelToken();
+    if (!token) {
+      setError('Your session expired. Sign in again to play.');
+      setStarting(false);
+      return;
+    }
+    send({ action: 'createRoom', name: account.displayName ?? '', visibility: 'private', token, mode: 'survival' });
+  }, [connect, send, account.displayName]);
 
   /**
    * Find me a game.
@@ -323,6 +428,8 @@ export default function Game() {
     setMatch(null);
     setWaiting(null);
     setRooms([]);
+    setRun(null);
+    setStarting(false);
     setScreen('menu');
     try {
       disconnect();
@@ -374,6 +481,33 @@ export default function Game() {
         difficulty={difficulty}
         multiplayer={preview}
         onExit={() => setPreviewClosed(true)}
+      />
+    );
+  }
+
+  if (screen === 'survival' && run) {
+    return (
+      <Survival
+        // Keyed on the run so "Go again" mounts a genuinely fresh one rather
+        // than leaving the previous run's state to be reset piece by piece.
+        key={run.id}
+        script={run.script}
+        countdownMs={run.countdownMs}
+        subscribe={subscribe}
+        onWord={(word, elapsedMs, accuracy, typos) =>
+          send({ action: 'survivalWord', word, elapsedMs, accuracy, typos })}
+        /**
+         * The run stays on screen while the next one is being arranged.
+         *
+         * Clearing it here is what sent the player back to the menu: with no
+         * run, this branch falls through to the menu render, so "Go again"
+         * flashed the main screen before the server answered — and if the
+         * server refused, which it did every time because the finished room
+         * was never closed, that was simply where they ended up.
+         */
+        starting={starting}
+        onAgain={() => void startSurvival()}
+        onExit={leave}
       />
     );
   }
@@ -455,7 +589,83 @@ export default function Game() {
           </LoginLink>
         )}
 
-        <span className="eyebrow">Or practise against a bot</span>
+        {/*
+          * Two modes, under the one button that is neither.
+          *
+          * Play is "I want a game now" and needs no decision. These are the two
+          * decisions worth offering, side by side and equal, because they are
+          * alternatives rather than a list: one is practice against a machine,
+          * the other is a run that ends the first time you slip.
+          *
+          * Practice opens the ladder in place rather than on its own screen, so
+          * six bots stop being six buttons a player has to read past on the way
+          * to anything else.
+          */}
+        <div className={styles.modes} role="tablist" aria-label="Game modes">
+          {([
+            { id: 'practice', label: 'Practice', note: 'against a bot' },
+            { id: 'survival', label: 'Survival', note: 'one mistake ends it' },
+          ] as const).map((choice) => (
+            <button
+              key={choice.id}
+              role="tab"
+              aria-selected={mode === choice.id}
+              className={`btn ${styles.mode}`}
+              data-active={mode === choice.id || undefined}
+              data-mode={choice.id}
+              onClick={() => setMode(mode === choice.id ? null : choice.id)}
+            >
+              {choice.label}
+              <small className="btn-sub">{choice.note}</small>
+            </button>
+          ))}
+        </div>
+
+        {/*
+          * Survival explains itself before it starts.
+          *
+          * Being frightening is the selling point, so the warning is the copy
+          * rather than small print under it. A player who reads this and starts
+          * anyway has agreed to the terms, which is the difference between hard
+          * and unfair.
+          */}
+        {/*
+          * Whatever the server refused, said out loud.
+          *
+          * `error` has been set on this screen since quick play existed and only
+          * ever rendered inside the lobby, so a refusal on the menu was
+          * swallowed whole. "You are already hosting a duel" was arriving on
+          * every attempt to start a second run and going nowhere, which is why
+          * the button looked broken rather than blocked.
+          */}
+        {error && <p className={styles.error} role="status">{error}</p>}
+
+        {mode === 'survival' && (
+          <div className={styles.modePanel}>
+            <p className={styles.modeBlurb}>
+              No health, no opponent. One mistyped letter ends the run, and the
+              forge cools faster the longer you last. Your score is how far you
+              got.
+            </p>
+            {account.signedIn ? (
+              <button
+                className={`btn btn-primary ${styles.full}`}
+                onClick={() => void startSurvival()}
+                disabled={starting}
+                data-working={starting || undefined}
+              >
+                {starting ? 'Stoking the forge' : 'Start a run'}
+              </button>
+            ) : (
+              <LoginLink className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
+                Sign in to run
+                <small className="btn-sub">a run needs a server to referee it</small>
+              </LoginLink>
+            )}
+          </div>
+        )}
+
+        {mode === 'practice' && (
         <div className={styles.ladder}>
           {DIFFICULTIES.map((key) => {
             const unlocked = isBotUnlocked(key, myBest);
@@ -486,6 +696,7 @@ export default function Game() {
             );
           })}
         </div>
+        )}
 
           {/*
             * Rooms and codes, demoted to a link.

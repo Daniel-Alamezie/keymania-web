@@ -109,6 +109,23 @@ describe('the three treatments', () => {
   });
 
   /**
+   * Two layouts, and the names are load-bearing outside TypeScript.
+   *
+   * `Duel` renders `layout` straight into `data-layout`, and
+   * SentenceView.module.css keys the painted edge gradients on the literal
+   * string `arena` — they need a background that is already `--panel`, which is
+   * true of the arena floor and nowhere else. A third layout, or a rename, would
+   * silently fall to the masked default. That is the safe direction now, which
+   * is the point of having turned it round, but it should be a decision rather
+   * than a surprise.
+   */
+  it('only ever names two layouts, because a stylesheet reads them', () => {
+    for (const id of FX_IDS) {
+      expect(['arena', 'plain']).toContain(ARENA_FX[id].layout);
+    }
+  });
+
+  /**
    * The canvas draws its blade between two fixed lane positions at mid height,
    * which in a layout with the sentence in the middle of the screen means driving
    * it straight through the words. A layout without fighters therefore cannot use
