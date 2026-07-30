@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  initialSurvival, survivalReducer, survivalWpm,
+  currentWord, initialSurvival, survivalReducer, survivalWpm,
   type SurvivalState,
 } from '../survivalReducer';
 import { CAPACITY_MS } from '../heat';
@@ -217,6 +217,39 @@ describe('the clock', () => {
     expect(type(running(), 'x', 7_000).finishedAt).toBe(7_000);
     expect(survivalReducer(running(), { type: 'end', reason: 'cold', now: 9_000 }).finishedAt)
       .toBe(9_000);
+  });
+});
+
+/**
+ * The word a run died in the middle of.
+ *
+ * A wrong key ends the run without ever committing a word, so this is the only
+ * thing there is to name when telling the server it is over. Getting it wrong is
+ * not cosmetic: the referee matches it against the word it owed, and a mismatch
+ * used to leave the room open, which is what made every second run of a session
+ * impossible to start.
+ */
+describe('currentWord', () => {
+  const at = (cursor: number) => currentWord({ ...running(), cursor });
+
+  it('names the whole word, not the part already typed', () => {
+    expect(at(0)).toBe('one');
+    expect(at(1)).toBe('one');
+    expect(at(2)).toBe('one');
+  });
+
+  it('names the word the space is about to commit, not the next one', () => {
+    expect(at(3)).toBe('one');
+  });
+
+  it('moves on once the cursor is past the space', () => {
+    expect(at(4)).toBe('two');
+    expect(at(5)).toBe('two');
+  });
+
+  /** Sentences carry a trailing space, so the last word has a right edge too. */
+  it('does not run off the end on the final word', () => {
+    expect(at(7)).toBe('two');
   });
 });
 

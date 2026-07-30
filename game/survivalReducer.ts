@@ -247,6 +247,19 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
   }
 }
 
+/**
+ * The word the cursor is standing in, whole.
+ *
+ * Not the part already typed — the whole word, because the only thing that reads
+ * it is the referee, and the referee is comparing against the word it owed you.
+ * Used when a run ends mid-word, which is every run that ends on a typo.
+ */
+export function currentWord(state: SurvivalState): string {
+  const start = state.sentence.lastIndexOf(' ', Math.max(0, state.cursor - 1)) + 1;
+  const end = state.sentence.indexOf(' ', state.cursor);
+  return state.sentence.slice(start, end < 0 ? undefined : end);
+}
+
 /** Words per minute across the whole run, on the standard five-character word. */
 export function survivalWpm(state: SurvivalState, now: number): number {
   const elapsed = now - state.startedAt;

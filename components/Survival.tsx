@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  initialSurvival, survivalReducer, survivalWpm,
+  currentWord, initialSurvival, survivalReducer, survivalWpm,
 } from '@/game/survivalReducer';
+import { secondsLeft } from '@/game/heat';
 import { audio } from '@/game/audio';
 import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
@@ -126,6 +127,21 @@ export default function Survival({
 
     if (!correct) {
       audio.miss();
+      /**
+       * The referee has to be told, and this is the only chance to tell it.
+       *
+       * A wrong key reaches no handler on its own: it does not advance the
+       * cursor, so no word is ever committed and nothing is sent. The server was
+       * left holding a room that was still `playing` for a run that had been
+       * over for minutes, and since a live room is one you are still hosting,
+       * every later run was refused. The player saw a Go again that did nothing
+       * and a menu that did nothing, which is one bug wearing two faces.
+       *
+       * The word goes with it because the server matches what it owed you. It is
+       * the whole word rather than the part typed: what was typed is wrong by
+       * definition, and what it wanted is the thing worth naming.
+       */
+      onWord(currentWord(snapshot), Date.now() - snapshot.wordStartedAt, 100, 1);
       dispatch({ type: 'typed', char: key, now: Date.now() });
       return;
     }
@@ -207,6 +223,34 @@ export default function Survival({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [state.phase, typeChar, onExit]);
+
+  /**
+   * The forge going out, on its own, with nobody typing.
+   *
+   * The other half of the same bug as the typo above, and the one that made the
+   * mode's second death decorative. Cold was only ever noticed when the *next*
+   * word arrived, because that is the only thing that runs the server's clock.
+   * A player who watched the bar reach zero and stopped — which is exactly what
+   * somebody does when they can see they are dead — sat on a run that never
+   * ended, in a room that stayed open, and could not start another.
+   *
+   * So the client keeps its own timer for the moment the bar hits nothing, and
+   * sends the word it was on when it does. The server recomputes the gap from
+   * timestamps it wrote itself and reaches the same verdict independently, which
+   * is what stops this being a client that can declare its own runs over.
+   */
+  useEffect(() => {
+    if (state.phase !== 'running') return;
+    const left = secondsLeft(state.heat, state.words) * 1000;
+    const id = track(setTimeout(() => {
+      const snapshot = stateRef.current;
+      if (snapshot.phase !== 'running') return;
+      onWord(currentWord(snapshot), Date.now() - snapshot.wordStartedAt, 100, 0);
+      audio.finishSwell(false);
+      dispatch({ type: 'end', reason: 'cold', now: Date.now() });
+    }, left));
+    return () => clearTimeout(id);
+  }, [state.phase, state.heat, state.words, onWord]);
 
   /** The referee's word on every word, and on when the run ended. */
   useEffect(() => subscribe((message) => {
