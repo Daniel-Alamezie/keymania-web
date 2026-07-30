@@ -273,7 +273,31 @@ export default function Survival({
   const over = state.phase === 'over';
 
   return (
-    <main className={styles.screen} data-keyboard={keyboardUp || undefined}>
+    /**
+     * This screen *is* the plain layout, and now it says so.
+     *
+     * It was rendering the same `SentenceView` as a duel without claiming any
+     * layout at all, so it got the arena's edge treatment: two gradients that
+     * fade the line by painting `--panel` over each end. That is invisible on
+     * the arena floor, which is the colour they were matched to, and here it
+     * painted two lighter slabs with hard vertical edges — the words sitting on
+     * a panel nobody put there.
+     *
+     * The default has been turned round so the masked version, which works over
+     * anything, is what a screen gets for free. This attribute is no longer what
+     * fixes the edges; it is here because the statement is true and any future
+     * rule that distinguishes the two layouts should find survival on the right
+     * side of it.
+     *
+     * Safe to claim wholesale. Only `SentenceView` and `HealthBar` read it
+     * unscoped, everything else is nested under the duel's own screen class,
+     * and there are no health plates in a run.
+     */
+    <main
+      className={styles.screen}
+      data-layout="plain"
+      data-keyboard={keyboardUp || undefined}
+    >
       <div className={styles.controls}>
         <SoundToggle className={styles.iconBtn} />
         <button className={styles.iconBtn} onClick={onExit} aria-label="Leave the run">✕</button>
