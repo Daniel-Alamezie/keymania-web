@@ -25,7 +25,14 @@
   transition: opacity 320ms ease;
   box-shadow: inset 0 0 130px rgba(255, 214, 110, 0.38);
 }
-.screen[data-heat]::before { opacity: 1; }
+/*
+ * Only when this treatment puts its ambient state around the window.
+ *
+ * The stripped-down layout paints heat and the wound into the reading surface
+ * instead, and leaving this on as well meant a streak glowing twice: once at the
+ * edges of the screen, once around the text. See the `ambient` knob.
+ */
+.screen[data-ambient='edges'][data-heat]::before { opacity: 1; }
 
 /* Near death the edges bleed red and pulse. */
 .screen::after {
@@ -38,9 +45,204 @@
   transition: opacity 400ms ease;
   box-shadow: inset 0 0 160px rgba(239, 68, 68, 0.62);
 }
-.screen[data-danger]::after { opacity: 1; animation: pulse 900ms ease-in-out infinite; }
+.screen[data-ambient='edges'][data-danger]::after { opacity: 1; }
+
+/*
+ * The throb is opt-in, not opt-out.
+ *
+ * It was the other way round, with the animation on the base rule and a list of
+ * preset names switching it off. That list went stale the day a fifth preset
+ * arrived: `plain` asks for a steady edge, was not in the list, and kept
+ * pulsing. Stating which behaviour wants the animation rather than which presets
+ * do not means a new preset can never silently inherit the wrong one.
+ *
+ * The pulse itself is a 900ms loop that never stops once you are under a quarter
+ * health, which is exactly when a player most needs to read well. The state
+ * still reads as urgent without it, because the edge is red and was not there a
+ * moment ago.
+ */
+.screen[data-ambient='edges'][data-danger][data-danger-style='pulse']::after {
+  animation: pulse 900ms ease-in-out infinite;
+}
 
 @keyframes pulse { 50% { opacity: 0.4; } }
+
+/* ==========================================================================
+   The stripped-down layout: the words are the arena.
+   ==========================================================================
+
+   Prototype, driven by data-layout="plain". See game/arenaFx.ts for the idea.
+   No fighters, no stone room, the line dead centre and large, and each duellist
+   reduced to a portrait plate in a corner.
+
+   Every rule here is scoped to the attribute, so nothing in it can reach the
+   arena layout. That matters more than usual: this branch exists to be compared
+   against the arena, and a rule that leaked would change both sides of the
+   comparison at once. */
+
+/*
+ * The stream, resized from outside.
+ *
+ * A custom property rather than a prop, because CSS module class names are
+ * scoped per file and this stylesheet cannot see `.viewport` inside
+ * SentenceView.module.css. Custom properties cross that boundary by inheriting.
+ */
+.screen[data-layout='plain'] { --stream-size: clamp(28px, 4.6vw, 58px); }
+
+/*
+ * The frame stops pretending to be a room.
+ *
+ * The border and the min-height both go: what is left should read as open space
+ * with words in it, not as an empty stage with the set removed. Centring is done
+ * here rather than by the sentence, which pins its own cursor with a transform
+ * and has no opinion about where the line sits vertically.
+ */
+.screen[data-layout='plain'] .arena {
+  display: grid;
+  /*
+   * `align-content`, not `place-items: center`.
+   *
+   * Centring both axes would shrink the stream to its content width, and the
+   * sentence viewport is sized at 100% of its parent, so the two would be asking
+   * each other how wide to be. This centres vertically and lets the default
+   * stretch keep the line full width.
+   */
+  align-content: center;
+  /*
+   * Two rows now: the line, and the forge under it. The gap is what stops the
+   * streak reading as part of the sentence, which at a glance it otherwise
+   * would, since both are centred text on the same axis.
+   */
+  row-gap: clamp(16px, 4vh, 44px);
+  border: none;
+  min-height: 0;
+  background: transparent;
+}
+
+/*
+ * The deck keeps only the held powers.
+ *
+ * The streak moved up into the arena rather than being copied there: two
+ * readouts of one number would be exactly the clutter this layout is undoing.
+ * What is left is centred, because a single item pinned to the left of an empty
+ * strip looks like the rest of the row failed to load.
+ */
+.screen[data-layout='plain'] .deckRow { justify-content: center; }
+
+/*
+ * The line moves off the floor and into the middle.
+ *
+ * It is absolutely pinned to `bottom: 0` in the arena, where sitting on the
+ * flagstones is the point: a throw and the word that caused it share one glance.
+ * With no floor to sit on it becomes a normal grid item so the centring above can
+ * reach it.
+ */
+.screen[data-layout='plain'] .stream {
+  position: static;
+  width: 100%;
+  padding: 0 18px;
+}
+
+/*
+ * And the scrim goes with it.
+ *
+ * It exists to hold the words readable over a repeating flagstone tile with
+ * enough contrast in it to fight the letterforms. There is no tile here, so it
+ * would be a dark panel floating in open space for no reason.
+ */
+.screen[data-layout='plain'] .stream::before { display: none; }
+
+/*
+ * Your own condition, in the surface you are already reading.
+ *
+ * This is the half of the idea that stops the layout being merely emptier. With
+ * the fighters gone there is nothing left to look wounded, so the reading area
+ * takes the wound: a red bloom closes in from the edges as health falls. It costs
+ * no glance away from the word, because it arrives in peripheral vision around
+ * the thing already being looked at.
+ *
+ * Opacity is driven by the same data-danger the arena uses, so the threshold is
+ * shared rather than invented twice.
+ */
+.screen[data-layout='plain'] .arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 42%,
+    rgba(239, 68, 68, 0.22) 100%
+  );
+}
+/* Keyed on the knob, not on the layout, so it is genuinely the other half of
+   `[data-ambient='edges']` above and the two can never both be on. */
+.screen[data-ambient='surface'][data-danger] .arena::before { opacity: 1; }
+
+/*
+ * And the streak, in the same surface.
+ *
+ * Warm rather than red, and it grows with the combo, so the two ambient signals
+ * cannot be confused: heat closes in when you are winning, red when you are not.
+ */
+.screen[data-layout='plain'] .arena::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 214, 110, 0.10) 0%,
+    transparent 62%
+  );
+}
+.screen[data-ambient='surface'][data-heat] .arena::after { opacity: 1; }
+
+/*
+ * The plates move to the corners and stop sharing a row.
+ *
+ * In the arena they are a HUD strip above the action. Here they are the only
+ * bodies on screen, so they want the far corners: as much distance from the
+ * reading line as the layout can give them, which is what makes them peripheral
+ * rather than adjacent.
+ */
+/*
+ * Two status plates, in two corners, and nothing across the middle.
+ *
+ * `.plate` is `flex: 1`, which on a wide screen gave each one about nine hundred
+ * pixels: two enormous bars dominating the top while the actual game happened in
+ * a narrow column underneath. Capped and pushed apart, the eye has a clear
+ * centre again. The same cap already exists for a four-way under `[data-solo]`,
+ * for the same reason and in almost the same words.
+ */
+.screen[data-layout='plain'] .hud {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.screen[data-layout='plain'] .hud > * { flex: 0 1 340px; }
+
+/* Nothing needs pointing at when there is nothing between the two plates. */
+.screen[data-layout='plain'] .vs { display: none; }
+
+/*
+ * The damage number lands on the plate, not in the middle of the screen.
+ *
+ * In the arena it rises from the fighter that was hit, which here would put it
+ * squarely over the sentence. Moved out to whichever corner wore the blow, where
+ * it is next to the bar that is draining for the same reason.
+ */
+.screen[data-layout='plain'] .damage {
+  top: 92px;
+  bottom: auto;
+}
+.screen[data-layout='plain'] .damage[data-side='player'] { left: 7%; right: auto; }
+.screen[data-layout='plain'] .damage[data-side='opponent'] { right: 7%; left: auto; }
 
 /*
  * Mute and leave, out in the margin.

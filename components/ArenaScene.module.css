@@ -120,6 +120,18 @@
   animation: breathe 2.3s ease-in-out infinite;
 }
 
+/*
+ * A lit but still torch.
+ *
+ * Note what this cannot be: `animation: none` alone puts every frame back to its
+ * base `opacity: 0` and the torches go out completely, because the flicker is
+ * what reveals one frame at a time rather than something layered on top of a
+ * visible sprite. So the first frame is pinned lit and the other two stay dark.
+ */
+.torch[data-still] .frame { animation: none; opacity: 0; }
+.torch[data-still] .frame:nth-child(1) { opacity: 1; }
+.torch[data-still] .glow { animation: none; }
+
 @keyframes breathe {
   50% { opacity: 0.62; transform: translateX(-50%) scale(1.12); }
 }

@@ -52,7 +52,14 @@
   color: var(--faint);
 }
 
-.statValue { margin: 0; font-size: 15px; color: var(--ink); }
+.statValue {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .stat[data-highlight] .statValue { color: var(--gold); }
 
 .unit { font-size: 9px; margin-left: 3px; color: var(--faint); }
