@@ -90,6 +90,49 @@
 .grow { flex: 1; min-width: 110px; }
 .full { width: 100%; }
 
+/* ---------- The bot ladder ----------
+ *
+ * Six rungs on a fixed three-column grid rather than a wrapping flex row. Flex
+ * would put four on one line and two on the next at some widths, which reads as
+ * two groups and invites the question of what separates them. Two rows of three
+ * says one ladder, and the second row being the locked half is a coincidence
+ * worth keeping.
+ */
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.rung { min-width: 0; }
+
+/*
+ * A locked rung is dim but still legible, and still says what opens it.
+ *
+ * Not hidden: the ladder is the reason to keep playing, and a player who cannot
+ * see what is above them has nothing to climb towards. Not greyed to the point
+ * of being unreadable either, because the number underneath is the whole point.
+ */
+.rung[data-locked] {
+  opacity: 0.42;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.rung[data-locked]:hover { opacity: 0.55; }
+
+/*
+ * The one at your level, marked without shouting.
+ *
+ * A left edge rather than a fill or a badge: it picks the rung out at a glance
+ * and survives sitting next to the ignition glow, which a coloured background
+ * would not.
+ */
+.rung[data-suggested] {
+  border-color: var(--player);
+  box-shadow: inset 3px 0 0 0 var(--player);
+}
+
 /* ---------- Choosing an opponent ----------
  *
  * This is the most consequential button on the menu and it used to behave like

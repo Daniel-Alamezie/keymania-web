@@ -46,10 +46,38 @@ export const TIER_THRESHOLDS: { tier: BladeTier; combo: number }[] = [
 export const PROJECTILE_FLIGHT_MS = 420;
 
 /** Bot personalities: target speed and how often it fumbles. */
-export const BOT_PROFILES: Record<Difficulty, { wpm: number; errorRate: number; label: string }> = {
-  rookie: { wpm: 34, errorRate: 0.18, label: 'Rookie' },
-  rival: { wpm: 55, errorRate: 0.12, label: 'Rival' },
-  master: { wpm: 80, errorRate: 0.09, label: 'Master' },
+/**
+ * The bots, easiest first.
+ *
+ * Three dials, and **the error rate does more work than the speed does.** A
+ * fumble resets the bot's combo for that word (see `botWord` in duelReducer),
+ * and the combo multiplier is worth up to 2x, so a bot that stops fumbling hits
+ * roughly a third harder before it types a single extra word. It also stops
+ * paying the 260 to 680ms recovery each time. Raising wpm alone would make a
+ * fast bot that keeps tripping over itself.
+ *
+ * `jitter` narrows as the ladder climbs, which is the one behavioural change up
+ * here. At 34wpm a swing of a quarter either way is what makes the thing feel
+ * like a person. At 150 it makes the bot erratic rather than hard, and you lose
+ * to a lucky burst instead of to a better typist. Consistency is what actually
+ * makes a fast typist frightening, so the top of the ladder is relentless.
+ *
+ * Nothing above 150. The per-word speed multiplier is clamped at 95wpm, so past
+ * that point extra speed only buys more words per second: Apex already deals
+ * about twice Master's damage rate before its combo advantage is counted. A
+ * 300wpm bot would not be a difficulty, it would be a ten-second loss with no
+ * play in it.
+ */
+export const BOT_PROFILES: Record<
+  Difficulty,
+  { wpm: number; errorRate: number; jitter: number; label: string }
+> = {
+  rookie:   { wpm: 34,  errorRate: 0.18, jitter: 0.25, label: 'Rookie' },
+  rival:    { wpm: 55,  errorRate: 0.12, jitter: 0.25, label: 'Rival' },
+  master:   { wpm: 80,  errorRate: 0.09, jitter: 0.22, label: 'Master' },
+  champion: { wpm: 100, errorRate: 0.06, jitter: 0.18, label: 'Champion' },
+  virtuoso: { wpm: 120, errorRate: 0.04, jitter: 0.14, label: 'Virtuoso' },
+  apex:     { wpm: 150, errorRate: 0.02, jitter: 0.10, label: 'Apex' },
 };
 
 /**
@@ -65,6 +93,11 @@ export const BOT_CHARACTERS: Record<Difficulty, CharacterId> = {
   rookie: 'rookie',
   rival: 'drifter',
   master: 'baron',
+  champion: 'scholar',
+  virtuoso: 'wanderer',
+  // The last face left, and a better joke than a bigger one would have been:
+  // the fastest thing in the game looks like the smallest.
+  apex: 'sprout',
 };
 
 /** Seconds counted down before a duel begins. */

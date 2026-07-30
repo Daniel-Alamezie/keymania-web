@@ -4,9 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES } from '@/game/constants';
+import { BOT_UNLOCK_WPM, bestSpeed, isBotUnlocked, suggestedBot } from '@/game/botLadder';
+import { useProfile } from '@/game/profile';
+import { useServerProfile } from '@/game/serverProfile';
 import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
 import type { PowerKind } from '@/game/powers';
-import type { Difficulty } from '@/models/bot';
+import { DIFFICULTIES, type Difficulty } from '@/models/bot';
 import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
 import ArenaScene from './ArenaScene';
@@ -74,6 +77,21 @@ export default function Game() {
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
   /** Which bot has been chosen and is mid-ignition, if any. */
   const [igniting, setIgniting] = useState<Difficulty | null>(null);
+
+  /**
+   * The best speed this player has on record, wherever they earned it.
+   *
+   * Drives the ladder. Reads the account when there is one and this browser's
+   * own record when there is not, so a signed-out player can still open tiers by
+   * typing fast; bot duels are unranked, so there is nothing here worth
+   * protecting with a round trip.
+   */
+  const local = useProfile();
+  const { profile } = useServerProfile();
+  const myBest = profile
+    ? bestSpeed(profile.ranked.bestWpm, profile.practice.bestWpm)
+    : bestSpeed(0, local.bestWpm);
+  const suggestion = suggestedBot(myBest);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -304,21 +322,35 @@ export default function Game() {
         </p>
 
         <span className="eyebrow">Practise against a bot</span>
-        <div className={styles.row}>
-          {(Object.keys(BOT_PROFILES) as Difficulty[]).map((key) => (
-            <button
-              key={key}
-              className={`btn ${styles.grow}`}
-              // Marks the one chosen, so the ignition plays on that button and
-              // not on all three at once.
-              data-igniting={igniting === key || undefined}
-              disabled={igniting !== null}
-              onClick={() => ignite(key)}
-            >
-              {BOT_PROFILES[key].label}
-              <small className="btn-sub">{BOT_PROFILES[key].wpm} wpm</small>
-            </button>
-          ))}
+        <div className={styles.ladder}>
+          {DIFFICULTIES.map((key) => {
+            const unlocked = isBotUnlocked(key, myBest);
+            return (
+              <button
+                key={key}
+                className={`btn ${styles.rung}`}
+                // Marks the one chosen, so the ignition plays on that button and
+                // not on all of them at once.
+                data-igniting={igniting === key || undefined}
+                data-locked={!unlocked || undefined}
+                // The one nearest your own speed, so the ladder is a suggestion
+                // rather than a list to guess your way through.
+                data-suggested={unlocked && key === suggestion || undefined}
+                disabled={igniting !== null || !unlocked}
+                onClick={() => ignite(key)}
+                title={unlocked ? undefined : `Reach ${BOT_UNLOCK_WPM[key]} wpm to unlock`}
+              >
+                {BOT_PROFILES[key].label}
+                {/* A locked rung says what opens it rather than just refusing.
+                    "20 wpm away" is a target; a padlock is a closed door. */}
+                <small className="btn-sub">
+                  {unlocked
+                    ? `${BOT_PROFILES[key].wpm} wpm`
+                    : `${BOT_UNLOCK_WPM[key] - myBest} wpm away`}
+                </small>
+              </button>
+            );
+          })}
         </div>
 
           <span className="eyebrow">Or play other players</span>
