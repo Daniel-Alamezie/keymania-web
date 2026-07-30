@@ -64,3 +64,99 @@
   border-color: var(--gold);
   box-shadow: 0 0 18px rgba(255, 214, 110, 0.35);
 }
+
+/* ==========================================================================
+   The forge: the same meter, given the room to be the point.
+   ==========================================================================
+
+   For the stripped-down layout. Taking the fighters out left space, and the
+   streak is the thing worth spending it on: it is what a fast typist is playing
+   for, and it is also the only thing a typo can visibly take away. Small in a
+   strip below the arena, it was neither. */
+
+.meter[data-variant='forge'] {
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  min-width: 0;
+  background: none;
+  /*
+   * No plate. In the deck the border said "this is a readout among readouts";
+   * here it would draw a box in the middle of a screen whose whole idea is not
+   * having boxes in it. The blade and the number are enough on their own.
+   */
+  border: none;
+  box-shadow: none;
+}
+
+.meter[data-variant='forge'] .blade {
+  min-width: 0;
+  justify-content: center;
+  /* Bigger arrival than the deck's, since there is room for it to be felt. */
+  animation: forgeBig 380ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+@keyframes forgeBig {
+  0% { transform: scale(0.45) translateY(10px); filter: brightness(3); }
+  100% { transform: scale(1) translateY(0); filter: none; }
+}
+
+.meter[data-variant='forge'] .readout {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: none;
+}
+
+/*
+ * The number, finally worth looking at.
+ *
+ * This is the gratification. It scales with the tier so a long chain is
+ * physically larger on the screen than a short one, which means the reward for
+ * a streak arrives before you have read the digits.
+ */
+.meter[data-variant='forge'] .count {
+  font-size: 26px;
+  line-height: 1;
+  animation: bumpBig 260ms cubic-bezier(0.2, 1.6, 0.35, 1);
+}
+
+.meter[data-variant='forge'][data-tier='3'] .count { font-size: 30px; }
+.meter[data-variant='forge'][data-tier='4'] .count { font-size: 34px; }
+.meter[data-variant='forge'][data-tier='5'] .count {
+  font-size: 40px;
+  text-shadow: 0 0 18px rgba(255, 214, 110, 0.6);
+}
+
+@keyframes bumpBig {
+  0% { transform: scale(1.9); color: #fff; }
+  100% { transform: scale(1); }
+}
+
+.meter[data-variant='forge'] .name {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+/* Wide enough to read as progress rather than as a hairline. */
+.meter[data-variant='forge'] .track {
+  width: clamp(120px, 18vw, 220px);
+  height: 7px;
+}
+
+/*
+ * At full tier there is nothing left to fill, so the bar stops claiming there
+ * is and becomes a lit line instead.
+ */
+.meter[data-variant='forge'][data-tier='5'] .fill {
+  box-shadow: 0 0 12px rgba(255, 214, 110, 0.8);
+}
+
+/* Nothing under way: present, but not asking for anything. */
+.meter[data-variant='forge'][data-tier='1'] { opacity: 0.55; }
+
+@media (prefers-reduced-motion: reduce) {
+  .meter[data-variant='forge'] .blade,
+  .meter[data-variant='forge'] .count { animation: none; }
+}

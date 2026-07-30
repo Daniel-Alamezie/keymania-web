@@ -101,10 +101,26 @@
    * stretch keep the line full width.
    */
   align-content: center;
+  /*
+   * Two rows now: the line, and the forge under it. The gap is what stops the
+   * streak reading as part of the sentence, which at a glance it otherwise
+   * would, since both are centred text on the same axis.
+   */
+  row-gap: clamp(16px, 4vh, 44px);
   border: none;
   min-height: 0;
   background: transparent;
 }
+
+/*
+ * The deck keeps only the held powers.
+ *
+ * The streak moved up into the arena rather than being copied there: two
+ * readouts of one number would be exactly the clutter this layout is undoing.
+ * What is left is centred, because a single item pinned to the left of an empty
+ * strip looks like the rest of the row failed to load.
+ */
+.screen[data-layout='plain'] .deckRow { justify-content: center; }
 
 /*
  * The line moves off the floor and into the middle.

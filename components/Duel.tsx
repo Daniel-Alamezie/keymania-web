@@ -972,6 +972,23 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         <div ref={flashRef} className={styles.flash} aria-hidden="true" />
 
         {!keyboardUp && stream}
+
+        {/*
+          * The forge sits under the words, in the room the fighters used to take.
+          *
+          * Below rather than beside, so it is on the axis the eye already travels
+          * and needs no sideways look. It changes at most once a word and only
+          * ever grows, so unlike the effects it replaced it is not competing for
+          * attention between keystrokes; it is only there when something has
+          * happened.
+          */}
+        {plateIsTheFighter && (
+          <ComboMeter
+            variant="forge"
+            combo={state.playerCombo}
+            tier={currentTier(state)}
+          />
+        )}
       </ArenaScene>
 
       {/*
@@ -1024,7 +1041,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       <section className={styles.deck}>
         <div className={styles.deckRow}>
-          <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />
+          {/* Moved into the arena in the stripped-down layout, not duplicated:
+              two readouts of one streak would be the clutter this is undoing. */}
+          {!plateIsTheFighter && <ComboMeter combo={state.playerCombo} tier={currentTier(state)} />}
           <PowerBar
             // Derived here rather than stored as a set, so the reducer's shape
             // is untouched by this change. Moving DuelState itself to a set is
