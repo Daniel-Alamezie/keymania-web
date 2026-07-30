@@ -3,7 +3,7 @@ import FullBoard from '@/components/FullBoard';
 
 export const metadata: Metadata = {
   title: 'Leaderboard · KeyMania',
-  description: 'Who is winning, and who is fastest.',
+  description: 'Who is winning, who is fastest, and who has survived longest.',
 };
 
 /**

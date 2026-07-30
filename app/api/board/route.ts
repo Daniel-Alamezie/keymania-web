@@ -11,8 +11,8 @@ import { asBoard } from '@/models/leaderboard';
  * The `board` parameter is resolved through `asBoard` rather than passed along,
  * which does two jobs. It settles on a real board for a junk value instead of
  * relying on the upstream route to do the same thing, and — because the result
- * is one of two string literals — the interpolation below cannot be used to
- * append anything to the upstream path.
+ * is one of a fixed set of string literals — the interpolation below cannot be
+ * used to append anything to the upstream path.
  */
 export const GET = (request: Request) => {
   const board = asBoard(new URL(request.url).searchParams.get('board'));

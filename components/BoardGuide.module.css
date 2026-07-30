@@ -292,6 +292,46 @@
 
 .compareNote { font-size: 9px; color: var(--faint); font-style: italic; }
 
+/* ---------- The run: distance against the pace it costs ----------
+ *
+ * Three bars rising, because the page says the game gets faster and a row of
+ * equal numbers would not. Heights come from `requiredWpm` in the markup rather
+ * than being fixed here: the shape is the content, so it has to follow the curve
+ * if the curve ever changes.
+ */
+.ramp {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20px;
+  height: 116px;
+}
+
+.rung {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  height: 100%;
+}
+
+/*
+ * The bar grows from the floor, so the three read as one climb.
+ *
+ * `min-height` because the shortest rung is 43 of 129 and a third of the space
+ * still needs to look like a bar rather than a smudge.
+ */
+.rungBar {
+  width: 22px;
+  min-height: 10px;
+  background: linear-gradient(180deg, var(--opponent), var(--opponent-deep, var(--edge)));
+  border: 1px solid var(--opponent);
+}
+
+.rungWpm { font-size: 12px; color: var(--gold); }
+.rungWords { font-size: 9px; color: var(--faint); }
+
 /* ---------- Page 5: the bands ---------- */
 
 .bands {

@@ -55,13 +55,11 @@ export default function FullBoard({ initial }: { initial?: string }) {
         )}
 
         {status === 'unavailable' && (
-          <p className={panel.empty}>The standings are unreachable right now.</p>
+          <p className={panel.empty}>The board is unreachable right now.</p>
         )}
 
         {status === 'ready' && entries?.length === 0 && (
-          <p className={panel.empty}>
-            Nobody has been ranked yet. Beat another player and the board is yours.
-          </p>
+          <p className={panel.empty}>{meta.empty}</p>
         )}
 
         {status === 'ready' && entries && entries.length > 0 && (

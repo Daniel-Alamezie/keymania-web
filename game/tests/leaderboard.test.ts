@@ -13,6 +13,7 @@ describe('asBoard', () => {
   it('keeps a board it recognises', () => {
     expect(asBoard('standings')).toBe('standings');
     expect(asBoard('speed')).toBe('speed');
+    expect(asBoard('streak')).toBe('streak');
   });
 
   /**
@@ -73,11 +74,28 @@ describe('BOARD_META', () => {
       expect(meta.heading.length).toBeGreaterThan(0);
       expect(meta.scoreLabel.length).toBeGreaterThan(0);
       expect(meta.footnote.length).toBeGreaterThan(0);
+      expect(meta.empty.length).toBeGreaterThan(0);
     }
   });
 
-  it('gives the two boards distinct tabs, so the strip is readable', () => {
+  it('gives every board a distinct tab, so the strip is readable', () => {
     const tabs = BOARDS.map((kind) => BOARD_META[kind].tab);
     expect(new Set(tabs).size).toBe(BOARDS.length);
+  });
+
+  /**
+   * Each empty board has to say how to stop being empty, in terms that apply to
+   * it.
+   *
+   * The two components rendering this each carried their own copy of "Beat
+   * another player and the board is yours", which is true of the standings and
+   * nonsense on a board where there is nobody to beat. Moving the sentence here
+   * fixed both at once, and this stops a later edit reintroducing one message
+   * for boards that are won in different ways.
+   */
+  it('tells each empty board how to fill itself, in its own terms', () => {
+    const messages = BOARDS.map((kind) => BOARD_META[kind].empty);
+    expect(new Set(messages).size).toBe(BOARDS.length);
+    expect(BOARD_META.streak.empty).not.toMatch(/beat another player/i);
   });
 });

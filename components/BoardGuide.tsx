@@ -5,6 +5,7 @@ import {
   AZURE_FROM, GOLD_FROM, LOSS_POINTS, MAX_UPSET_BONUS,
   RATING_FLOOR, START_RATING, WIN_POINTS,
 } from '@/models/rating';
+import { COOL_PER_WORDS, requiredWpm } from '@/game/heat';
 import PixelSprite from './PixelSprite';
 import RankFlame, { Flame } from './RankFlame';
 import styles from './BoardGuide.module.css';
@@ -40,15 +41,16 @@ const signed = (points: number) => (points > 0 ? `+${points}` : `${points}`);
 
 const PAGES = [
   {
-    title: 'Two boards',
+    title: 'Three boards',
     body: (
       <>
         <strong>Standings</strong> is your rating, and it moves every time you
         duel a person. <strong>Fastest</strong> is the quickest duel you have
-        ever typed, so it only ever goes up.
+        ever typed. <strong>Survival</strong> is how far one run got before a
+        mistake ended it.
       </>
     ),
-    visual: <TwoBoards />,
+    visual: <ThreeBoards />,
   },
   {
     title: 'Rating moves both ways',
@@ -71,6 +73,18 @@ const PAGES = [
       </>
     ),
     visual: <Upset />,
+  },
+  {
+    title: 'Survival is a distance',
+    body: (
+      <>
+        A run ends on your first wrong letter, so the score is simply how far
+        you got. The forge cools faster the longer you last, so getting a long
+        way means typing faster and faster. The speed beside your streak is what
+        it took.
+      </>
+    ),
+    visual: <TheRun />,
   },
   {
     title: 'Bots never count',
@@ -186,12 +200,13 @@ export default function BoardGuide({ onClose }: BoardGuideProps) {
  * theirs, and it starts colliding the moment somebody claims that handle.
  * "You" cannot be anybody else.
  */
-function TwoBoards() {
+function ThreeBoards() {
   return (
     <div className={styles.boards}>
       {([
         { tab: 'Standings', score: 312, note: 'moves every duel' },
         { tab: 'Fastest', score: 128, note: 'only ever climbs' },
+        { tab: 'Survival', score: 214, note: 'how far one run got' },
       ] as const).map((board) => (
         <div key={board.tab} className={styles.mini}>
           <span className={`${styles.miniTab} pixel-font`}>{board.tab}</span>
@@ -277,6 +292,40 @@ function Refereed() {
         <span className={styles.compareTag}>A bot</span>
         <small className={styles.compareNote}>practice only</small>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The ramp: how far you have got, and what it costs to still be there.
+ *
+ * The three figures are computed by `requiredWpm`, the same function the server
+ * charges cooling with, rather than written out. This page exists to say "the
+ * further you get the faster you have to type", and a hard-coded pair of numbers
+ * would go on saying it confidently after somebody tuned the curve.
+ *
+ * Milestones at the cooling step rather than at round distances, because that is
+ * where the curve actually has joints: each one is a whole extra multiple of the
+ * starting pace.
+ */
+function TheRun() {
+  const marks = [0, COOL_PER_WORDS, COOL_PER_WORDS * 2];
+  const hardest = requiredWpm(marks[marks.length - 1]);
+
+  return (
+    <div className={styles.ramp}>
+      {marks.map((words) => (
+        <div key={words} className={styles.rung}>
+          <span
+            className={styles.rungBar}
+            // Proportional to the hardest rung shown, so the shape of the climb
+            // is the picture rather than three bars of arbitrary height.
+            style={{ height: `${(requiredWpm(words) / hardest) * 100}%` }}
+          />
+          <span className={`${styles.rungWpm} pixel-font`}>{requiredWpm(words)}</span>
+          <small className={styles.rungWords}>{words} words</small>
+        </div>
+      ))}
     </div>
   );
 }

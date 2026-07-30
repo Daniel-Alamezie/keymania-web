@@ -11,7 +11,7 @@ import styles from './SidePanel.module.css';
 /**
  * The global standings, as much of them as a menu column can carry.
  *
- * Two boards, and **standings leads**. It used to open on fastest-duel, which
+ * Three boards, and **standings leads**. It used to open on fastest-duel, which
  * turned out to be an incentive pointing the wrong way: a speed board is a
  * `max()`, so the correct play on reaching first place is to never duel again in
  * case you cannot repeat it. Rating only moves by playing, so that is the number
@@ -21,9 +21,9 @@ import styles from './SidePanel.module.css';
  * full board there is a wall of other people's numbers between you and the
  * button you came for. The rest is a page away.
  *
- * Every figure is computed by the server from a duel it refereed. Bot practice
- * is kept against a player's own record but never reaches either board, because
- * a result the browser reported about itself cannot be ranked.
+ * Every figure is computed by the server from a game it refereed. Bot practice
+ * is kept against a player's own record but never reaches any board, because a
+ * result the browser reported about itself cannot be ranked.
  */
 export default function LeaderboardPanel() {
   const [board, setBoard] = useState<BoardKind>(DEFAULT_BOARD);
@@ -60,13 +60,11 @@ export default function LeaderboardPanel() {
       )}
 
       {status === 'unavailable' && (
-        <p className={styles.empty}>The standings are unreachable right now.</p>
+        <p className={styles.empty}>The board is unreachable right now.</p>
       )}
 
       {status === 'ready' && entries?.length === 0 && (
-        <p className={styles.empty}>
-          Nobody has been ranked yet. Beat another player and the board is yours.
-        </p>
+        <p className={styles.empty}>{meta.empty}</p>
       )}
 
       {status === 'ready' && shown && shown.length > 0 && (

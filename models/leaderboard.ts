@@ -11,19 +11,25 @@
  */
 
 /**
- * The two boards.
+ * The three boards.
  *
- * `standings` leads, and that ordering is the whole point of having two. A
- * speed board is a `max()`: one clean run puts a player at the top and nothing
- * anybody does afterwards can dislodge them, so the rational move on reaching
- * first place is to stop playing. Rating only moves by duelling, so the board a
- * new arrival sees first is the one that rewards coming back.
+ * `standings` leads, and that ordering is the whole point of having more than
+ * one. A speed board is a `max()`: one clean run puts a player at the top and
+ * nothing anybody does afterwards can dislodge them, so the rational move on
+ * reaching first place is to stop playing. Rating only moves by duelling, so the
+ * board a new arrival sees first is the one that rewards coming back.
  *
  * Speed is kept rather than dropped. It is the board that makes this a game
- * about typing rather than a game about winning, and it is also the only place
- * a player's own best is celebrated whether or not they beat anybody.
+ * about typing rather than a game about winning, and it is also the only place a
+ * player's own best is celebrated whether or not they beat anybody.
+ *
+ * `streak` is the third, and it is last for the same reason speed is not first:
+ * it is another `max()`, and it belongs to one mode rather than to the game. It
+ * measures something neither of the others can — how far a single run got before
+ * one wrong letter ended it — which is a distance rather than a rate or a
+ * standing.
  */
-export const BOARDS = ['standings', 'speed'] as const;
+export const BOARDS = ['standings', 'speed', 'streak'] as const;
 export type BoardKind = (typeof BOARDS)[number];
 
 export const DEFAULT_BOARD: BoardKind = 'standings';
@@ -64,18 +70,46 @@ export const BOARD_META: Record<BoardKind, {
   /** What the big number in a row is, spelled out for assistive tech. */
   scoreLabel: string;
   footnote: string;
+  /**
+   * What an empty board says, and how to stop it being empty.
+   *
+   * Here rather than in the components, which each carried their own copy of
+   * "Beat another player and the board is yours" — true of the standings, and
+   * wrong on a board where there is nobody to beat. Two copies of one sentence
+   * is also two places to fix when it turns out to be wrong on a third board,
+   * which is exactly what happened.
+   */
+  empty: string;
 }> = {
   standings: {
     tab: 'Standings',
     heading: 'Standings',
     scoreLabel: 'rating',
     footnote: 'Rating moves every time you duel a person. Bots never count.',
+    empty: 'Nobody has been ranked yet. Beat another player and the board is yours.',
   },
   speed: {
     tab: 'Fastest',
     heading: 'Fastest duels',
     scoreLabel: 'words per minute',
     footnote: 'Best sustained speed across one duel, timed by the server.',
+    empty: 'No duels timed yet. Finish one and the top spot is yours.',
+  },
+  streak: {
+    tab: 'Survival',
+    heading: 'Longest runs',
+    scoreLabel: 'words survived',
+    /**
+     * The speed is named here on purpose.
+     *
+     * A distance on its own invites the question of how it was earned, and the
+     * answer is the interesting part: the forge cools faster the further a run
+     * goes, so getting a long way is only possible at a pace the server timed.
+     * Saying so turns the second figure on the row from a decoration into the
+     * reason the first one is worth anything.
+     */
+    footnote: 'Words survived in one run, and the speed it took to get there.',
+    empty: 'No runs have survived anything yet. Start one and see how far you get.',
   },
 };
 
@@ -106,6 +140,14 @@ export interface BoardEntry {
    * exactly as the server's own `ratingOf` does.
    */
   rating?: number;
+  /**
+   * Words survived in the longest run, and the ordering of the survival board.
+   *
+   * Sent only by that board. Absent rather than zero elsewhere, because the
+   * other two do not read the index that carries it and a zero would be
+   * indistinguishable from somebody who has run and got nowhere.
+   */
+  streak?: number;
 }
 
 export interface LeaderboardResponse {
