@@ -1,101 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useDisplayName, useHandle } from '@/game/serverProfile';
-import {
-  BOARDS, BOARD_META, DEFAULT_BOARD,
-  type BoardEntry, type BoardKind, type LeaderboardResponse,
-} from '@/models/leaderboard';
-import { ratingFlame, START_RATING } from '@/models/rating';
-import RankFlame, { Flame, type Podium } from './RankFlame';
+import { useBoard } from '@/game/useBoard';
+import { BOARDS, BOARD_META, DEFAULT_BOARD, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
+import BoardRows from './BoardRows';
 import BoardGuide from './BoardGuide';
 import styles from './SidePanel.module.css';
 
 /**
- * The global standings.
+ * The global standings, as much of them as a menu column can carry.
  *
  * Two boards, and **standings leads**. It used to open on fastest-duel, which
  * turned out to be an incentive pointing the wrong way: a speed board is a
- * `max()`, so the correct play on reaching first place is to never duel again
- * in case you can't repeat it. Rating only moves by playing, so that is the
- * number a new arrival sees first.
+ * `max()`, so the correct play on reaching first place is to never duel again in
+ * case you cannot repeat it. Rating only moves by playing, so that is the number
+ * a new arrival sees first.
+ *
+ * Only the top few. A menu is somewhere you glance on the way to a duel, and a
+ * full board there is a wall of other people's numbers between you and the
+ * button you came for. The rest is a page away.
  *
  * Every figure is computed by the server from a duel it refereed. Bot practice
  * is kept against a player's own record but never reaches either board, because
  * a result the browser reported about itself cannot be ranked.
- *
- * Deliberately global-only: it used to fall back to this browser's own runs,
- * which made a private list look like a public one. An empty board that says so
- * is more honest than a full board that means nothing.
  */
-
 export default function LeaderboardPanel() {
   const [board, setBoard] = useState<BoardKind>(DEFAULT_BOARD);
-  /**
-   * Both boards kept once fetched, keyed by which one they are.
-   *
-   * Toggling is a view change, not new information, so it should not cost a
-   * spinner the second time. Storing one `entries` array instead meant flicking
-   * between tabs blanked the panel on every press — the same needless-refetch
-   * flicker already fixed on the profile.
-   */
-  const [cache, setCache] = useState<Partial<Record<BoardKind, BoardEntry[]>>>({});
-  /** Boards whose fetch failed, so a dead one is not retried on every render. */
-  const [failed, setFailed] = useState<Partial<Record<BoardKind, true>>>({});
   const [showGuide, setShowGuide] = useState(false);
-  const myName = useDisplayName();
-  const myHandle = useHandle();
-
-  const entries = cache[board];
+  const { entries, status } = useBoard(board);
   const meta = BOARD_META[board];
 
-  /**
-   * Derived, not stored.
-   *
-   * A `status` state variable had to be set from inside the effect on the
-   * cache-hit path, which is a synchronous setState in an effect body — a
-   * cascading render, and one the lint rule rejects outright. Status is a pure
-   * function of what has been fetched, so making it one removes both the extra
-   * render and the chance of it disagreeing with the cache.
-   */
-  const status = entries ? 'ready' : failed[board] ? 'unavailable' : 'loading';
-
-  useEffect(() => {
-    // Already held, or already known to be unreachable. An empty array counts
-    // as held, so a genuinely empty board is not re-fetched on every look.
-    if (entries || failed[board]) return;
-
-    // Guards a late response from landing after unmount, or after the player
-    // has already switched to the other board.
-    let live = true;
-
-    (async () => {
-      try {
-        const response = await fetch(`/api/board?board=${board}`, { cache: 'no-store' });
-        if (!live) return;
-
-        if (!response.ok) {
-          setFailed((prev) => ({ ...prev, [board]: true }));
-          return;
-        }
-        const { entries: rows } = (await response.json()) as LeaderboardResponse;
-        if (!live) return;
-
-        setCache((prev) => ({ ...prev, [board]: rows }));
-      } catch {
-        if (live) setFailed((prev) => ({ ...prev, [board]: true }));
-      }
-    })();
-
-    return () => { live = false; };
-  }, [board, entries, failed]);
+  const shown = entries?.slice(0, PANEL_ROWS);
+  /** Only worth offering the page when it would actually show more. */
+  const hasMore = (entries?.length ?? 0) > PANEL_ROWS;
 
   return (
     <aside className={`panel ${styles.side}`}>
-      {/* The heading is the tab strip, so the panel keeps its place on the
-          arena screen rather than growing a second box above itself. Same
-          pattern as the record panel opposite. */}
+      {/* The heading is the tab strip, so the panel keeps its place on the arena
+          screen rather than growing a second box above itself. Same pattern as
+          the record panel opposite. */}
       <div className={styles.tabs} role="tablist" aria-label="Leaderboard">
         {BOARDS.map((kind) => (
           <button
@@ -111,7 +55,9 @@ export default function LeaderboardPanel() {
         ))}
       </div>
 
-      {status === 'loading' && <p className={styles.empty}>Loading the {meta.heading.toLowerCase()}…</p>}
+      {status === 'loading' && (
+        <p className={styles.empty}>Loading the {meta.heading.toLowerCase()}…</p>
+      )}
 
       {status === 'unavailable' && (
         <p className={styles.empty}>The standings are unreachable right now.</p>
@@ -123,92 +69,16 @@ export default function LeaderboardPanel() {
         </p>
       )}
 
-      {status === 'ready' && entries && entries.length > 0 && (
-        <ul className={styles.list}>
-          {entries.map((entry) => {
-            const podium = entry.position <= 3 ? (entry.position as Podium) : null;
-            /**
-             * The big number is whichever board you are on, and the small one
-             * is the other figure — so a row still tells you both things and
-             * the ordering is never ambiguous about which it followed.
-             */
-            const rating = entry.rating ?? START_RATING;
-            const score = board === 'standings' ? rating : entry.wpm;
-            const sub = board === 'standings' ? `${entry.wpm} wpm` : `${entry.accuracy}%`;
+      {status === 'ready' && shown && shown.length > 0 && (
+        <BoardRows entries={shown} board={board} />
+      )}
 
-            return (
-              <li
-                // Keyed on the handle where there is one: display names are not
-                // unique, so two players called the same thing shared a key and
-                // React had no way to tell their rows apart.
-                key={entry.handle ?? `${entry.position}-${entry.name}`}
-                className={styles.rank}
-                /**
-                 * Matched on handle where both sides have one, and only on
-                 * name as a fallback.
-                 *
-                 * Names are not unique, so the old comparison highlighted
-                 * every player who happened to share yours as though they
-                 * were you. The fallback is kept for accounts that predate
-                 * handles, where a name is the only thing to go on and being
-                 * occasionally wrong beats never highlighting anybody.
-                 */
-                data-me={(myHandle && entry.handle
-                  ? entry.handle === myHandle
-                  : Boolean(myName) && entry.name === myName) || undefined}
-                data-top={entry.position === 1 || undefined}
-              >
-                <span className={`${styles.rankPos} pixel-font`}>{entry.position}</span>
-                {/*
-                  * A crown for the podium, a band flame for everybody else.
-                  *
-                  * The slot used to be empty below third, which read as "you
-                  * have nothing" rather than "you are not top three" — and it
-                  * left most of the board looking unranked when every one of
-                  * those players has a rating and therefore a band.
-                  *
-                  * Standings only. The flame means a rating band, and putting
-                  * one on a board that is *not* ordered by rating invites the
-                  * reading that it ranks something about the speed board.
-                  *
-                  * Both sizes are exact quarter-scale: the crown sprite is 68
-                  * tall and the flame 76, so 17 and 19 land on whole source
-                  * pixels. A fraction between them maps some rows to two screen
-                  * pixels and their neighbours to one, which at this size is
-                  * visible as a wobble.
-                  */}
-                <span className={styles.rankFlame}>
-                  {podium
-                    ? <RankFlame rank={podium} height={17} />
-                    : board === 'standings' && <Flame kind={ratingFlame(rating)} height={19} />}
-                </span>
-                {/* Only a link once a player has a handle. Accounts that
-                    reached the board before handles existed have nothing to
-                    link to, and are rendered as plain text rather than as a
-                    control that goes nowhere. */}
-                {/* Your own row points straight at the dashboard. Sending it
-                    to /u/ instead would render the public card and then bounce,
-                    and the flash of somebody else's view of you is exactly what
-                    the redirect is there to avoid. */}
-                {entry.handle ? (
-                  <Link
-                    href={entry.handle === myHandle ? '/profile' : `/u/${entry.handle}`}
-                    className={styles.rankName}
-                    data-link
-                  >
-                    {entry.name}
-                  </Link>
-                ) : (
-                  <span className={styles.rankName}>{entry.name}</span>
-                )}
-                <span className={styles.rankSub}>{sub}</span>
-                <span className={`${styles.rankScore} pixel-font`} aria-label={meta.scoreLabel}>
-                  {score}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+      {/* Only once there is something past the cap, so it never promises a page
+          that shows exactly what you are already looking at. */}
+      {status === 'ready' && hasMore && (
+        <Link href={`/leaderboard?board=${board}`} className={styles.footLink}>
+          See the full board
+        </Link>
       )}
 
       <p className={styles.footnote}>{meta.footnote}</p>
@@ -217,14 +87,14 @@ export default function LeaderboardPanel() {
         * Its own control, below the footnote rather than inside it.
         *
         * It started as an underlined phrase at the end of that sentence, in the
-        * same faint grey, and nobody read it as clickable — an underline inside
-        * a run of small print is camouflage, not an affordance. Out of the
+        * same faint grey, and nobody read it as clickable: an underline inside a
+        * run of small print is camouflage, not an affordance. Out of the
         * paragraph and given a border, it is shaped like the buttons everywhere
         * else on the screen.
         *
-        * Still a button and not an anchor: it opens a panel in place rather
-        * than going anywhere, and a link that does not navigate misleads the
-        * status bar and anybody listening to the page.
+        * Still a button and not an anchor, because it opens a panel in place
+        * rather than going anywhere, and a link that does not navigate misleads
+        * the status bar and anybody listening to the page.
         */}
       <button type="button" className={styles.footLink} onClick={() => setShowGuide(true)}>
         How the boards work
