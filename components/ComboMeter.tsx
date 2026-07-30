@@ -24,6 +24,16 @@ interface ComboMeterProps {
    * losing it hurt.
    */
   variant?: 'deck' | 'forge';
+  /**
+   * There is almost no room. Draw the blade small.
+   *
+   * A prop rather than a media query, because `PixelSprite` writes its size as
+   * an inline style so CSS cannot shrink it, and a `transform` would scale the
+   * drawing without giving back the space it occupies. The caller knows when a
+   * soft keyboard is up and the arena has collapsed to a strip; the stylesheet
+   * does not.
+   */
+  dense?: boolean;
 }
 
 const TIER_NAMES: Record<BladeTier, string> = {
@@ -38,7 +48,9 @@ const TIER_NAMES: Record<BladeTier, string> = {
  * Makes the combo legible as a *weapon* rather than an abstract multiplier —
  * the blade the player is charging is shown, growing as the streak builds.
  */
-export default function ComboMeter({ combo, tier, variant = 'deck' }: ComboMeterProps) {
+export default function ComboMeter({
+  combo, tier, variant = 'deck', dense,
+}: ComboMeterProps) {
   const progress = chainProgress(combo);
 
   /**
@@ -117,7 +129,11 @@ export default function ComboMeter({ combo, tier, variant = 'deck' }: ComboMeter
         <PixelSprite
           name={`blade-${tier}` as SpriteName}
           alt={`${TIER_NAMES[tier]} blade`}
-          height={variant === 'forge' ? 34 + tier * 11 : 20 + tier * 4}
+          height={
+            variant !== 'forge' ? 20 + tier * 4
+              : dense ? 18 + tier * 4
+                : 34 + tier * 11
+          }
         />
       </div>
 

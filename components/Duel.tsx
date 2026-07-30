@@ -1044,6 +1044,10 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             variant="forge"
             combo={state.playerCombo}
             tier={currentTier(state)}
+            // A soft keyboard leaves perhaps 300px of screen and the words own
+            // it. The blade's size is an inline style, so this is the only way
+            // to give the space back rather than merely scale the drawing.
+            dense={keyboardUp}
           />
         )}
       </ArenaScene>

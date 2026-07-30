@@ -275,6 +275,62 @@
   .screen[data-layout='plain'] .foes[data-many] .foeSlot { transition: none; }
 }
 
+/* ---------- The stripped-down layout on a phone ---------- */
+
+@media (max-width: 700px) {
+  /*
+   * Two plates that each wanted 340px, in 390px of phone.
+   *
+   * They shrank, but the fixed portrait inside them did not, so the bars were
+   * squeezed to a stub while the faces stayed full size. Sharing the row evenly
+   * and letting the plate contents shrink with it is what actually fits.
+   */
+  .screen[data-layout='plain'] .hud {
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .screen[data-layout='plain'] .hud > * { flex: 1 1 0; }
+
+  /*
+   * The words step down, but not as far as the arena's.
+   *
+   * They are the whole screen in this layout, so 28px on a phone is not too
+   * large, it is the point. The floor drops only enough that a long word stops
+   * running off both edges at once.
+   */
+  .screen[data-layout='plain'] { --stream-size: clamp(24px, 7vw, 34px); }
+
+  .screen[data-layout='plain'] .arena { row-gap: clamp(10px, 3vh, 22px); }
+
+  /* Three opponents want every pixel of the column they are stacked in. */
+  .screen[data-layout='plain'] .foes[data-many] { gap: 4px; }
+}
+
+/*
+ * Keyboard up: the words are the screen and everything else is a footnote.
+ *
+ * The plates keep their bars, because taking damage you cannot see is worse on a
+ * phone than on a desktop. What goes is the space around them.
+ */
+.screen[data-layout='plain'][data-keyboard] {
+  --stream-size: clamp(20px, 6vw, 30px);
+}
+
+.screen[data-layout='plain'][data-keyboard] .hud { gap: 6px; }
+
+/*
+ * The arena holds only the forge once the words have moved above it.
+ *
+ * `.deck` is already hidden with a keyboard up, and in this layout the streak
+ * moved out of the deck and into the arena, so without this the forge would be
+ * the only thing in a strip sized for a whole duel.
+ */
+.screen[data-layout='plain'][data-keyboard] .arena {
+  height: auto;
+  min-height: 0;
+  row-gap: 0;
+}
+
 /* Nothing needs pointing at when there is nothing between the two plates. */
 .screen[data-layout='plain'] .vs { display: none; }
 
