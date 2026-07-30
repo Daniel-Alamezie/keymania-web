@@ -801,12 +801,18 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       className={styles.screen}
       data-heat={state.playerCombo >= HEAT_COMBO || undefined}
       data-danger={playerLow || undefined}
-      // Lets the stylesheet answer the treatment questions that are pure CSS,
-      // like whether the low-health edge throbs, without plumbing props down.
-      data-fx={fx.id}
-      // Separate from data-fx because it is a different kind of answer: one is
-      // "how loud", this is "which screen". A later preset could reuse either.
+      /*
+       * The knobs the stylesheet needs, published as the knobs themselves.
+       *
+       * These used to be one `data-fx` carrying the preset's *name*, with the
+       * CSS listing which names wanted which behaviour. That broke the moment a
+       * fifth preset arrived: `plain` asked for a steady low-health edge, the
+       * selector named the other three, and it went on pulsing. Naming the
+       * behaviour instead of the preset means a sixth one cannot miss a rule.
+       */
       data-layout={fx.layout}
+      data-danger-style={fx.danger}
+      data-ambient={fx.ambient}
       // Drives the whole compact layout. When a soft keyboard is up there is
       // perhaps 300px of usable height left, and the words have to win it.
       data-keyboard={keyboardUp || undefined}
@@ -839,7 +845,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           team="blue"
           align="left"
           character={me.character}
-          caption={state.phase === 'playing' ? `${liveWpm} wpm` : undefined}
+          /*
+           * No caption at all when the readout is switched off, rather than a
+           * caption that never moves. Without this guard the interval never
+           * runs, `liveWpm` stays at its initial value, and the plate spends the
+           * whole duel confidently reporting "0 wpm".
+           */
+          caption={
+            state.phase === 'playing' && fx.wpmEveryMs !== null
+              ? `${liveWpm} wpm`
+              : undefined
+          }
           // Only in the stripped-down layout. In the arena the fighter standing
           // below already flinches, and a plate doing it too would be the same
           // hit reported twice in one glance.

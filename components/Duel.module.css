@@ -25,7 +25,14 @@
   transition: opacity 320ms ease;
   box-shadow: inset 0 0 130px rgba(255, 214, 110, 0.38);
 }
-.screen[data-heat]::before { opacity: 1; }
+/*
+ * Only when this treatment puts its ambient state around the window.
+ *
+ * The stripped-down layout paints heat and the wound into the reading surface
+ * instead, and leaving this on as well meant a streak glowing twice: once at the
+ * edges of the screen, once around the text. See the `ambient` knob.
+ */
+.screen[data-ambient='edges'][data-heat]::before { opacity: 1; }
 
 /* Near death the edges bleed red and pulse. */
 .screen::after {
@@ -38,27 +45,27 @@
   transition: opacity 400ms ease;
   box-shadow: inset 0 0 160px rgba(239, 68, 68, 0.62);
 }
-.screen[data-danger]::after { opacity: 1; animation: pulse 900ms ease-in-out infinite; }
-
-@keyframes pulse { 50% { opacity: 0.4; } }
+.screen[data-ambient='edges'][data-danger]::after { opacity: 1; }
 
 /*
- * A steady low-health edge instead of a throbbing one.
+ * The throb is opt-in, not opt-out.
  *
- * Part of the arena-treatment experiment; see game/arenaFx.ts. The pulse is a
- * 900ms loop that never stops once you are under a quarter health, which is
- * precisely the moment a player most needs to read well. The state still reads
- * as urgent because the edge is red and was not there a second ago; the endless
- * animation adds nothing to that and costs attention continuously.
+ * It was the other way round, with the animation on the base rule and a list of
+ * preset names switching it off. That list went stale the day a fifth preset
+ * arrived: `plain` asks for a steady edge, was not in the list, and kept
+ * pulsing. Stating which behaviour wants the animation rather than which presets
+ * do not means a new preset can never silently inherit the wrong one.
  *
- * Selector carries `[data-danger]` as well as `[data-fx]`, so it only ever
- * overrides the rule above rather than sitting at the same specificity and
- * depending on which one the bundler emitted last. That is the production-only
- * bug this codebase has already had once, in ArenaScene.
+ * The pulse itself is a 900ms loop that never stops once you are under a quarter
+ * health, which is exactly when a player most needs to read well. The state
+ * still reads as urgent without it, because the edge is red and was not there a
+ * moment ago.
  */
-.screen[data-danger][data-fx='trim']::after,
-.screen[data-danger][data-fx='focus']::after,
-.screen[data-danger][data-fx='stage']::after { animation: none; }
+.screen[data-ambient='edges'][data-danger][data-danger-style='pulse']::after {
+  animation: pulse 900ms ease-in-out infinite;
+}
+
+@keyframes pulse { 50% { opacity: 0.4; } }
 
 /* ==========================================================================
    The stripped-down layout: the words are the arena.
@@ -170,7 +177,9 @@
     rgba(239, 68, 68, 0.22) 100%
   );
 }
-.screen[data-layout='plain'][data-danger] .arena::before { opacity: 1; }
+/* Keyed on the knob, not on the layout, so it is genuinely the other half of
+   `[data-ambient='edges']` above and the two can never both be on. */
+.screen[data-ambient='surface'][data-danger] .arena::before { opacity: 1; }
 
 /*
  * And the streak, in the same surface.
@@ -191,7 +200,7 @@
     transparent 62%
   );
 }
-.screen[data-layout='plain'][data-heat] .arena::after { opacity: 1; }
+.screen[data-ambient='surface'][data-heat] .arena::after { opacity: 1; }
 
 /*
  * The plates move to the corners and stop sharing a row.
@@ -201,10 +210,22 @@
  * reading line as the layout can give them, which is what makes them peripheral
  * rather than adjacent.
  */
+/*
+ * Two status plates, in two corners, and nothing across the middle.
+ *
+ * `.plate` is `flex: 1`, which on a wide screen gave each one about nine hundred
+ * pixels: two enormous bars dominating the top while the actual game happened in
+ * a narrow column underneath. Capped and pushed apart, the eye has a clear
+ * centre again. The same cap already exists for a four-way under `[data-solo]`,
+ * for the same reason and in almost the same words.
+ */
 .screen[data-layout='plain'] .hud {
   align-items: flex-start;
+  justify-content: space-between;
   gap: 24px;
 }
+
+.screen[data-layout='plain'] .hud > * { flex: 0 1 340px; }
 
 /* Nothing needs pointing at when there is nothing between the two plates. */
 .screen[data-layout='plain'] .vs { display: none; }

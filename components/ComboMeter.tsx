@@ -52,8 +52,19 @@ export default function ComboMeter({ combo, tier, variant = 'deck' }: ComboMeter
    */
   const next = nextTierAt(tier);
   const goal = next === null
-    ? TIER_NAMES[5]
+    ? null
     : `${Math.max(1, next - combo)} to ${TIER_NAMES[(tier + 1) as BladeTier]}`;
+
+  /**
+   * At the top of the ladder the label and the bar are switched off entirely.
+   *
+   * Both exist to answer "how far to the next one", and at legendary there is no
+   * next one. A full gold bar that can never move again and the word LEGENDARY
+   * beside a blade that is already gold and already the largest sprite there is
+   * are three ways of saying nothing. What is left is the count, which is the
+   * only number still going up.
+   */
+  const maxed = variant === 'forge' && next === null;
 
   const root = useRef<HTMLDivElement>(null);
   const previous = useRef(combo);
@@ -114,10 +125,16 @@ export default function ComboMeter({ combo, tier, variant = 'deck' }: ComboMeter
         <span className={`${styles.count} pixel-font`} key={combo}>
           {combo > 0 ? `x${combo}` : '—'}
         </span>
-        <span className={styles.name}>{variant === 'forge' ? goal : TIER_NAMES[tier]}</span>
-        <div className={styles.track}>
-          <div className={styles.fill} style={{ width: `${progress * 100}%` }} />
-        </div>
+        {!maxed && (
+          <span className={styles.name}>
+            {variant === 'forge' ? goal : TIER_NAMES[tier]}
+          </span>
+        )}
+        {!maxed && (
+          <div className={styles.track}>
+            <div className={styles.fill} style={{ width: `${progress * 100}%` }} />
+          </div>
+        )}
       </div>
     </div>
   );

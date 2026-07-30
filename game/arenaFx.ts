@@ -99,6 +99,21 @@ export interface ArenaFx {
   torches: 'flicker' | 'still';
   /** The low-health edge: an endless pulse, or a steady glow. */
   danger: 'pulse' | 'steady';
+
+  /**
+   * Where a streak and a wound are shown.
+   *
+   * `edges` is the original: two viewport-sized inset glows, gold for heat and
+   * red for danger, bleeding in from the sides of the whole screen. `surface`
+   * puts them in the reading area instead, which is the only place a player who
+   * cannot look away from the words will actually see them.
+   *
+   * A knob rather than something the plain layout does on top, because the two
+   * do not stack. Left to both, a low-health moment painted red twice: once
+   * around the window and once around the text. Two overlays saying one thing is
+   * exactly the redundancy this whole exercise is removing.
+   */
+  ambient: 'edges' | 'surface';
   /**
    * How often the wpm caption changes, in ms. `null` hides it until the duel is
    * over: it is a number that moves in peripheral vision, inches from the text.
@@ -122,6 +137,7 @@ const CURRENT: ArenaFx = {
   loudFrom: 1,
   torches: 'flicker',
   danger: 'pulse',
+  ambient: 'edges',
   wpmEveryMs: 700,
 };
 
@@ -207,10 +223,16 @@ const PLAIN: ArenaFx = {
   blurb: 'No fighters, no room. The words are the arena.',
   layout: 'plain',
   blade: 'word',
-  // The canvas is not drawn at all in this layout, so these only describe what
-  // would happen if it were. Left at Trim's values so switching layout is the
-  // only difference between the two.
-  wpmEveryMs: 2000,
+  // Heat and the wound belong in the reading area here, not around the window.
+  ambient: 'surface',
+  /**
+   * No speed readout while the duel is live.
+   *
+   * With the fighters and the room gone, a digit reprinting in the corner was
+   * the last thing on screen moving of its own accord. It is still shown on the
+   * result, which is where anybody actually reads it.
+   */
+  wpmEveryMs: null,
 };
 
 export const ARENA_FX: Record<FxId, ArenaFx> = {

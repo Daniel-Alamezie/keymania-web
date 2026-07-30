@@ -31,6 +31,7 @@ describe('the control preset', () => {
       loudFrom: 1,
       torches: 'flicker',
       danger: 'pulse',
+      ambient: 'edges',
       wpmEveryMs: 700,
     });
   });
@@ -61,7 +62,7 @@ describe('the three treatments', () => {
   const knobsOf = (id: FxId) => {
     const fx = ARENA_FX[id];
     return JSON.stringify([
-      fx.layout, fx.blade,
+      fx.layout, fx.blade, fx.ambient,
       fx.shake, fx.shakeScale, fx.particles, fx.particleFloor,
       fx.trails, fx.arc, fx.loudFrom, fx.torches, fx.danger, fx.wpmEveryMs,
     ]);
@@ -94,6 +95,41 @@ describe('the three treatments', () => {
       const fx = ARENA_FX[id];
       if (fx.layout === 'plain') expect(fx.blade).toBe('word');
       if (fx.blade === 'canvas') expect(fx.layout).toBe('arena');
+    }
+  });
+
+  /**
+   * Heat and the wound are shown in one place or the other, never both.
+   *
+   * They were briefly shown twice in `plain`, once around the window and once
+   * around the text, which is the redundancy this whole exercise is removing.
+   * The surface treatment only exists in the layout that has a reading surface
+   * worth painting, and the edge treatment belongs to the arena.
+   */
+  it('put ambient state where the layout can actually show it', () => {
+    for (const id of FX_IDS) {
+      const fx = ARENA_FX[id];
+      /**
+       * Both directions, in one assertion.
+       *
+       * The first attempt was two one-way `if`s, which looked thorough and
+       * checked half of what it claimed: a plain layout left on `edges` matched
+       * neither branch and sailed through. That is the exact mistake it exists
+       * to catch, and it was only found by making it and watching the test pass.
+       */
+      expect(fx.ambient === 'surface').toBe(fx.layout === 'plain');
+    }
+  });
+
+  /**
+   * A treatment that stops the readout ticking must not leave a stale one on
+   * screen. Duel.tsx drops the caption entirely when this is null; without that
+   * guard the interval never runs and the plate reports "0 wpm" all duel.
+   */
+  it('either update the speed readout or say nothing', () => {
+    for (const id of FX_IDS) {
+      const ms = ARENA_FX[id].wpmEveryMs;
+      expect(ms === null || ms > 0).toBe(true);
     }
   });
 

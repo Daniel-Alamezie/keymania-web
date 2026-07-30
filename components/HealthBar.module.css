@@ -99,6 +99,22 @@
 .plate[data-align='right'] .value { margin-left: 0; margin-right: auto; }
 .value[data-state='low'] { color: var(--bad); }
 
+/*
+ * In the stripped-down layout, each number sits with its own name.
+ *
+ * The auto margin pushes the value to the far end of the plate, and because the
+ * two plates mirror, "far end" means inward for both. On a bare wide screen that
+ * left `65` and `37` touching in the middle with nothing between them, reading
+ * as one pair of numbers rather than as two players. Dropping the margin packs
+ * name and value together at the outer edge, which for a row-reverse plate is
+ * automatically the right-hand side.
+ *
+ * A bare attribute selector, because CSS modules only rewrite class names:
+ * `[data-layout]` is set on the duel screen in Duel.tsx and reaches in here,
+ * where a scoped class from that stylesheet could not.
+ */
+[data-layout='plain'] .value { margin-left: 0; margin-right: 0; }
+
 .track {
   position: relative;
   height: 22px;
