@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useDuelSocket } from '@/game/useDuelSocket';
+import { invalidateBoards } from '@/game/useBoard';
 import { audio } from '@/game/audio';
 import { BOT_PROFILES } from '@/game/constants';
 import { BOT_UNLOCK_WPM, bestSpeed, isBotUnlocked, suggestedBot } from '@/game/botLadder';
@@ -201,6 +202,31 @@ export default function Game() {
     () =>
       subscribe((message) => {
         if (message.type === 'roomList') setRooms(message.rooms);
+
+        /**
+         * Anything this player just did that a board would want to know about.
+         *
+         * The cache's staleness window exists for other people's results, which
+         * nothing in this browser can hear about. It is the wrong instrument for
+         * your own: coming back from the best run of your life to a board that
+         * had not noticed reads as the board being broken, and half a minute is
+         * a long time to sit looking at that.
+         *
+         * `gameOver` only ever comes from a duel this server refereed — a bot
+         * duel never touches the socket — so it is exactly the set of duels that
+         * can move a board. A `survivalWord` carrying `ended` is a run
+         * finishing, which the server has by then already written to the record.
+         *
+         * The obvious third case is `rating`, which the server sends each player
+         * after a refereed duel. It is not here because this client has never
+         * declared that message and nothing reads it, so keying on it would be
+         * writing against a shape nothing enforces — the mistake that has been
+         * the theme of this whole stretch of work. `gameOver` arrives alongside
+         * it and is already in the protocol.
+         */
+        if (message.type === 'gameOver' || (message.type === 'survivalWord' && message.ended)) {
+          invalidateBoards();
+        }
         if (message.type === 'error') {
           setError(message.message);
           // A refused search leaves the player staring at a spinner that will
