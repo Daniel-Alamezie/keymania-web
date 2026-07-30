@@ -29,6 +29,16 @@ export type BoardKind = (typeof BOARDS)[number];
 export const DEFAULT_BOARD: BoardKind = 'standings';
 
 /**
+ * How many rows the menu panel shows before deferring to the full board.
+ *
+ * Five, because the menu is somewhere you glance on the way to a duel. Ten rows
+ * of other people's numbers between a player and the button they came for is a
+ * wall, and the two names most worth seeing are the one at the top and your own.
+ * The rest is a page away rather than gone.
+ */
+export const PANEL_ROWS = 5;
+
+/**
  * Read a board name off untrusted input.
  *
  * Anything unrecognised becomes the default rather than an error, matching what

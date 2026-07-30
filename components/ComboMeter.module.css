@@ -156,6 +156,40 @@
 /* Nothing under way: present, but not asking for anything. */
 .meter[data-variant='forge'][data-tier='1'] { opacity: 0.55; }
 
+/* ---------- The forge on a phone ---------- */
+
+@media (max-width: 700px) {
+  /*
+   * Scaled down, not hidden.
+   *
+   * The streak is the gratification this layout was rebuilt around, and it is
+   * the only thing on screen that says a chain is worth holding. Shrinking it
+   * costs a few pixels; removing it would take the reason to type carefully.
+   */
+  .meter[data-variant='forge'] { gap: 5px; }
+  .meter[data-variant='forge'] .count { font-size: 20px; }
+  .meter[data-variant='forge'][data-tier='3'] .count { font-size: 22px; }
+  .meter[data-variant='forge'][data-tier='4'] .count { font-size: 25px; }
+  .meter[data-variant='forge'][data-tier='5'] .count { font-size: 28px; }
+  .meter[data-variant='forge'] .track { width: clamp(90px, 40vw, 160px); height: 6px; }
+}
+
+/*
+ * Keyboard up: the blade and the number, and nothing else.
+ *
+ * There is perhaps 300px of screen left and the words must have it. What
+ * survives is the pair that says how big your chain is; the bar and the label
+ * both answer "how far to the next one", which is a question nobody is asking
+ * while a keyboard is covering half the phone.
+ */
+[data-keyboard] .meter[data-variant='forge'] {
+  flex-direction: row;
+  gap: 8px;
+}
+[data-keyboard] .meter[data-variant='forge'] .name,
+[data-keyboard] .meter[data-variant='forge'] .track { display: none; }
+[data-keyboard] .meter[data-variant='forge'] .count { font-size: 17px; }
+
 @media (prefers-reduced-motion: reduce) {
   .meter[data-variant='forge'] .blade,
   .meter[data-variant='forge'] .count { animation: none; }

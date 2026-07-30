@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asBoard, BOARDS, BOARD_META, DEFAULT_BOARD } from '../../models/leaderboard';
+import { asBoard, BOARDS, BOARD_META, DEFAULT_BOARD, PANEL_ROWS } from '../../models/leaderboard';
 
 /**
  * The board a player lands on, and what reaches the API.
@@ -43,6 +43,20 @@ describe('asBoard', () => {
     expect(asBoard('speed&limit=1000')).toBe('standings');
     expect(asBoard('../players')).toBe('standings');
     expect(asBoard('speed#')).toBe('standings');
+  });
+});
+
+describe('PANEL_ROWS', () => {
+  /**
+   * The cap has to be smaller than a full board or the "see the full board" link
+   * offers a page showing exactly what the reader is already looking at. The
+   * panel only renders that link when there is something past the cap, so a bad
+   * value here does not break anything visibly: it just quietly removes the only
+   * route to the page.
+   */
+  it('is smaller than a board, so the page has something to add', () => {
+    expect(PANEL_ROWS).toBeGreaterThan(0);
+    expect(PANEL_ROWS).toBeLessThan(10);
   });
 });
 

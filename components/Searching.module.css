@@ -1,0 +1,97 @@
+/*
+ * The searching screen.
+ *
+ * One card, centred, with one thing to do. Everything else on the menu stays
+ * off screen rather than being greyed out behind it: a player waiting for a
+ * match is not choosing between six things, and showing them the choices they
+ * cannot make is the decision fatigue this rebuild was meant to remove.
+ */
+.screen {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(380px, 94vw);
+  padding: 28px 26px;
+  text-align: center;
+  animation: riseIn 320ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes riseIn {
+  from { transform: translateY(16px) scale(0.97); opacity: 0; }
+}
+
+/*
+ * Three blades breathing in sequence.
+ *
+ * Motion, because a still screen reads as a hung one, and this is the one place
+ * in the game where a player is asked to wait with nothing to do. Kept to the
+ * game's own sprites rather than a generic spinner: the wait should still feel
+ * like it belongs to this game.
+ */
+.blades {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  height: 40px;
+}
+
+.blade {
+  display: flex;
+  align-items: flex-end;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.25; transform: translateY(2px); }
+  50%      { opacity: 1;    transform: translateY(-2px); }
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--gold);
+}
+
+.status {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.clock { margin: 0; }
+
+/*
+ * The count is large because it is the only proof anything is happening.
+ *
+ * A search that shows no progress cannot be told apart from one that has hung,
+ * and this one really does get more likely to resolve as it runs.
+ */
+.seconds {
+  font-size: 26px;
+  color: var(--ink);
+}
+
+.note {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--faint);
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .blade { animation: none; opacity: 0.8; }
+}

@@ -35,6 +35,78 @@
 .plate[data-big] .track { height: 16px; }
 
 /*
+ * The plate you are currently throwing at.
+ *
+ * Marked here rather than only by the parent's opacity, because a lit border is
+ * what makes it findable at a glance: opacity separates it from the others, and
+ * the border says which one it is. Both are needed, since a player reading a
+ * word sees this in the corner of their eye and has no attention spare for
+ * comparing three similar rectangles.
+ *
+ * Only ever set past two players. In a duel there is one opponent and marking
+ * them would be pointing at the only thing there is.
+ */
+.plate[data-big][data-targeted] .portrait {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(255, 214, 110, 0.45);
+}
+.plate[data-big][data-targeted] .track { border-color: var(--gold); }
+
+/*
+ * A player who is out stays on the board, spent.
+ *
+ * Removing them would repack the column and move everybody else, and the order
+ * you learned at the start is the order you keep reading. Draining the colour
+ * says "not in this any more" without taking the row away.
+ */
+.plate[data-big][data-defeated] { filter: grayscale(1); opacity: 0.45; }
+
+/* ---------- The plate on a phone ----------
+ *
+ * `[data-layout]` and `[data-many]` are bare attribute selectors set on the duel
+ * screen and the opponent column. CSS modules only rewrite class names, so they
+ * reach in here where a class from that stylesheet could not.
+ */
+@media (max-width: 700px) {
+  /*
+   * A plate sized for a laptop is a quarter of a phone.
+   *
+   * 84px of portrait plus a 16px bar was most of the room above the words. Every
+   * part shrinks together rather than the portrait alone, or the face ends up
+   * smaller than the name beside it.
+   */
+  [data-layout='plain'] .plate[data-big] .portrait { width: 50px; height: 54px; }
+  [data-layout='plain'] .plate[data-big] .name { font-size: 10px; }
+  [data-layout='plain'] .plate[data-big] .value { font-size: 15px; }
+  [data-layout='plain'] .plate[data-big] .track { height: 11px; }
+  [data-layout='plain'] .plate[data-big] { gap: 7px; }
+
+  /*
+   * In a four-way the faces go and the bars stay.
+   *
+   * Three portraits stacked take more height above the words than a phone has to
+   * give, and of the two things a plate carries it is the bar that answers the
+   * question a four-way keeps asking. The name still says who, and the target
+   * highlight still says which, so nothing is lost but the picture.
+   */
+  [data-many] .plate[data-big] .portrait { display: none; }
+  [data-many] .plate[data-big] .track { height: 9px; }
+  [data-many] .plate[data-big] .value { font-size: 13px; }
+}
+
+/*
+ * With a keyboard up there is perhaps 300px of screen, and the words own it.
+ *
+ * The bar survives, because taking damage you cannot see is worse on a phone
+ * than on a desktop, not better. Everything decorative around it goes.
+ */
+[data-keyboard] .plate[data-big] .portrait { display: none; }
+[data-keyboard] .plate[data-big] .caption { display: none; }
+[data-keyboard] .plate[data-big] .track { height: 8px; }
+[data-keyboard] .plate[data-big] .name { font-size: 9px; }
+[data-keyboard] .plate[data-big] .value { font-size: 12px; }
+
+/*
  * The flinch, driven by remount rather than by a timer.
  *
  * Note the property: `translate`, not `transform`. The right-hand plate mirrors
