@@ -90,6 +90,20 @@
 .grow { flex: 1; min-width: 110px; }
 .full { width: 100%; }
 
+/*
+ * The one button the menu is built around.
+ *
+ * Bigger than everything below it on purpose. A player arriving wants to play,
+ * and the previous menu answered that with six bots and a lobby, all the same
+ * size, plus a list of rooms that is usually empty. Weight is the cheapest way
+ * to say "start here".
+ */
+.play {
+  width: 100%;
+  padding: 16px 18px;
+  font-size: 15px;
+}
+
 /* ---------- The bot ladder ----------
  *
  * Six rungs on a fixed three-column grid rather than a wrapping flex row. Flex

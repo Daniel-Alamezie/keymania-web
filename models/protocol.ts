@@ -26,6 +26,17 @@ export type ServerMessage =
     you: string;
   }
   | { type: 'roomList'; rooms: RoomSummary[] }
+  /**
+   * Nobody suitable was waiting, so you are the one waiting now.
+   *
+   * Carries the rating it queued you at, which is worth showing: it is the only
+   * moment the game explains *why* the wait might be short or long, and a player
+   * staring at a spinner deserves to know it is looking for somebody near them
+   * rather than simply stuck.
+   */
+  | { type: 'searching'; roomId: string; rating: number }
+  /** The search was called off, by you. */
+  | { type: 'searchStopped' }
   /** A room filling up, before it is full enough to start. */
   | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
   | {
@@ -119,6 +130,19 @@ export type ClientMessage =
   }
   | { action: 'joinRoom'; roomId: string; name: string; token: string }
   | { action: 'listRooms' }
+  /**
+   * Find me a game.
+   *
+   * Takes the seat of somebody already waiting, or opens one and waits. The
+   * server answers with `matchStart` if it paired you immediately, or
+   * `searching` if you are now the person being found.
+   *
+   * Carries a token for the same reason hosting does: a duel has to belong to an
+   * account before it can move a rating.
+   */
+  | { action: 'quickPlay'; name: string; token: string }
+  /** Stop looking, and tear down the seat that was opened for you. */
+  | { action: 'cancelQueue' }
   // Running accuracy rides along here rather than on its own route. The server
   // cannot verify it, so it is stored for the player's record but never ranked.
   //

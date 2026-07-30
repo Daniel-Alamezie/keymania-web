@@ -17,6 +17,7 @@ import Embers from './Embers';
 import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
+import Searching from './Searching';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
@@ -27,7 +28,7 @@ import { track } from '@/game/analytics';
 import { duelToken } from '@/game/duelToken';
 import styles from './Game.module.css';
 
-type Screen = 'menu' | 'solo' | 'lobby' | 'duel';
+type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching';
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -120,6 +121,8 @@ export default function Game() {
   useEffect(() => () => {
     if (igniteTimer.current) clearTimeout(igniteTimer.current);
   }, []);
+  /** The rating the queue is looking around, once the server has confirmed. */
+  const [queuedAt, setQueuedAt] = useState<number | null>(null);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +136,16 @@ export default function Game() {
     () =>
       subscribe((message) => {
         if (message.type === 'roomList') setRooms(message.rooms);
-        if (message.type === 'error') setError(message.message);
+        if (message.type === 'error') {
+          setError(message.message);
+          // A refused search leaves the player staring at a spinner that will
+          // never resolve, because the server is not looking for them.
+          setScreen((current) => (current === 'searching' ? 'menu' : current));
+        }
+        // Confirmation that a seat was opened. The screen is already showing the
+        // search, so this only carries the rating it queued at.
+        if (message.type === 'searching') setQueuedAt(message.rating);
+        if (message.type === 'searchStopped') setQueuedAt(null);
         if (message.type === 'roomCreated') {
           setError(null);
           setWaiting({
@@ -200,6 +212,43 @@ export default function Game() {
     connect();
     setScreen('lobby');
   };
+
+  /**
+   * Find me a game.
+   *
+   * The one action the menu is built around now. The lobby asked a player to
+   * pick a room off a list, which works when there is a list and is a dead end
+   * when there is not, and "there is not" is the state this game is actually in.
+   *
+   * The screen changes before the server answers. Waiting for `searching` would
+   * leave the button dead for a round trip, and the two outcomes both land here
+   * anyway: `searching` if nobody suited, `matchStart` if somebody did.
+   */
+  const findGame = useCallback(async () => {
+    setError(null);
+    connect();
+    setScreen('searching');
+
+    const token = await duelToken();
+    if (!token) {
+      setError('Your session expired. Sign in again to duel.');
+      setScreen('menu');
+      return;
+    }
+    send({ action: 'quickPlay', name: account.displayName ?? '', token });
+  }, [connect, send, account.displayName]);
+
+  /**
+   * Stop looking.
+   *
+   * Tells the server before changing screen, because the room it opened for you
+   * outlives this component: leaving without cancelling would strand a seat that
+   * every other searcher takes and then sits in alone.
+   */
+  const stopSearching = useCallback(() => {
+    send({ action: 'cancelQueue' });
+    setScreen('menu');
+  }, [send]);
 
   /**
    * Hosting and joining both carry an access token: the server refuses either
@@ -279,6 +328,18 @@ export default function Game() {
     return <Duel difficulty={difficulty} onExit={() => setScreen('menu')} />;
   }
 
+  if (screen === 'searching') {
+    return (
+      <main className={styles.screen}>
+        <Backdrop />
+        <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
+        {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
+        <AccountBar />
+        <Searching rating={queuedAt} onCancel={stopSearching} />
+      </main>
+    );
+  }
+
   if (screen === 'lobby') {
     return (
       <main className={styles.screen}>
@@ -321,7 +382,30 @@ export default function Game() {
           your opponent. Chain words fast to forge something bigger — a typo shatters your streak.
         </p>
 
-        <span className="eyebrow">Practise against a bot</span>
+        {/*
+          * One obvious action, above everything else.
+          *
+          * The menu used to offer six bots and a lobby with equal weight, and
+          * the lobby asked you to pick a room off a list that is usually empty.
+          * Quick play is the answer to "I want to play now" and it belongs where
+          * a player looks first; everything below it is for somebody who wants
+          * something more specific.
+          */}
+        {account.signedIn ? (
+          <button className={`btn btn-primary ${styles.play}`} onClick={findGame}>
+            Play
+            <small className="btn-sub">find a duel at your level</small>
+          </button>
+        ) : (
+          // Bots stay open to everyone; only human duels need an account,
+          // because only those results are server-verified enough to rank.
+          <LoginLink className={`btn btn-primary ${styles.play} ${styles.loginBtn}`}>
+            Sign in to play
+            <small className="btn-sub">Google or email · unlocks the leaderboard</small>
+          </LoginLink>
+        )}
+
+        <span className="eyebrow">Or practise against a bot</span>
         <div className={styles.ladder}>
           {DIFFICULTIES.map((key) => {
             const unlocked = isBotUnlocked(key, myBest);
@@ -353,19 +437,18 @@ export default function Game() {
           })}
         </div>
 
-          <span className="eyebrow">Or play other players</span>
-          {account.signedIn ? (
-            <button className={`btn btn-primary ${styles.full}`} onClick={openLobby}>
-              Multiplayer
-              <small className="btn-sub">host or join a room</small>
+          {/*
+            * Rooms and codes, demoted to a link.
+            *
+            * Still there, because playing a specific person is a real thing to
+            * want and a four-way needs somewhere to be arranged. But it is no
+            * longer the front door: it asks a player to make a decision about
+            * hosting, visibility and size before they have played anything.
+            */}
+          {account.signedIn && (
+            <button className={styles.guideLink} onClick={openLobby}>
+              Play a friend, or a four-way
             </button>
-          ) : (
-            // Bots stay open to everyone; only human duels need an account,
-            // because only those results are server-verified enough to rank.
-            <LoginLink className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
-              Sign in to play others
-              <small className="btn-sub">Google or email · unlocks the leaderboard</small>
-            </LoginLink>
           )}
 
           <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
