@@ -1,0 +1,314 @@
+'use client';
+
+import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  initialSurvival, survivalReducer, survivalWpm,
+} from '@/game/survivalReducer';
+import { audio } from '@/game/audio';
+import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
+import { track as trackEvent } from '@/game/analytics';
+import type { MessageHandler } from '@/game/useDuelSocket';
+import SentenceView from './SentenceView';
+import HeatBar from './HeatBar';
+import ArenaScene from './ArenaScene';
+import SoundToggle from './SoundToggle';
+import styles from './Survival.module.css';
+
+export interface SurvivalConfig {
+  script: string[];
+  /** The server's own countdown. The client must not assume its own. */
+  countdownMs: number | undefined;
+  subscribe: (handler: MessageHandler) => () => void;
+  onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) => void;
+  onExit: () => void;
+  onAgain: () => void;
+}
+
+/**
+ * A survival run.
+ *
+ * Its own screen, not a mode inside `Duel`. There is no opponent, no health, no
+ * damage and no powers, and the first attempt at reusing the duel ended a run
+ * with `winnerSlot: -1` because there is no winner to name. What is on screen is
+ * the words, how far you have got, and a forge going cold.
+ *
+ * The input handling below is deliberately a close copy of the duel's rather
+ * than an import, and that is a decision with a shelf life. It is the hardest
+ * code in the project, it has produced three real bugs, and this repo has no DOM
+ * test setup to prove a shared version behaves the same. So it gets copied once,
+ * with the reasons kept, and the two unify after this has actually been played.
+ */
+export default function Survival({
+  script, countdownMs, subscribe, onWord, onExit, onAgain,
+}: SurvivalConfig) {
+  /**
+   * Armed from the script in the initialiser rather than in an effect.
+   *
+   * The component is keyed on the run in `Game`, so a fresh one is a fresh
+   * mount, which makes this the honest place to start. Dispatching `begin` from
+   * an effect instead meant one render of an empty run, and setting state inside
+   * an effect body, which is the cascading render lint rejects.
+   */
+  const [state, dispatch] = useReducer(
+    survivalReducer,
+    script,
+    (from) => survivalReducer(initialSurvival(), { type: 'begin', script: from }),
+  );
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  /**
+   * The invisible input that exists purely to summon a phone's keyboard.
+   *
+   * A soft keyboard only appears for a focused, editable element, and this game
+   * has none: it reads `window.keydown` and draws its own caret.
+   */
+  const capture = useRef<HTMLInputElement>(null);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const track = (id: ReturnType<typeof setTimeout>) => { timers.current.push(id); return id; };
+
+  useEffect(() => () => { timers.current.forEach(clearTimeout); }, []);
+
+  /**
+   * Whether this device is one where the capture input is the way in.
+   *
+   * Through the store rather than an effect: a media query is a real external
+   * source, the server has no window to ask, and setting it from inside an
+   * effect is the cascading render the lint rule objects to.
+   */
+  const touch = useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia('(pointer: coarse)');
+      query.addEventListener('change', notify);
+      return () => query.removeEventListener('change', notify);
+    },
+    () => window.matchMedia('(pointer: coarse)').matches,
+    () => false,
+  );
+
+  useEffect(() => {
+    trackEvent({ name: 'duel_started', mode: 'human', difficulty: 'master', touch });
+    // Once per run. The component is keyed on the run, so a new one remounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Countdown ticks into the run, never finishing before the server's. */
+  useEffect(() => {
+    if (state.phase !== 'countdown') return;
+    const delay = tickDelay(countdownMs ?? FALLBACK_COUNTDOWN_MS, state.countdown) || SOLO_TICK_MS;
+    const id = track(setTimeout(() => dispatch({ type: 'countdown' }), delay));
+    return () => clearTimeout(id);
+  }, [state.phase, state.countdown, countdownMs]);
+
+  /**
+   * One character, from whichever keyboard produced it.
+   *
+   * Shared between a physical key and a phone's soft keyboard, which arrive by
+   * completely different routes. Letting each drive its own copy is how the two
+   * quietly diverge.
+   */
+  const typeChar = useCallback((raw: string) => {
+    const key = raw.toLowerCase();
+    const snapshot = stateRef.current;
+    if (snapshot.phase !== 'running') return;
+
+    const expected = snapshot.sentence[snapshot.cursor];
+    const correct = key === expected;
+
+    if (!correct) {
+      audio.miss();
+      dispatch({ type: 'typed', char: key, now: Date.now() });
+      return;
+    }
+
+    // The keystroke click, rising in pitch with the chain, exactly as a duel's
+    // does. In survival the chain is the whole run, so it climbs the entire way.
+    audio.key(snapshot.words);
+
+    /**
+     * A space commits the word, so the server gets told before the reducer has
+     * moved on. Read off the snapshot for that reason: after the dispatch the
+     * cursor has already rolled, possibly onto a different sentence entirely.
+     */
+    if (expected === ' ') {
+      const start = snapshot.sentence.lastIndexOf(' ', snapshot.cursor - 1) + 1;
+      const word = snapshot.sentence.slice(start, snapshot.cursor);
+      const elapsed = Date.now() - snapshot.wordStartedAt;
+      // Zero mistakes, always: a mistake would have ended the run rather than
+      // reaching here. Sent anyway so the message shape matches the duel's.
+      onWord(word, elapsed, 100, 0);
+    }
+
+    dispatch({ type: 'typed', char: key, now: Date.now() });
+  }, [onWord]);
+
+  /**
+   * The soft keyboard, read through a native listener rather than React's prop.
+   *
+   * `onBeforeInput` looks like the obvious way and is not: React's is a
+   * *synthetic* event backed by `textInput` and composition, not the native
+   * `beforeinput`, and it never fired here. `beforeinput` rather than `keydown`
+   * because a composing Android keyboard reports `key: 'Unidentified'` and
+   * `keyCode: 229`, so the character is simply not in the key event. It is in
+   * `event.data`, which is also where predictive text puts whole words, hence
+   * looping rather than taking `data[0]`.
+   */
+  useEffect(() => {
+    const input = capture.current;
+    if (!input) return;
+
+    const onBeforeInput = (e: Event) => {
+      const native = e as InputEvent;
+      // Always prevented: the field must stay empty, or predictive text has
+      // something to autocorrect and the browser draws a second caret.
+      e.preventDefault();
+      for (const char of native.data ?? '') typeChar(char);
+    };
+    const clear = () => { input.value = ''; };
+
+    input.addEventListener('beforeinput', onBeforeInput);
+    input.addEventListener('input', clear);
+    return () => {
+      input.removeEventListener('beforeinput', onBeforeInput);
+      input.removeEventListener('input', clear);
+    };
+  }, [typeChar]);
+
+  /** A physical keyboard. */
+  useEffect(() => {
+    if (state.phase !== 'running') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Escape') { e.preventDefault(); onExit(); return; }
+
+      /**
+       * Ignored while the capture input has focus.
+       *
+       * A physical key pressed into a focused input fires `keydown` *and* an
+       * input event, so without this every character counts twice on any device
+       * that has both.
+       */
+      if (document.activeElement === capture.current) return;
+
+      const key = e.key === 'Spacebar' ? ' ' : e.key;
+      if (key.length !== 1) return;
+      e.preventDefault();
+      typeChar(key);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state.phase, typeChar, onExit]);
+
+  /** The referee's word on every word, and on when the run ended. */
+  useEffect(() => subscribe((message) => {
+    if (message.type !== 'survivalWord') return;
+
+    dispatch({
+      type: 'confirm',
+      heat: message.heat,
+      cooling: message.cooling,
+      words: message.wordIndex,
+      appended: message.appended,
+    });
+
+    if (message.ended) {
+      audio.finishSwell(false);
+      dispatch({ type: 'end', reason: message.ended, now: Date.now() });
+    }
+  }), [subscribe]);
+
+  const over = state.phase === 'over';
+
+  return (
+    <main className={styles.screen} data-keyboard={keyboardUp || undefined}>
+      <div className={styles.controls}>
+        <SoundToggle className={styles.iconBtn} />
+        <button className={styles.iconBtn} onClick={onExit} aria-label="Leave the run">✕</button>
+      </div>
+
+      <ArenaScene bare className={styles.arena}>
+        <div className={styles.stream}>
+          <SentenceView
+            previous={state.previous}
+            sentence={state.sentence}
+            upcoming={state.upcoming}
+            cursor={state.cursor}
+            missTick={state.missTick}
+            // No powers in survival: ward, surge, mend, leech and stagger are
+            // all damage, and there is nobody to damage.
+            powers={{}}
+            wordOffset={state.wordOffset}
+          />
+        </div>
+
+        <div className={styles.gauge}>
+          {/* The count is the score. In sudden death, how far you got and how
+              long your chain was are the same number. */}
+          <span className={`${styles.count} pixel-font`} key={state.words}>{state.words}</span>
+          <HeatBar
+            heat={state.heat}
+            wordsSurvived={state.words}
+            tick={state.heat + state.words}
+            alive={!over}
+          />
+        </div>
+      </ArenaScene>
+
+      <input
+        ref={capture}
+        className={styles.capture}
+        autoCapitalize="none"
+        autoCorrect="off"
+        autoComplete="off"
+        spellCheck={false}
+        inputMode="text"
+        enterKeyHint="done"
+        aria-label="Type here to survive"
+        tabIndex={-1}
+        onBlur={() => setKeyboardUp(false)}
+      />
+
+      {touch && !keyboardUp && !over && (
+        // A real button, because iOS refuses a programmatic focus outside a
+        // genuine user gesture.
+        <button
+          type="button"
+          className={styles.tapToType}
+          onClick={() => { capture.current?.focus(); setKeyboardUp(true); }}
+        >
+          Tap to type
+        </button>
+      )}
+
+      {state.phase === 'countdown' && (
+        <div className={styles.overlay}>
+          <span key={state.countdown} className={`${styles.countdown} pixel-font`}>
+            {state.countdown > 0 ? state.countdown : 'GO'}
+          </span>
+        </div>
+      )}
+
+      {over && (
+        <div className={styles.overlay}>
+          <div className={`panel ${styles.result}`}>
+            <h1 className={`${styles.resultTitle} pixel-font`}>{state.words} words</h1>
+            <p className={styles.reason}>
+              {state.ended === 'typo'
+                ? 'One mistake. That is the whole game.'
+                : 'The forge went cold.'}
+            </p>
+            {/* Measured to the moment it ended, not to now. Reading the clock
+                during render would make the figure creep while the result sits
+                on screen, and it is also an impure call the lint rule refuses. */}
+            <p className={styles.stat}>
+              {survivalWpm(state, state.finishedAt)} wpm
+            </p>
+            <button className="btn btn-primary" onClick={onAgain}>Go again</button>
+            <button className="btn btn-ghost" onClick={onExit}>Back</button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}

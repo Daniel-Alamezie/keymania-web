@@ -8,7 +8,7 @@ import { CAPACITY_MS } from '../heat';
 const SCRIPT = ['one two', 'three four', 'five six'];
 
 const started = (): SurvivalState =>
-  survivalReducer(initialSurvival(), { type: 'begin', script: SCRIPT, now: 1_000 });
+  survivalReducer(initialSurvival(), { type: 'begin', script: SCRIPT });
 
 /** Runs the countdown out, since nothing is accepted before it finishes. */
 const running = (): SurvivalState => {
@@ -130,7 +130,7 @@ describe('what the server says', () => {
 
 describe('ending', () => {
   it('records a cold forge as its own cause', () => {
-    const state = survivalReducer(running(), { type: 'end', reason: 'cold' });
+    const state = survivalReducer(running(), { type: 'end', reason: 'cold', now: 9_000 });
     expect(state.phase).toBe('over');
     expect(state.ended).toBe('cold');
     expect(state.heat).toBe(0);
@@ -139,8 +139,35 @@ describe('ending', () => {
   /** Two different lessons: one says slow down, the other says the opposite. */
   it('does not overwrite the reason a run already ended', () => {
     const typo = type(running(), 'x');
-    const after = survivalReducer(typo, { type: 'end', reason: 'cold' });
+    const after = survivalReducer(typo, { type: 'end', reason: 'cold', now: 9_000 });
     expect(after.ended).toBe('typo');
+  });
+});
+
+describe('the clock', () => {
+  /**
+   * It starts on the first key, not when the run was armed.
+   *
+   * The countdown, the socket and the first render all happen before anybody
+   * types. Counting them would report a speed nobody achieved, and the longer
+   * the connection took the slower the player would look.
+   */
+  it('does not start until somebody types', () => {
+    expect(running().startedAt).toBe(0);
+    expect(type(running(), 'o', 4_000).startedAt).toBe(4_000);
+  });
+
+  it('does not restart on every subsequent key', () => {
+    let state = type(running(), 'o', 4_000);
+    state = survivalReducer(state, { type: 'typed', char: 'n', now: 9_999 });
+    expect(state.startedAt).toBe(4_000);
+  });
+
+  /** Stamped at the end, so the figure on the result screen stops moving. */
+  it('records when the run finished, both ways it can', () => {
+    expect(type(running(), 'x', 7_000).finishedAt).toBe(7_000);
+    expect(survivalReducer(running(), { type: 'end', reason: 'cold', now: 9_000 }).finishedAt)
+      .toBe(9_000);
   });
 });
 

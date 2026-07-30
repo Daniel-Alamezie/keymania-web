@@ -104,6 +104,58 @@
   font-size: 15px;
 }
 
+/* ---------- Game modes ----------
+ *
+ * Two labels under Play, and nothing else until one is chosen. The menu at rest
+ * is one button and two words rather than one button and eight, which is the
+ * whole point: Play answers "I want a game now" and needs no decision, and these
+ * are the only two decisions worth offering.
+ */
+.modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.mode { min-width: 0; }
+
+/*
+ * The open one is lit and stays lit while its panel is showing, so the panel
+ * below reads as belonging to it rather than floating under both.
+ */
+.mode[data-active] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Survival warns before it is chosen, so its label runs warm even closed. */
+.mode[data-mode='survival'] { border-color: var(--opponent-deep, var(--edge)); }
+.mode[data-mode='survival'][data-active] { border-color: var(--opponent); color: var(--opponent); }
+
+.modePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  animation: unfold 200ms ease-out;
+}
+
+@keyframes unfold {
+  from { transform: translateY(-6px); opacity: 0; }
+}
+
+.modeBlurb {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modePanel { animation: none; }
+}
+
 /* ---------- The bot ladder ----------
  *
  * Six rungs on a fixed three-column grid rather than a wrapping flex row. Flex
@@ -117,6 +169,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
+  animation: unfold 200ms ease-out;
 }
 
 .rung { min-width: 0; }

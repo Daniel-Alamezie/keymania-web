@@ -49,18 +49,27 @@ export interface SurvivalState {
   heat: number;
   cooling: number;
   charsTyped: number;
+  /**
+   * When the first key landed, not when the run was armed.
+   *
+   * The countdown, the connection and the render all happen before anybody
+   * types, and counting them would report a speed nobody achieved. Zero until
+   * the first keystroke sets it.
+   */
   startedAt: number;
   wordStartedAt: number;
+  /** When it ended, so the final speed is not recomputed on every render. */
+  finishedAt: number;
   ended: SurvivalEnd | null;
 }
 
 export type SurvivalAction =
-  | { type: 'begin'; script: string[]; now: number }
+  | { type: 'begin'; script: string[] }
   | { type: 'countdown' }
   | { type: 'typed'; char: string; now: number }
   /** The server's word on the last word, including where the forge stands. */
   | { type: 'confirm'; heat: number; cooling: number; words: number; appended?: string }
-  | { type: 'end'; reason: SurvivalEnd };
+  | { type: 'end'; reason: SurvivalEnd; now: number };
 
 export function initialSurvival(): SurvivalState {
   return {
@@ -80,6 +89,7 @@ export function initialSurvival(): SurvivalState {
     charsTyped: 0,
     startedAt: 0,
     wordStartedAt: 0,
+    finishedAt: 0,
     ended: null,
   };
 }
@@ -95,8 +105,6 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
         script: action.script,
         sentence: withSpace(action.script[0] ?? OPENING_SENTENCE),
         upcoming: withSpace(action.script[1] ?? ''),
-        startedAt: action.now,
-        wordStartedAt: action.now,
       };
 
     case 'countdown': {
@@ -125,15 +133,23 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
           ...state,
           phase: 'over',
           ended: 'typo',
+          finishedAt: action.now,
           missTick: state.missTick + 1,
         };
       }
 
       const advanced = state.cursor + 1;
       const charsTyped = state.charsTyped + 1;
+      /**
+       * The clock starts on the first key, not when the run was armed.
+       *
+       * The countdown, the socket and the first render all happen before anybody
+       * types, and counting them would report a speed nobody achieved.
+       */
+      const startedAt = state.startedAt || action.now;
 
       // Mid-word: nothing to report, just move.
-      if (expected !== ' ') return { ...state, cursor: advanced, charsTyped };
+      if (expected !== ' ') return { ...state, cursor: advanced, charsTyped, startedAt };
 
       /**
        * A space committed the word.
@@ -150,6 +166,7 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
           ...state,
           cursor: advanced,
           charsTyped,
+          startedAt,
           words: state.words + 1,
           wordStartedAt: action.now,
         };
@@ -165,6 +182,7 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
         wordOffset: state.wordOffset + wordsInSentence,
         cursor: 0,
         charsTyped,
+        startedAt,
         words: state.words + 1,
         wordStartedAt: action.now,
       };
@@ -194,7 +212,7 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
 
     case 'end':
       if (state.phase === 'over') return state;
-      return { ...state, phase: 'over', ended: action.reason, heat: 0 };
+      return { ...state, phase: 'over', ended: action.reason, finishedAt: action.now, heat: 0 };
 
     default:
       return state;

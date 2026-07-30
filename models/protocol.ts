@@ -81,6 +81,15 @@ export type ServerMessage =
   | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
   | {
     type: 'matchStart';
+    /**
+     * What is starting.
+     *
+     * Absent means a duel, which is what every release before survival sent and
+     * what every duel still sends. The client routes on this rather than on the
+     * roster length, because a room of one is a legitimate thing for a duel to
+     * become mid-match and a survival run is not something to fall into.
+     */
+    mode?: 'duel' | 'survival';
     roomId: string;
     script: string[];
     /** Charged words keyed by flat word index. */
@@ -167,6 +176,14 @@ export type ClientMessage =
     token: string;
     /** How many players the room waits for. Omitted means a duel. */
     capacity?: RoomSize;
+    /**
+     * A room of one, refereed against the clock rather than an opponent.
+     *
+     * Omitted means a duel, which is what every release before survival sent.
+     * The server starts a survival room the moment it exists, so the reply is
+     * `matchStart` rather than `roomCreated`.
+     */
+    mode?: 'survival';
   }
   | { action: 'joinRoom'; roomId: string; name: string; token: string }
   | { action: 'listRooms' }
