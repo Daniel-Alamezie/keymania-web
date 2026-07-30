@@ -27,7 +27,16 @@ export function startBot(difficulty: Difficulty, onWord: (event: BotWordEvent) =
 
     const word = words[index];
     const baseMs = (word.text.length / 5 / profile.wpm) * 60_000;
-    const jitter = 0.75 + Math.random() * 0.5;
+    /**
+     * How much this bot's pace wanders, centred on its target speed.
+     *
+     * Per-profile rather than a fixed quarter either way. The swing is what
+     * makes a slow bot feel like a person rather than a metronome, and what
+     * makes a fast one feel arbitrary: at 150wpm a quarter-swing means losing to
+     * a lucky burst rather than to a better typist. So it narrows as the ladder
+     * climbs and the top bot is relentless instead of erratic.
+     */
+    const jitter = 1 - profile.jitter + Math.random() * profile.jitter * 2;
     const fumbled = Math.random() < profile.errorRate;
     const delay = baseMs * jitter + (fumbled ? 260 + Math.random() * 420 : 0);
 
