@@ -32,4 +32,37 @@ describe('tickDelay', () => {
     expect(tickDelay(-900, 2)).toBe(0);
     expect(tickDelay(1000, 0)).toBe(0);
   });
+
+  /**
+   * The argument is time *remaining*, and calling it with the total is the way
+   * this goes wrong.
+   *
+   * Survival did exactly that: it passed the whole countdown on every tick, so
+   * the delays were the total over 3, then over 2, then over 1 — nearly twice
+   * the countdown the server had committed to. The run sat there long after it
+   * was live, and it read as the game being slow rather than as a bug, because
+   * a countdown that is too long still looks like a countdown.
+   *
+   * Both spellings are shown together, because the difference is invisible at
+   * the call site and the function cannot tell which it was given.
+   */
+  it('overruns badly if given the total instead of what is left', () => {
+    const spend = (each: (ticks: number) => number) => {
+      let spent = 0;
+      for (let ticks = 3; ticks > 0; ticks -= 1) spent += each(ticks);
+      return spent;
+    };
+
+    // Correct: hand it what is left each time, and it lands on the deadline.
+    let left = 1500;
+    const onDeadline = spend((ticks) => {
+      const delay = tickDelay(left, ticks);
+      left -= delay;
+      return delay;
+    });
+    expect(onDeadline).toBe(1500);
+
+    // Wrong: hand it the total each time. 500 + 750 + 1500.
+    expect(spend((ticks) => tickDelay(1500, ticks))).toBe(2750);
+  });
 });

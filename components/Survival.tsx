@@ -6,7 +6,7 @@ import {
 } from '@/game/survivalReducer';
 import { secondsLeft } from '@/game/heat';
 import { audio } from '@/game/audio';
-import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
+import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import SentenceView from './SentenceView';
@@ -102,10 +102,34 @@ export default function Survival({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** Countdown ticks into the run, never finishing before the server's. */
+  /**
+   * When the server said it would start accepting words.
+   *
+   * Stamped once, on the first tick, rather than read during render — the clock
+   * is impure and this is the same arrangement the duel uses for `startsAt`.
+   */
+  const deadline = useRef(0);
+
+  /**
+   * Countdown ticks into the run, never finishing before the server's.
+   *
+   * **Time remaining, not the total.** This passed the whole countdown on every
+   * tick, so the three delays were the total divided by 3, then by 2, then by 1
+   * — nearly twice the countdown the server had committed to, and the run sat
+   * there long after it was live. That is why it felt slow: with a three second
+   * deadline the client took five and a half.
+   *
+   * `tickDelay` was written to be given the remaining time and recompute, which
+   * is exactly what the duel does with it. Only survival called it the other
+   * way, and the mistake was invisible because a countdown that is too long
+   * looks like a countdown.
+   */
   useEffect(() => {
     if (state.phase !== 'countdown') return;
-    const delay = tickDelay(countdownMs ?? FALLBACK_COUNTDOWN_MS, state.countdown) || SOLO_TICK_MS;
+    if (!deadline.current) {
+      deadline.current = Date.now() + (countdownMs ?? FALLBACK_COUNTDOWN_MS);
+    }
+    const delay = tickDelay(deadline.current - Date.now(), state.countdown);
     const id = track(setTimeout(() => dispatch({ type: 'countdown' }), delay));
     return () => clearTimeout(id);
   }, [state.phase, state.countdown, countdownMs]);
