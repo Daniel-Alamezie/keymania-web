@@ -519,7 +519,18 @@ export default function Game() {
         <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
         {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
         <AccountBar />
-        <Searching rating={queuedAt} onCancel={stopSearching} />
+        <Searching
+          rating={queuedAt}
+          onCancel={stopSearching}
+          /**
+           * Waiting has gone on long enough. What happens next is the server's
+           * decision: it may have somebody real by now, it may refuse because
+           * the ask came too early, and it may have the whole thing switched
+           * off. So this reports the wait rather than requesting an outcome,
+           * and the screen carries on counting either way.
+           */
+          onGiveUpWaiting={() => send({ action: 'playGhost' })}
+        />
       </main>
     );
   }
