@@ -18,9 +18,18 @@ import styles from './Searching.module.css';
  * rating band it will accept. Saying so turns waiting into something that is
  * working rather than something that is stuck.
  */
-export default function Searching({ rating, onCancel }: {
+export default function Searching({ rating, onCancel, onGiveUpWaiting }: {
   rating: number | null;
   onCancel: () => void;
+  /**
+   * Called once, when waiting has gone on long enough to stop being worth it.
+   *
+   * Optional, so the search screen still works with nothing wired to it. The
+   * server decides what happens next and enforces its own floor on how early
+   * this can be asked, so it says "I have waited long enough" rather than
+   * naming an outcome.
+   */
+  onGiveUpWaiting?: () => void;
 }) {
   const [seconds, setSeconds] = useState(0);
 
@@ -28,6 +37,27 @@ export default function Searching({ rating, onCancel }: {
     const id = setInterval(() => setSeconds((n) => n + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  /**
+   * How long to hold out for a person, this time.
+   *
+   * Randomised rather than fixed, because a wait that ends at exactly the same
+   * second every single search is the first thing anybody notices. Chosen once
+   * per mount so it cannot drift while the clock is running.
+   *
+   * `useState` with an initialiser rather than a bare call: reading the random
+   * source during render is impure, and doing it in an effect would cost a
+   * render where the limit is not yet known.
+   */
+  const [patience] = useState(() => 20 + Math.floor(Math.random() * 30));
+
+  useEffect(() => {
+    if (!onGiveUpWaiting || seconds < patience) return;
+    onGiveUpWaiting();
+    // Once per search. The screen is unmounted the moment a duel starts, so
+    // there is nothing to reset, and asking twice would open two rooms.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seconds >= patience]);
 
   /**
    * What the server will currently accept, mirrored for the player.

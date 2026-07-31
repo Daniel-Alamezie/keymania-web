@@ -201,6 +201,15 @@ export type ClientMessage =
   /** Stop looking, and tear down the seat that was opened for you. */
   | { action: 'cancelQueue' }
   /**
+   * Stop waiting for a person and take the opponent the server is running.
+   *
+   * Sent when the search has gone on long enough that waiting is worse than
+   * playing. The server decides whether to honour it, and enforces its own floor
+   * on how early it can be asked, so this says "I have waited long enough"
+   * rather than "give me an opponent".
+   */
+  | { action: 'playGhost' }
+  /**
    * One word of a survival run.
    *
    * The same shape as `wordComplete` and a different route, because the two are
