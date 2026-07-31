@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { invalidateBoards } from '@/game/useBoard';
 import { audio } from '@/game/audio';
@@ -726,6 +727,19 @@ export default function Game() {
           <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
             New here? Read how to play
           </button>
+
+          {/*
+            * Only on a screen too narrow for the panel beside the menu.
+            *
+            * The board is dropped rather than stacked on a phone, which is the
+            * right call — a player should land on the game, not on a wall of
+            * other people's numbers. But the only route to the full board was a
+            * link inside that dropped panel, so on mobile the page existed and
+            * nothing pointed at it. A real link, because it goes somewhere.
+            */}
+          <Link href="/leaderboard" className={`${styles.guideLink} ${styles.narrowLink}`}>
+            See the leaderboard
+          </Link>
         </div>
         <LeaderboardPanel />
       </div>

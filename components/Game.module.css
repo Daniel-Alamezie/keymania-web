@@ -42,6 +42,25 @@
   .wide > :first-child, .wide > :last-child { display: none; }
 }
 
+/*
+ * The way to the board on a screen too narrow to show it beside the menu.
+ *
+ * Dropping the side panels on a phone is still right: a player arriving on a
+ * small screen should land on the game rather than on a wall of other people's
+ * statistics. What was wrong is that the *only* link to the full board lived
+ * inside the panel being dropped, so the page existed at /leaderboard and
+ * nothing anywhere pointed at it. A player on mobile reported exactly that.
+ *
+ * Hidden where the panel is visible, because a link to something already on
+ * screen is noise. The two are mirror images of the rule above, which is why
+ * they share its breakpoint — if one moves, both have to.
+ */
+.narrowLink { display: none; }
+
+@media (max-width: 1100px) {
+  .narrowLink { display: inline-block; }
+}
+
 .menu {
   position: relative;
   z-index: 3;
