@@ -59,6 +59,37 @@ export const PANEL_LIMIT = 10;
 export const PAGE_LIMIT = 50;
 
 /**
+ * The most rows this app will ask for, mirroring the server's own ceiling.
+ *
+ * Both sides clamp. The server has to, because the route is public and a caller
+ * who picks the row count picks the bill: every row costs an extra read, since
+ * the handle is not in the index projection. This side does it so the number
+ * interpolated into a URL is one of ours rather than one a query string
+ * suggested.
+ */
+export const MAX_LIMIT = 100;
+
+/**
+ * The query string for a board request, built in one place.
+ *
+ * This exists because the two halves disagreed. The client asked for fifty rows
+ * and the proxy forwarded only `board`, so every request reached the API with no
+ * limit and came back with the default ten — which meant "Show more" could never
+ * appear, and the page confidently reported "showing all 10 ranked players" while
+ * fifteen were ranked.
+ *
+ * Nothing was broken in either file. The client was right, the proxy was right,
+ * and the thing between them was never written down. So it is written down here,
+ * and both call it.
+ */
+export function boardQuery(board: BoardKind, limit: number): string {
+  const rows = Number.isFinite(limit) && limit >= 1
+    ? Math.min(Math.floor(limit), MAX_LIMIT)
+    : PANEL_LIMIT;
+  return `board=${board}&limit=${rows}`;
+}
+
+/**
  * Read a board name off untrusted input.
  *
  * Anything unrecognised becomes the default rather than an error, matching what

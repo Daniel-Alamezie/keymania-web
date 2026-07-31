@@ -158,3 +158,53 @@ describe('board cache', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
+
+/**
+ * What the cache saves, counted in requests.
+ *
+ * Cost is the north star here and every row is an extra read on the server: the
+ * handle is not in the index projection and cannot be added to it, so a page of
+ * fifty is fifty GetItems on top of the query. That makes "how many times do we
+ * ask" the number worth pinning, rather than a thing to assume the cache handles.
+ */
+describe('what a real session costs', () => {
+  it('reads the menu panel once however many times the menu is seen', async () => {
+    const store = await freshStore();
+
+    // Menu, into a duel, back to the menu, into a run, back again.
+    for (let visit = 0; visit < 5; visit += 1) await store.ensureBoard('standings', 10);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('costs one request per board looked at, not per look', async () => {
+    const store = await freshStore();
+
+    for (const board of ['standings', 'speed', 'streak'] as const) {
+      await store.ensureBoard(board, 10);
+      await store.ensureBoard(board, 10);
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  /**
+   * The full board asks for more than the panel holds, so it does pay again.
+   *
+   * That is the one deliberate re-read in the design and it is the right way
+   * round: the menu is the hot path and asks for ten, the page is opened on
+   * purpose and asks for fifty. Making them share a size would either make every
+   * menu load pay for fifty rows nobody sees, or leave the page showing ten.
+   */
+  it('pays once more when somebody opens the full board, and not again', async () => {
+    const store = await freshStore();
+
+    await store.ensureBoard('standings', 10);
+    await store.ensureBoard('standings', 50);
+    // Back to the menu, and into the page again.
+    await store.ensureBoard('standings', 10);
+    await store.ensureBoard('standings', 50);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

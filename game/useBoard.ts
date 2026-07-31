@@ -3,7 +3,8 @@
 // The store owns the state, so nothing here needs local React state.
 import { useEffect, useSyncExternalStore } from 'react';
 import {
-  BOARDS, PANEL_LIMIT, type BoardEntry, type BoardKind, type LeaderboardResponse,
+  boardQuery, BOARDS, PANEL_LIMIT,
+  type BoardEntry, type BoardKind, type LeaderboardResponse,
 } from '@/models/leaderboard';
 
 export type BoardStatus = 'loading' | 'ready' | 'unavailable';
@@ -124,10 +125,9 @@ export function ensureBoard(board: BoardKind, limit = PANEL_LIMIT): Promise<void
 
   const request = (async () => {
     try {
-      const response = await fetch(
-        `/api/board?board=${board}&limit=${limit}`,
-        { cache: 'no-store' },
-      );
+      const response = await fetch(`/api/board?${boardQuery(board, limit)}`, {
+        cache: 'no-store',
+      });
       if (!response.ok) {
         // Only a failure worth showing if there is nothing already on screen.
         // Replacing a readable board with an error helps nobody.

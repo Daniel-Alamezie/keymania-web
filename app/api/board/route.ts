@@ -1,5 +1,5 @@
 import { forward } from '@/lib/upstream';
-import { asBoard } from '@/models/leaderboard';
+import { asBoard, boardQuery } from '@/models/leaderboard';
 
 /**
  * The standings.
@@ -8,13 +8,21 @@ import { asBoard } from '@/models/leaderboard';
  * browser bundle, so the duel server is reachable only through routes this app
  * actually offers.
  *
- * The `board` parameter is resolved through `asBoard` rather than passed along,
- * which does two jobs. It settles on a real board for a junk value instead of
- * relying on the upstream route to do the same thing, and — because the result
- * is one of a fixed set of string literals — the interpolation below cannot be
- * used to append anything to the upstream path.
+ * Both parameters are rebuilt through `boardQuery` rather than passed along.
+ * That settles on a real board and a sane row count for junk input instead of
+ * relying on the upstream route to do the same thing, and — because everything
+ * interpolated is either a fixed string literal or a clamped integer — the
+ * upstream path cannot be extended by anything a caller sends.
+ *
+ * **It also forwarded only `board` for a while, and dropped the row count in
+ * silence.** The client asked for fifty and the API answered ten, every time,
+ * so the "Show more" control could never appear and the page reported "showing
+ * all 10 ranked players" while fifteen were ranked. Neither file was wrong; the
+ * agreement between them was just never written anywhere. It is written in
+ * `boardQuery` now, and this calls it rather than assembling its own.
  */
 export const GET = (request: Request) => {
-  const board = asBoard(new URL(request.url).searchParams.get('board'));
-  return forward(`/leaderboard?board=${board}`, {}, { auth: false });
+  const asked = new URL(request.url).searchParams;
+  const board = asBoard(asked.get('board'));
+  return forward(`/leaderboard?${boardQuery(board, Number(asked.get('limit')))}`, {}, { auth: false });
 };

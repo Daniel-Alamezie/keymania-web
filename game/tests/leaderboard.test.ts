@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { asBoard, BOARDS, BOARD_META, DEFAULT_BOARD, PANEL_ROWS } from '../../models/leaderboard';
+import {
+  asBoard, boardQuery, BOARDS, BOARD_META, DEFAULT_BOARD,
+  MAX_LIMIT, PANEL_LIMIT, PANEL_ROWS,
+} from '../../models/leaderboard';
 
 /**
  * The board a player lands on, and what reaches the API.
@@ -97,5 +100,44 @@ describe('BOARD_META', () => {
     const messages = BOARDS.map((kind) => BOARD_META[kind].empty);
     expect(new Set(messages).size).toBe(BOARDS.length);
     expect(BOARD_META.streak.empty).not.toMatch(/beat another player/i);
+  });
+});
+
+/**
+ * The query string, which is where the two halves disagreed.
+ *
+ * The client asked for fifty rows and the proxy forwarded only `board`, so every
+ * request reached the API without a limit and came back with the default ten.
+ * Neither file was wrong on its own. The agreement between them was simply never
+ * written down, which is the same shape as every other seam bug in this project:
+ * two correct halves and nothing holding them together.
+ *
+ * It is written down now and both call it, so these are the tests for the thing
+ * that was missing rather than for either side of it.
+ */
+describe('boardQuery', () => {
+  it('carries the row count, which is the whole reason it exists', () => {
+    expect(boardQuery('standings', 50)).toBe('board=standings&limit=50');
+  });
+
+  /**
+   * Clamped on this side as well as the server's. Both have to: the server
+   * because the route is public and every row is an extra read, so a caller
+   * choosing the count is a caller choosing the bill — and here so the number
+   * interpolated into a URL is one of ours rather than one a query string
+   * suggested.
+   */
+  it('will not ask for more rows than the server would ever return', () => {
+    expect(boardQuery('speed', 5_000)).toBe(`board=speed&limit=${MAX_LIMIT}`);
+  });
+
+  it('falls back rather than sending nonsense upstream', () => {
+    for (const junk of [0, -1, NaN, Infinity, undefined as unknown as number]) {
+      expect(boardQuery('streak', junk)).toBe(`board=streak&limit=${PANEL_LIMIT}`);
+    }
+  });
+
+  it('rounds a fractional ask rather than passing it on', () => {
+    expect(boardQuery('standings', 12.7)).toBe('board=standings&limit=12');
   });
 });
