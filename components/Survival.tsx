@@ -264,7 +264,9 @@ export default function Survival({
    * is what stops this being a client that can declare its own runs over.
    */
   useEffect(() => {
-    if (state.phase !== 'running') return;
+    // Nothing is cooling until the run has begun, and it begins on the first
+    // key rather than when the countdown ends — see `armed` below.
+    if (state.phase !== 'running' || !state.startedAt) return;
     const left = secondsLeft(state.heat, state.words) * 1000;
     const id = track(setTimeout(() => {
       const snapshot = stateRef.current;
@@ -274,7 +276,7 @@ export default function Survival({
       dispatch({ type: 'end', reason: 'cold', now: Date.now() });
     }, left));
     return () => clearTimeout(id);
-  }, [state.phase, state.heat, state.words, onWord]);
+  }, [state.phase, state.startedAt, state.heat, state.words, onWord]);
 
   /** The referee's word on every word, and on when the run ended. */
   useEffect(() => subscribe((message) => {
@@ -346,11 +348,17 @@ export default function Survival({
           {/* The count is the score. In sudden death, how far you got and how
               long your chain was are the same number. */}
           <span className={`${styles.count} pixel-font`} key={state.words}>{state.words}</span>
+          {/* `alive` holds the bar full until the first key, matching the
+              server: nothing cools before the run has begun. A bar draining
+              while the player reads the opening word was showing them losing
+              time they were never charged for, and it is most of why the wait
+              before a run felt longer than the countdown. `startedAt` stays
+              zero until they type. */}
           <HeatBar
             heat={state.heat}
             wordsSurvived={state.words}
             tick={state.heat + state.words}
-            alive={!over}
+            alive={!over && state.startedAt > 0}
           />
         </div>
       </ArenaScene>
