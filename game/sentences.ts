@@ -19,6 +19,14 @@ const ADJECTIVES = [
   'gentle', 'ragged', 'crimson', 'distant', 'iron', 'lucky', 'nimble', 'patient',
   'reckless', 'silent', 'stubborn', 'twisted', 'weary', 'wicked', 'bright', 'dull',
   'sharp', 'heavy', 'narrow', 'rotten', 'sacred', 'sleepy', 'sturdy', 'wild',
+  'brittle', 'solemn', 'eager', 'amber', 'ashen', 'barren', 'calm', 'coarse', 'dusty',
+  'eerie', 'faded', 'fearless', 'fierce', 'fragile', 'gaunt', 'grim', 'hazy', 'hungry',
+  'idle', 'jagged', 'keen', 'lonely', 'lofty', 'mellow', 'misty', 'mortal', 'murky',
+  'nameless', 'noble', 'ornate', 'placid', 'polished', 'proud', 'quaint', 'radiant', 'rapid',
+  'rugged', 'ruthless', 'scarlet', 'secret', 'serene', 'shallow', 'sombre', 'sparse',
+  'splendid', 'steady', 'stormy', 'sullen', 'sunken', 'supple', 'tarnished', 'tender',
+  'timid', 'tireless', 'tranquil', 'unruly', 'velvet', 'vivid', 'watchful', 'weathered',
+  'willing', 'winding', 'wistful', 'wooden', 'worthy', 'zealous',
 ];
 
 const NOUNS = [
@@ -27,6 +35,17 @@ const NOUNS = [
   'thunder', 'candle', 'bridge', 'forest', 'window', 'compass', 'kettle', 'ribbon',
   'hammer', 'meadow', 'orchard', 'pillar', 'raven', 'saddle', 'temple', 'valley',
   'whisper', 'anvil', 'cavern', 'feather', 'glacier', 'harvest', 'island',
+  'beacon', 'cinder', 'quarry', 'thicket', 'furnace', 'marsh', 'chapel', 'banner',
+  'cauldron', 'cottage', 'sparrow', 'otter', 'badger', 'heron', 'willow', 'cedar', 'thorn',
+  'bracken', 'granite', 'marble', 'copper', 'sickle', 'plough', 'barrow', 'cellar',
+  'chimney', 'hearth', 'rafter', 'doorway', 'corridor', 'courtyard', 'fountain', 'statue',
+  'archway', 'tunnel', 'ferry', 'lighthouse', 'current', 'seashell', 'driftwood', 'dune',
+  'cliff', 'ravine', 'summit', 'plateau', 'canyon', 'prairie', 'heather', 'clover',
+  'bramble', 'nettle', 'acorn', 'chestnut', 'walnut', 'apricot', 'quince', 'satchel',
+  'buckle', 'cloak', 'glove', 'helm', 'shield', 'spear', 'arrow', 'quiver', 'torch',
+  'brazier', 'forge', 'bellows', 'chisel', 'ladder', 'basket', 'barrel', 'crate', 'rope',
+  'chain', 'latch', 'hinge', 'keystone', 'cobble', 'furrow', 'hedgerow', 'paddock', 'stable',
+  'granary', 'windmill', 'millstone', 'beehive',
 ];
 
 const VERBS = [
@@ -34,12 +53,25 @@ const VERBS = [
   'holds', 'opens', 'watches', 'wakes', 'buries', 'catches', 'crosses', 'feeds',
   'greets', 'leaves', 'marks', 'names', 'passes', 'raises', 'shapes', 'tests',
   'turns', 'wears', 'weighs', 'counts', 'forgets', 'remembers',
+  'gathers', 'guides', 'hammers', 'hunts', 'keeps', 'kindles', 'lifts', 'listens', 'mends',
+  'moves', 'offers', 'paints', 'plants', 'polishes', 'protects', 'pulls', 'reaches',
+  'rebuilds', 'repeats', 'rescues', 'rings', 'rules', 'scatters', 'seals', 'searches',
+  'sends', 'settles', 'shelters', 'shifts', 'sings', 'sorts', 'sparks', 'splits', 'steadies',
+  'steers', 'stirs', 'studies', 'sweeps', 'teaches', 'tends', 'throws', 'tightens', 'traces',
+  'trades', 'travels', 'trusts', 'waits', 'walks', 'wanders', 'warms', 'warns', 'washes',
+  'weaves', 'welcomes', 'whistles', 'widens', 'winds', 'works',
 ];
 
 const TAILS = [
   'at dawn', 'in silence', 'before the storm', 'without a sound', 'by the river',
   'under the moon', 'for a while', 'in the dark', 'past the gate', 'on the hour',
   'after the rain', 'beyond the hill', 'all night', 'once again', 'in the cold',
+  'at first light', 'through the frost', 'before the bell', 'without warning',
+  'across the field', 'below the ridge', 'until morning', 'behind the wall',
+  'among the stones', 'against the tide', 'over the water', 'through the gate',
+  'at the crossing', 'near the mill', 'beside the fire', 'after the harvest',
+  'through the pines', 'at the turning', 'under the eaves', 'in the hollow',
+  'through the smoke', 'by the old road', 'before the frost', 'at the ford',
 ];
 
 type Pick = <T>(list: T[]) => T;
@@ -66,6 +98,10 @@ const SIGNATURE = [
   'speed is nothing without control',
   'a duel is won between the spaces',
   'keep your fingers on the home row',
+  'accuracy is the fastest thing you own', 'the streak is the whole game',
+  'one wrong letter and the forge goes cold', 'good typists look slow and never stop',
+  'rhythm beats bursts every single time', 'read one word ahead of your hands',
+  'a clean run is worth two fast ones', 'the space bar is the trigger',
 ];
 
 const pick: Pick = (list) => list[Math.floor(Math.random() * list.length)];
