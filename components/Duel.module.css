@@ -757,6 +757,20 @@
 
 .choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
+/*
+ * The spacebar shortcut, said quietly.
+ *
+ * Smaller and fainter than the blurb, because it is the second way to do a
+ * thing there is already a button for. Worth saying at all because the key is
+ * invisible otherwise, and this game is played with a hand on it — a player who
+ * never learns the shortcut leaves the keyboard after every duel.
+ */
+.shortcut {
+  margin: -2px 0 0;
+  font-size: 11px;
+  color: var(--faint);
+}
+
 .countdown {
   font-size: clamp(48px, 14vw, 120px);
   color: var(--gold);

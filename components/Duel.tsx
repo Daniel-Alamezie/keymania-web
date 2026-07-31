@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import EffectsCanvas, { type EffectsHandle } from '@/render/EffectsCanvas';
 import {
   accuracy, currentTier, duelReducer, finalWpm, initialState, isOut, overallWpm,
@@ -16,6 +16,7 @@ import { useAccount } from '@/game/useAccount';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
 import { useArenaFx } from '@/game/useArenaFx';
+import { confirmTarget, useConfirmKey } from '@/game/useConfirmKey';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
@@ -319,6 +320,50 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     if (!touch) return;
     capture.current?.focus();
   }, [touch]);
+
+  /**
+   * Start a duel against the bot.
+   *
+   * Extracted because three things now do it — the READY? panel, Rematch, and
+   * the spacebar shortcut — and two identical copies of a three-line sequence
+   * is exactly how one of them ends up missing the analytics call or the
+   * keyboard nudge.
+   */
+  const beginDuel = useCallback(() => {
+    openKeyboard();
+    trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
+    dispatch({ type: 'start', difficulty, character: mine });
+  }, [openKeyboard, difficulty, mine, touch]);
+
+  /**
+   * What the spacebar does, given whichever panel is currently up.
+   *
+   * One action rather than a listener per panel, because only one of them is
+   * ever on screen and the whole question is "what is being asked right now".
+   * `null` while a duel is being played, which is the case that matters most:
+   * space is how a word is thrown, and a shortcut that stole it mid-duel would
+   * be catastrophic rather than merely wrong.
+   *
+   * Memoised so the identity only changes when the answer does. `useConfirmKey`
+   * re-arms its delay whenever this changes, which is exactly right — a new
+   * panel deserves a fresh guard against the keystroke that opened it.
+   */
+  const confirmAction = useMemo(() => {
+    const target = confirmTarget({ phase: state.phase, isMulti, confirmQuit, asked });
+    switch (target) {
+      case 'dismiss': return () => setConfirmQuit(false);
+      case 'start': return beginDuel;
+      case 'rematch':
+        return () => { trackEvent({ name: 'rematch_taken', mode: 'bot' }); beginDuel(); };
+      case 'playAgain':
+        return multiplayer
+          ? () => { setAsked(true); multiplayer.onRematch(); }
+          : null;
+      default: return null;
+    }
+  }, [confirmQuit, state.phase, isMulti, multiplayer, asked, beginDuel]);
+
+  useConfirmKey(confirmAction);
 
   const typeChar = useCallback((raw: string) => {
       const key = raw.toLowerCase();
@@ -1128,17 +1173,13 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
             {/* Starting a duel no longer re-asserts the sound preference — the
                 store already holds it, and re-applying it here is what used to
                 undo a mute the moment the next duel began. */}
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                openKeyboard();
-                trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
-                dispatch({ type: 'start', difficulty, character: mine });
-              }}
-            >
+            <button className="btn btn-primary" onClick={beginDuel}>
               Fight {BOT_PROFILES[difficulty].label}
             </button>
             <button className="btn btn-ghost" onClick={onExit}>Back</button>
+            <p className={styles.shortcut}>
+              or hit <kbd className="kbd">SPACE</kbd>
+            </p>
           </div>
         </div>
       )}
@@ -1218,10 +1259,8 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                 <button
                   className="btn btn-primary"
                   onClick={() => {
-                    openKeyboard();
                     trackEvent({ name: 'rematch_taken', mode: 'bot' });
-                    trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
-                    dispatch({ type: 'start', difficulty, character: mine });
+                    beginDuel();
                   }}
                 >
                   Rematch
@@ -1248,6 +1287,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
               <button className="btn btn-ghost" onClick={onExit}>Back to menu</button>
             </div>
+
+            {/* Only while the key actually does something. Once a rematch has
+                been asked for there is nothing to confirm, and the disabled
+                button says so on its own. */}
+            {(!isMulti || !asked) && (
+              <p className={styles.shortcut}>
+                or hit <kbd className="kbd">SPACE</kbd>
+              </p>
+            )}
 
             {/* Names, not just a count. In a four-way the useful question is
                 which of them you are still waiting on. */}

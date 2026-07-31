@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore,
+} from 'react';
 import {
   currentWord, initialSurvival, survivalReducer, survivalWpm,
 } from '@/game/survivalReducer';
 import { secondsLeft } from '@/game/heat';
+import { useConfirmKey } from '@/game/useConfirmKey';
 import { audio } from '@/game/audio';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
@@ -298,6 +301,22 @@ export default function Survival({
 
   const over = state.phase === 'over';
 
+  /**
+   * Space goes again, once the run is over and not before.
+   *
+   * `null` for the whole of a live run, which is the case that has to be right:
+   * space is how a word is committed here, and a shortcut that took it would
+   * end runs rather than restart them. The hook's own arming delay covers the
+   * other half — the space that ended the run must not immediately start the
+   * next one, and in a mode built on sudden death that keystroke is very often
+   * still on its way down.
+   */
+  const goAgain = useMemo(
+    () => (over && !starting ? onAgain : null),
+    [over, starting, onAgain],
+  );
+  useConfirmKey(goAgain);
+
   return (
     /**
      * This screen *is* the plain layout, and now it says so.
@@ -425,6 +444,13 @@ export default function Survival({
               {starting ? 'Stoking the forge' : 'Go again'}
             </button>
             <button className="btn btn-ghost" onClick={onExit}>Back</button>
+            {/* Only while it does something. Mid-request there is nothing left
+                to confirm, and the button already says it is working. */}
+            {!starting && (
+              <p className={styles.shortcut}>
+                or hit <kbd className="kbd">SPACE</kbd>
+              </p>
+            )}
           </div>
         </div>
       )}

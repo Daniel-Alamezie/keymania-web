@@ -181,6 +181,14 @@
   .result [data-working] { animation: none; opacity: 0.8; }
 }
 
+/* The spacebar shortcut, said quietly — see .shortcut in Duel.module.css for
+   why it is worth saying at all. */
+.shortcut {
+  margin: -2px 0 0;
+  font-size: 11px;
+  color: var(--faint);
+}
+
 /* With a keyboard up the words own what is left of the screen. */
 .screen[data-keyboard] .arena { row-gap: 12px; }
 .screen[data-keyboard] .stream { --stream-size: clamp(20px, 6vw, 30px); }
