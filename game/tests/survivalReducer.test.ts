@@ -269,3 +269,70 @@ describe('survivalWpm', () => {
     expect(survivalWpm(state, 5_000)).toBe(0);
   });
 });
+
+/**
+ * The bug a player reported after 68 words.
+ *
+ * Their words: "I reach around 68 words in a row then the words disappear and
+ * all I can do is spam space bar to keep the session live otherwise the forge
+ * cools." That is a precise description of `sentence` being a single space.
+ *
+ * The client walks the script forward and the server wraps around it with a
+ * modulo, so the two only agree while the script is long enough. The server
+ * tops it up as a run goes on, but only enough to break even: one sentence
+ * added per sentence consumed, with no buffer. Any message in flight at the
+ * wrong moment and the client rolls onto a sentence that does not exist yet.
+ *
+ * `withSpace(undefined ?? '')` is `' '`. A sentence one character long, and that
+ * character a space, is a line with no words in it where the only key that
+ * advances anything is the spacebar. Every press commits an empty word and
+ * consumes another script slot, so spamming space to stay alive is also what
+ * stops it ever recovering.
+ */
+describe('running off the end of the script', () => {
+  const short = ['one two', 'three four'];
+
+  const toTheEnd = () => {
+    let state = survivalReducer(initialSurvival(), { type: 'begin', script: short });
+    for (let i = 0; i < 3; i += 1) state = survivalReducer(state, { type: 'countdown' });
+    return type(state, 'one two three four ');
+  };
+
+  /**
+   * The guarantee is not that the line is never blank. The stream genuinely has
+   * nothing to show for the moment it takes the next sentence to arrive, and
+   * pretending otherwise would mean inventing words the referee never agreed to.
+   *
+   * The guarantee is that a blank line costs the player nothing. Most of all it
+   * cannot kill them: dying to a wrong letter is the whole mode, and dying to a
+   * wrong letter typed at a line with no letters on it is not.
+   */
+  it('cannot end the run while there is nothing to type', () => {
+    const waiting = type(toTheEnd(), 'xyz ');
+    expect(waiting.phase).toBe('running');
+    expect(waiting.ended).toBeNull();
+  });
+
+  it('counts nothing while it waits, so the score cannot drift', () => {
+    const stranded = toTheEnd();
+    expect(type(stranded, '   ').words).toBe(stranded.words);
+  });
+
+  it('takes up a sentence that arrives after the stream ran dry', () => {
+    const stranded = survivalReducer(toTheEnd(), {
+      type: 'confirm', heat: 6_000, cooling: 1, words: 4, appended: 'five six',
+    });
+    expect(stranded.sentence.trim()).toBe('five six');
+  });
+
+  /**
+   * The half that made it unrecoverable. Each space committed a whole script
+   * slot, so a player holding the game alive was consuming the stream faster
+   * than any top-up could refill it.
+   */
+  it('does not burn through script slots while it is waiting', () => {
+    const stranded = toTheEnd();
+    const after = type(stranded, '   ');
+    expect(after.scriptIndex).toBe(stranded.scriptIndex);
+  });
+});

@@ -2,7 +2,9 @@
 
 // The store owns the state, so nothing here needs local React state.
 import { useEffect, useSyncExternalStore } from 'react';
-import { BOARDS, type BoardEntry, type BoardKind, type LeaderboardResponse } from '@/models/leaderboard';
+import {
+  BOARDS, PANEL_LIMIT, type BoardEntry, type BoardKind, type LeaderboardResponse,
+} from '@/models/leaderboard';
 
 export type BoardStatus = 'loading' | 'ready' | 'unavailable';
 
@@ -43,6 +45,16 @@ const STALE_AFTER_MS = 30_000;
 interface Cached {
   entries: BoardEntry[];
   at: number;
+  /**
+   * How many rows were asked for when this was fetched.
+   *
+   * Kept because a cache that only remembers the rows forgets the question. The
+   * menu wants five and the full board wants fifty, and without this the page
+   * would be served the panel's ten and conclude that was the whole board —
+   * which is the bug that has just been fixed on the server, reintroduced one
+   * layer up.
+   */
+  limit: number;
 }
 
 /**
@@ -85,9 +97,26 @@ function subscribe(notify: () => void) {
  * both be asking for the same thing, and two components wanting the same rows is
  * not a reason to ask twice.
  */
-export function ensureBoard(board: BoardKind): Promise<void> {
+export function ensureBoard(board: BoardKind, limit = PANEL_LIMIT): Promise<void> {
   const held = cache.get(board);
-  const fresh = held && Date.now() - held.at < STALE_AFTER_MS;
+  /**
+   * Held only if it is both recent enough and long enough.
+   *
+   * Asking for more rows than are cached is a different question, so a short
+   * answer does not settle it however fresh that answer is.
+   */
+  const fresh = held && Date.now() - held.at < STALE_AFTER_MS && held.limit >= limit;
+  /**
+   * A board known to be unreachable is not retried, whatever is asked of it.
+   *
+   * The first attempt at this excused a bigger ask, on the reasoning that
+   * wanting more rows is a different question. It is not a reachable one: a
+   * failed fetch caches nothing, so "bigger than what is held" was always true
+   * and a dead board was hammered on every render. The test caught it.
+   *
+   * Nothing is lost by the simpler rule. `hasMore` needs cached rows to be true,
+   * so the control that asks for more never appears on a board that failed.
+   */
   if (fresh || failed.has(board)) return Promise.resolve();
 
   const already = inflight.get(board);
@@ -95,7 +124,10 @@ export function ensureBoard(board: BoardKind): Promise<void> {
 
   const request = (async () => {
     try {
-      const response = await fetch(`/api/board?board=${board}`, { cache: 'no-store' });
+      const response = await fetch(
+        `/api/board?board=${board}&limit=${limit}`,
+        { cache: 'no-store' },
+      );
       if (!response.ok) {
         // Only a failure worth showing if there is nothing already on screen.
         // Replacing a readable board with an error helps nobody.
@@ -120,7 +152,7 @@ export function ensureBoard(board: BoardKind): Promise<void> {
        * truth, and the caller is not left inventing an explanation.
        */
       const answered = BOARDS.includes(body.board) ? body.board : board;
-      cache.set(answered, { entries: body.entries ?? [], at: Date.now() });
+      cache.set(answered, { entries: body.entries ?? [], at: Date.now(), limit });
       failed.delete(answered);
       changed();
     } catch {
@@ -166,9 +198,11 @@ export function invalidateBoards(): void {
  * stored — it is a pure function of what has been fetched, so making it one
  * removes both an extra render and any chance of it disagreeing with the cache.
  */
-export function useBoard(board: BoardKind): {
+export function useBoard(board: BoardKind, limit = PANEL_LIMIT): {
   entries: BoardEntry[] | undefined;
   status: BoardStatus;
+  /** Whether asking for more would plausibly return any, so a control can hide. */
+  hasMore: boolean;
 } {
   useSyncExternalStore(subscribe, () => version, () => 0);
 
@@ -182,11 +216,22 @@ export function useBoard(board: BoardKind): {
    * does, and a board that is not cached has nothing to show until the request
    * lands anyway.
    */
-  useEffect(() => { void ensureBoard(board); }, [board]);
+  useEffect(() => { void ensureBoard(board, limit); }, [board, limit]);
 
-  const entries = cache.get(board)?.entries;
+  const held = cache.get(board);
+  const entries = held?.entries;
   return {
     entries,
     status: entries ? 'ready' : failed.has(board) ? 'unavailable' : 'loading',
+    /**
+     * A full page is the only evidence there might be another.
+     *
+     * The route does not say how many players exist and should not have to
+     * count them: that is a scan of the whole table to render a button. A page
+     * that came back exactly as long as it was allowed is the usual signal, and
+     * its one failure is offering "more" on a board whose size lands exactly on
+     * the boundary — which costs a click and one empty answer.
+     */
+    hasMore: Boolean(held && held.entries.length >= held.limit),
   };
 }

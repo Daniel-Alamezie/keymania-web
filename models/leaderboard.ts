@@ -45,6 +45,20 @@ export const DEFAULT_BOARD: BoardKind = 'standings';
 export const PANEL_ROWS = 5;
 
 /**
+ * How many rows each surface asks the API for.
+ *
+ * The panel fetches ten and shows five, so the "see the full board" link knows
+ * whether there is anything past the cap without a second request.
+ *
+ * The page asks for a page at a time. Fifty rather than everything, because
+ * every row costs the server an extra read — the handle is not in the index
+ * projection and cannot be added to it — so a board of a thousand fetched whole
+ * is a thousand reads to render a screen nobody scrolls to the bottom of.
+ */
+export const PANEL_LIMIT = 10;
+export const PAGE_LIMIT = 50;
+
+/**
  * Read a board name off untrusted input.
  *
  * Anything unrecognised becomes the default rather than an error, matching what

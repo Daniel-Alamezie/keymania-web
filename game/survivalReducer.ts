@@ -134,6 +134,24 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
     case 'typed': {
       if (state.phase !== 'running') return state;
 
+      /**
+       * A line with no words in it accepts nothing.
+       *
+       * This is the state a run lands in when it reaches the end of the script
+       * before the server's next sentence arrives: `withSpace(undefined ?? '')`
+       * is `' '`, one character long and that character a space. Left accepting
+       * input, the only key that did anything was the spacebar, every press
+       * committed an empty word and consumed another script slot, and a player
+       * holding the game alive was outrunning the top-up that would have saved
+       * them. Somebody reported exactly that at 68 words.
+       *
+       * Ignoring the key is what makes it recoverable. Nothing is counted,
+       * nothing is consumed, and `confirm` fills the line in as soon as a
+       * sentence lands — which is within a round trip, because committing the
+       * word that emptied the stream is itself what asks for the next one.
+       */
+      if (state.sentence.trim() === '') return state;
+
       const expected = state.sentence[state.cursor];
 
       /**
@@ -201,6 +219,7 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
       }
 
       const nextIndex = state.scriptIndex + 1;
+
       return {
         ...state,
         previous: state.sentence,
@@ -224,19 +243,36 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
      * sentence the server added while topping the script up, without which a
      * long run walks off the end of the words it was given.
      */
-    case 'confirm':
+    case 'confirm': {
       if (state.phase === 'over') return state;
+      const grown = action.appended ? [...state.script, action.appended] : state.script;
       return {
         ...state,
         heat: orKeep(action.heat, state.heat),
         cooling: orKeep(action.cooling, state.cooling),
         words: orKeep(action.words, state.words),
-        script: action.appended ? [...state.script, action.appended] : state.script,
-        // A sentence that arrived after the stream had already rolled onto it.
-        upcoming: state.upcoming.trim() === '' && action.appended
-          ? withSpace(action.appended)
+        script: grown,
+        /**
+         * Adopt a sentence that arrived while the stream was waiting on it.
+         *
+         * The old version repaired `upcoming` and left `sentence` alone, which
+         * meant a run already stranded on an empty line stayed stranded for
+         * ever: the only thing that could have fixed it was the very message
+         * that chose not to.
+         *
+         * Both are patched now, and from the grown script rather than from
+         * `appended` directly, so it does not matter whether the sentence that
+         * unblocks this is the one that just arrived or one that was already
+         * sitting there unread.
+         */
+        sentence: state.sentence.trim() === ''
+          ? withSpace(grown[state.scriptIndex] ?? '')
+          : state.sentence,
+        upcoming: state.upcoming.trim() === ''
+          ? withSpace(grown[state.scriptIndex + 1] ?? '')
           : state.upcoming,
       };
+    }
 
     case 'end':
       if (state.phase === 'over') return state;

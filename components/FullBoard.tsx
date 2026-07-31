@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useBoard } from '@/game/useBoard';
-import { asBoard, BOARDS, BOARD_META, type BoardKind } from '@/models/leaderboard';
+import { asBoard, BOARDS, BOARD_META, PAGE_LIMIT, type BoardKind } from '@/models/leaderboard';
 import BoardRows from './BoardRows';
 import BoardGuide from './BoardGuide';
 import panel from './SidePanel.module.css';
@@ -24,7 +24,15 @@ import styles from './FullBoard.module.css';
 export default function FullBoard({ initial }: { initial?: string }) {
   const [board, setBoard] = useState<BoardKind>(asBoard(initial));
   const [showGuide, setShowGuide] = useState(false);
-  const { entries, status } = useBoard(board);
+  /**
+   * How many rows this page has asked for so far.
+   *
+   * Per board, so switching tabs does not carry one board's appetite onto
+   * another and quietly fetch fifty rows of something nobody looked at.
+   */
+  const [wanted, setWanted] = useState<Partial<Record<BoardKind, number>>>({});
+  const limit = wanted[board] ?? PAGE_LIMIT;
+  const { entries, status, hasMore } = useBoard(board, limit);
   const meta = BOARD_META[board];
 
   return (
@@ -66,6 +74,25 @@ export default function FullBoard({ initial }: { initial?: string }) {
           <BoardRows entries={entries} board={board} />
         )}
 
+        {/*
+          * A button rather than fetching as the page scrolls.
+          *
+          * Infinite scroll would put everything below the rows permanently out
+          * of reach — the footnote, the guide, the note about the cap all live
+          * down there — and a leaderboard is somewhere people want to stop and
+          * read rather than fall through. It is also reachable by keyboard,
+          * which a scroll listener is not.
+          */}
+        {status === 'ready' && hasMore && (
+          <button
+            type="button"
+            className={panel.footLink}
+            onClick={() => setWanted((n) => ({ ...n, [board]: limit + PAGE_LIMIT }))}
+          >
+            Show more
+          </button>
+        )}
+
         <p className={panel.footnote}>{meta.footnote}</p>
 
         <button type="button" className={panel.footLink} onClick={() => setShowGuide(true)}>
@@ -74,16 +101,19 @@ export default function FullBoard({ initial }: { initial?: string }) {
       </div>
 
       {/*
-        * Said out loud rather than left to be discovered.
+        * Said out loud, and now said accurately.
         *
-        * The board is capped at ten by the API, which is plenty while there are
-        * a handful of ranked players and will stop being plenty. Saying so now
-        * means nobody spends time wondering whether they are missing rows or
-        * whether the page is broken.
+        * This read "more will appear here as the board grows", which implied the
+        * cap was the size of the player base. It was not: the route returned ten
+        * rows and no more, so by the time fifteen accounts had reached the board
+        * five of them could not find themselves and the page was explaining that
+        * away as a lack of players. A note that is wrong is worse than no note,
+        * because it stops the reader asking.
         */}
       <p className={styles.note}>
-        Showing the top {entries?.length ?? 10}. More will appear here as the
-        board grows.
+        {hasMore
+          ? `Showing the top ${entries?.length ?? 0}.`
+          : `Showing all ${entries?.length ?? 0} ranked players.`}
       </p>
 
       {showGuide && <BoardGuide onClose={() => setShowGuide(false)} />}
