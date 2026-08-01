@@ -145,12 +145,19 @@ export function ghostProfile(targetWpm: number): GhostProfile {
  * says nothing about them, and rating measures winning while a duel feels fair
  * or unfair based on speed.
  *
+ * **`typicalWpm`, and the word is load-bearing.** This took a personal best for
+ * a long time, which made it a ratchet — every good run permanently raised every
+ * future opponent and nothing could lower one. The caller now passes a median of
+ * recent duels; see `typicalWpm` in lib/players.ts for why that is both fairer
+ * and harder to game. Passing a best here again would quietly restore the
+ * ratchet, which is why the parameter is no longer named after one.
+ *
  * Seeded, so the same duel always produces the same opponent — a ghost whose
  * pace changed between two reads of the same room would be a ghost that got
  * faster when you looked away.
  */
-export function ghostPaceFor(bestWpm: number, seed: number): GhostProfile {
-  const reference = bestWpm > 0 ? bestWpm : UNKNOWN_PLAYER_WPM;
+export function ghostPaceFor(typicalWpm: number, seed: number): GhostProfile {
+  const reference = typicalWpm > 0 ? typicalWpm : UNKNOWN_PLAYER_WPM;
   const spread = PACE_MIN + ghostRand(seed, -1) * (PACE_MAX - PACE_MIN);
   return ghostProfile(reference * spread);
 }
