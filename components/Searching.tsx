@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { askAttempt, waitLimit } from '@/game/ghostAsk';
 import PixelSprite from './PixelSprite';
 import styles from './Searching.module.css';
 
@@ -22,12 +23,15 @@ export default function Searching({ rating, onCancel, onGiveUpWaiting }: {
   rating: number | null;
   onCancel: () => void;
   /**
-   * Called once, when waiting has gone on long enough to stop being worth it.
+   * Called when waiting has gone on long enough to stop being worth it, and
+   * again periodically after that.
    *
    * Optional, so the search screen still works with nothing wired to it. The
    * server decides what happens next and enforces its own floor on how early
    * this can be asked, so it says "I have waited long enough" rather than
-   * naming an outcome.
+   * naming an outcome — which is also why it has to be repeatable. A request
+   * that lands under that floor is refused, and asking exactly once meant a
+   * refused player waited on this screen forever. See game/ghostAsk.ts.
    */
   onGiveUpWaiting?: () => void;
 }) {
@@ -41,23 +45,30 @@ export default function Searching({ rating, onCancel, onGiveUpWaiting }: {
   /**
    * How long to hold out for a person, this time.
    *
-   * Randomised rather than fixed, because a wait that ends at exactly the same
-   * second every single search is the first thing anybody notices. Chosen once
-   * per mount so it cannot drift while the clock is running.
-   *
+   * Chosen once per mount so it cannot drift while the clock is running.
    * `useState` with an initialiser rather than a bare call: reading the random
    * source during render is impure, and doing it in an effect would cost a
    * render where the limit is not yet known.
+   *
+   * The range, and why it came down from fifty seconds, are in game/ghostAsk.ts.
    */
-  const [patience] = useState(() => 20 + Math.floor(Math.random() * 30));
+  const [patience] = useState(() => waitLimit());
+
+  /**
+   * Which attempt is due right now, counting from the first.
+   *
+   * Fired on the attempt number rather than on a "have we waited long enough"
+   * boolean, and that is the fix rather than a refactor: a boolean already true
+   * cannot say "ask again", which is exactly why the original asked once and
+   * left a refused player here indefinitely.
+   */
+  const attempt = askAttempt(seconds, patience);
 
   useEffect(() => {
-    if (!onGiveUpWaiting || seconds < patience) return;
+    if (!onGiveUpWaiting || attempt === 0) return;
     onGiveUpWaiting();
-    // Once per search. The screen is unmounted the moment a duel starts, so
-    // there is nothing to reset, and asking twice would open two rooms.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seconds >= patience]);
+  }, [attempt]);
 
   /**
    * What the server will currently accept, mirrored for the player.
