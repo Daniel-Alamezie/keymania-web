@@ -39,6 +39,29 @@ export type ServerMessage =
   /** The search was called off, by you. */
   | { type: 'searchStopped' }
   /**
+   * What a refereed duel did to your standing.
+   *
+   * Sent per connection rather than broadcast, because the number is different
+   * for everybody in the room — a shared payload would be the one message in
+   * this protocol that is wrong for everyone but its author. It arrives just
+   * after `gameOver`, so the result lands first and the rating follows it onto
+   * the same screen.
+   *
+   * **The server has sent this since ratings existed and this client never
+   * declared it**, so every one was parsed, handed to the subscribers, matched
+   * by nobody and dropped. The single most motivating moment in the game — the
+   * number moving — has never once been shown to anybody.
+   */
+  | {
+    type: 'rating';
+    /** How far the duel moved them. Signed, and the sign is most of the message. */
+    delta: number;
+    /** Where they landed. */
+    rating: number;
+    /** How much of `delta` was the upset bonus, so this can say why. */
+    bonus: number;
+  }
+  /**
    * One word of a survival run, judged.
    *
    * Sent for every word, surviving or not, because the two carry the same

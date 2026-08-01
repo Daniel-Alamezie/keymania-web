@@ -755,6 +755,43 @@
 
 .blurb { margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
 
+/*
+ * The rating moving, which is the reason a ranked duel is different from a
+ * practice one.
+ *
+ * Given its own weight rather than sitting in the stats list: those are
+ * measurements of how you typed, and this is what happened to you because of
+ * it. The sign carries the message, so the colour follows the sign rather than
+ * whether you won — losing a duel and gaining points on an upset is a real
+ * outcome and should not be painted as a loss.
+ */
+.swing {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 2px solid var(--edge);
+  background: var(--edge-soft);
+}
+
+.swingDelta {
+  font-size: 20px;
+  color: var(--opponent);
+}
+
+.swing[data-up] .swingDelta { color: var(--good); }
+
+.swingNow { font-size: 12px; color: var(--muted); }
+
+.swingBonus {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--gold);
+}
+
 .choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
 /*

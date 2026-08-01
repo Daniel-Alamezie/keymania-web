@@ -156,6 +156,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const [liveWpm, setLiveWpm] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmQuit, setConfirmQuit] = useState(false);
+  /**
+   * Where this duel left your rating, once the server has said.
+   *
+   * Null for a bot duel, which never moves it, and for the beat between the
+   * result appearing and the rating message landing. The result screen is built
+   * to read without it, so a message that never arrives costs the sentence
+   * rather than the screen.
+   */
+  const [swing, setSwing] = useState<{ delta: number; rating: number; bonus: number } | null>(null);
 
   /**
    * The words.
@@ -768,6 +777,14 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
          */
         setRematch(null);
         setAsked(false);
+        /**
+         * Cleared here, with the rest of the slate.
+         *
+         * The rating message arrives just *after* this one, so anything left
+         * over from the previous duel would be on screen for the moment between
+         * the two — showing the last duel's points beside this duel's result.
+         */
+        setSwing(null);
 
         const iWon = message.winnerSlot === mySlot;
         if (message.reason === 'resign') {
@@ -796,6 +813,18 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       if (message.type === 'rematchState') {
         setRematch({ players: message.players, ready: message.ready });
+      }
+
+      /**
+       * What the duel did to your standing.
+       *
+       * The server has sent this since ratings existed and this client never
+       * declared the message, so every one arrived, was parsed, was handed to
+       * the subscribers and matched nobody. The number moving is the single most
+       * motivating moment the game has and it has never been shown to anybody.
+       */
+      if (message.type === 'rating') {
+        setSwing({ delta: message.delta, rating: message.rating, bonus: message.bonus });
       }
     });
 
@@ -1253,6 +1282,35 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
               <Stat label="Best combo" value={`x${state.stats.maxCombo}`} />
               <Stat label="Peak word" value={`${state.stats.bestWpm} wpm`} />
             </dl>
+
+            {/*
+              * What it cost, or what it paid.
+              *
+              * The whole point of a rating is the moment it moves, and this
+              * game has been computing that number, sending it to each player
+              * and throwing it away since ratings existed. A duel that changes
+              * your standing and never mentions it is a duel with no stakes.
+              *
+              * Below the stats rather than among them, because it is not a
+              * measurement of how you typed — it is what happened to you as a
+              * result. And absent entirely for a bot duel, which genuinely does
+              * not move it, so the silence there is honest rather than missing.
+              */}
+            {swing && (
+              <p className={styles.swing} data-up={swing.delta >= 0 || undefined}>
+                <span className={`${styles.swingDelta} pixel-font`}>
+                  {swing.delta >= 0 ? `+${swing.delta}` : swing.delta}
+                </span>
+                <span className={styles.swingNow}>rating {swing.rating}</span>
+                {/* Named only when there is one, and named because "why is this
+                    win worth more" is the question it answers. */}
+                {swing.bonus > 0 && (
+                  <span className={styles.swingBonus}>
+                    includes +{swing.bonus} for the upset
+                  </span>
+                )}
+              </p>
+            )}
 
             <div className={styles.choices}>
               {!isMulti && (
