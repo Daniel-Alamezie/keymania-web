@@ -1052,3 +1052,37 @@
   .hud { gap: 8px; }
   .vs { display: none; }
 }
+
+/*
+ * The countdown, while it is doubling as a way to summon a keyboard.
+ *
+ * Only ever set on a touch device with the keyboard still down, so a laptop
+ * never sees a cursor change on an overlay it cannot tap.
+ */
+.overlay[data-arming] { cursor: pointer; }
+
+/*
+ * Under the count, and quiet.
+ *
+ * It is instructions during the one moment a player is watching a number tick
+ * down, so it has to be readable without competing with it. Absent entirely on
+ * a desktop, and gone the instant the keyboard is up — an instruction still on
+ * screen after it has been followed reads as one that did not work.
+ */
+.arm {
+  margin-top: 14px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-align: center;
+  animation: armPulse 1.6s ease-in-out infinite;
+}
+
+/*
+ * Well under the three-flashes-a-second photosensitivity threshold, and it only
+ * moves opacity between two close values rather than flashing.
+ */
+@keyframes armPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}

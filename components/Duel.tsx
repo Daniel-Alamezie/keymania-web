@@ -115,21 +115,26 @@ const HEAT_COMBO = 4;
 const FINISH_HOLD_MS = 1900;
 
 /**
- * How often the client offers the server a look at the clock, and how recently a
- * word has to have been sent for it to skip.
+ * How often the client offers the server a look at the clock.
  *
- * The quiet window is a shade longer than the interval on purpose. Equal values
- * would put a fast typist right on the boundary, flickering between sending and
- * skipping on the jitter of their own typing; a window that clears the interval
- * means a player producing words at all reliably sends none of these.
+ * **There used to be a second constant here suppressing the beat whenever a word
+ * had been sent recently, and removing it is the point of this change.** The
+ * reasoning was that a fast typist already wakes the server through their own
+ * words, so a heartbeat on top was waste. The reasoning held; the consequence
+ * did not. Production told the story plainly — in five-minute windows carrying
+ * 115 and 135 words, the heartbeat fired once. It was being suppressed for the
+ * whole of normal play and only ran once somebody stopped, which is to say it
+ * ran everywhere except where it was needed.
  *
- * Two seconds is well inside the gap that matters. A player who has stopped is
- * usually stopped for far longer than that, and the arithmetic on the other side
- * is a pure function of elapsed time, so a late beat computes the same answer a
- * punctual one would.
+ * So the opponent's damage still arrived bundled into the player's own word
+ * events, in steps rather than as something happening beside them. That was the
+ * exact behaviour this was built to end.
+ *
+ * The saving was real and small; the thing it cost was the feature. An extra
+ * invocation and one room read every two seconds per player in a duel is the
+ * honest price of an opponent that moves whether or not you are typing.
  */
 const PULSE_EVERY_MS = 2000;
-const PULSE_QUIET_MS = 2500;
 
 export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   /**
@@ -148,15 +153,6 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const screenRef = useRef<HTMLElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledHit = useRef(0);
-  /**
-   * When this client last told the server about a word.
-   *
-   * Read only by the heartbeat, to stay quiet while words are already waking the
-   * server on this player's behalf. A ref rather than state because nothing
-   * renders from it, and a re-render per keystroke to hold a number no pixel
-   * depends on would be the most expensive thing in the duel.
-   */
-  const lastWordSentAt = useRef(0);
   const flashRef = useRef<HTMLDivElement>(null);
   /** The words, so a treatment can hold them still while the arena shakes. */
   const streamRef = useRef<HTMLDivElement>(null);
@@ -374,6 +370,20 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   }, [touch]);
 
   /**
+   * Try anyway when a duel we did not start counts down.
+   *
+   * iOS ignores this, and that is fine — it costs a function call and the
+   * countdown overlay below is the real answer there. Android is the reason it
+   * is here: it generally honours a programmatic focus without a gesture, and
+   * it is a large share of the players who reported this. Half the phones
+   * getting their keyboard for free is worth three lines.
+   */
+  useEffect(() => {
+    if (!touch || !isMulti || state.phase !== 'countdown') return;
+    capture.current?.focus();
+  }, [touch, isMulti, state.phase]);
+
+  /**
    * Start a duel against the bot.
    *
    * Extracted because three things now do it — the READY? panel, Rematch, and
@@ -433,9 +443,6 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         // figure for the record without a route of its own. It is measured up
         // to but not including this keystroke, which the reducer has yet to
         // fold in — near enough for a statistic that is advisory anyway.
-        // Stamped so the heartbeat below can stay quiet while words are already
-        // waking the server on this player's behalf.
-        lastWordSentAt.current = Date.now();
         multiplayer.onWord(
           word,
           Math.max(1, Date.now() - snapshot.wordStartedAt),
@@ -463,19 +470,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
    * showed up only against a simulated opponent would be a far clearer tell than
    * the ones it fixes.
    *
-   * Skipped while words are recent, which is what keeps it close to free. Above
-   * about forty words a minute a player commits a word inside the window and no
-   * heartbeat is ever sent; they appear exactly when somebody has gone quiet,
-   * which is precisely the case that was broken.
+   * Unconditional. It was briefly skipped while words were recent, to save the
+   * invocations of a player who was already waking the server — and that
+   * suppressed it through the whole of normal play, which is when the opponent
+   * most needs to be moving. See PULSE_EVERY_MS.
    */
   useEffect(() => {
     if (!multiplayer || state.phase !== 'playing') return;
 
-    const beat = window.setInterval(() => {
-      if (Date.now() - lastWordSentAt.current < PULSE_QUIET_MS) return;
-      multiplayer.onPulse();
-    }, PULSE_EVERY_MS);
-
+    const beat = window.setInterval(() => multiplayer.onPulse(), PULSE_EVERY_MS);
     return () => window.clearInterval(beat);
   }, [multiplayer, state.phase]);
 
@@ -1340,11 +1343,33 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         </div>
       )}
 
+      {/*
+        * The countdown, and on a phone the one chance to get the keyboard up in
+        * time.
+        *
+        * A human duel starts when the server says so, so there is no tap to ride
+        * on the way in — and iOS will not open a keyboard from script outside a
+        * real gesture. Players said the keyboard was not up when the words
+        * appeared, which costs them the opening word of a ranked duel against
+        * somebody it did not cost.
+        *
+        * So the whole countdown becomes the target rather than the small button
+        * in the corner. It is on screen for three seconds, it is the only thing
+        * being looked at, and a tap anywhere on it is a gesture iOS accepts. The
+        * button stays for every moment this overlay is gone.
+        */}
       {state.phase === 'countdown' && (
-        <div className={styles.overlay}>
+        <div
+          className={styles.overlay}
+          data-arming={touch && !keyboardUp ? '' : undefined}
+          onClick={touch && !keyboardUp ? () => capture.current?.focus() : undefined}
+        >
           <span key={state.countdown} className={`${styles.countdown} pixel-font`}>
             {state.countdown > 0 ? state.countdown : 'GO'}
           </span>
+          {touch && !keyboardUp && (
+            <span className={styles.arm}>Tap anywhere to bring up your keyboard</span>
+          )}
         </div>
       )}
 
