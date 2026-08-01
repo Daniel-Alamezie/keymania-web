@@ -61,5 +61,7 @@ export function previewMatch({ players, mySlot = 0 }: PreviewOptions): Multiplay
     onWord: () => {},
     onResign: () => {},
     onRematch: () => {},
+    // No socket to beat against. The preview is a still frame of a room.
+    onPulse: () => {},
   };
 }

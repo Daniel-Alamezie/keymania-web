@@ -263,6 +263,22 @@ export type ClientMessage =
   | { action: 'wordComplete'; word: string; elapsedMs: number; accuracy?: number; typos?: number }
   | { action: 'resign' }
   /**
+   * A heartbeat while a duel is live.
+   *
+   * Carries nothing. Its whole job is to give the server a reason to look at the
+   * clock, because some opponents run on one and until now the only thing that
+   * ever woke the server was a human finishing a word. That made going quiet a
+   * way to stop the other side dead.
+   *
+   * **Sent in every multiplayer duel, not only the ones that need it.** The
+   * client cannot tell which is which, and must not be able to: a message that
+   * appeared only against a simulated opponent would be a clearer tell than the
+   * one it fixes. Skipped while a word was recently sent, since words already
+   * wake the server and a fast typist should not pay for a heartbeat they are
+   * generating anyway.
+   */
+  | { action: 'pulse' }
+  /**
    * Another duel with the people already here.
    *
    * Needs no room code: the server knows which room this socket is in, and the

@@ -274,15 +274,42 @@
 }
 
 /*
- * The rating beside the name.
+ * The line under the bar: the rating, and the caption if there is one.
  *
- * Deliberately quiet. It answers "who am I up against" once, before the
- * countdown ends, and then has no business competing with the health bar or the
- * words for attention. Tabular figures so a three-digit rating and a four-digit
- * one do not shift the name beside them.
+ * Mirrored with the plate, so on the right-hand side it reads from the outside
+ * edge inwards exactly as the left-hand one reads from its own.
  */
-.rating {
-  font-size: 10px;
+.below {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 3px;
+}
+.plate[data-align='right'] .below { flex-direction: row-reverse; }
+
+/*
+ * What this seat is rated.
+ *
+ * This is the number the duel is about to move, so it is the loudest thing under
+ * the bar rather than the quietest — it replaced a caption reading "player",
+ * which told nobody anything and occupied the one line the eye already checks.
+ *
+ * Labelled, because a bare figure under a health bar is just one more figure. The
+ * label is small and muted and the number is not: together they read as one
+ * item, and a player meeting it for the first time can tell what it is without
+ * being taught.
+ */
+.rating { display: inline-flex; align-items: baseline; gap: 5px; }
+
+.ratingLabel {
+  font-size: 8px;
+  letter-spacing: 0.14em;
   color: var(--faint);
+}
+
+.ratingValue {
+  font-size: 13px;
+  color: var(--text);
+  /* So a four-digit rating cannot shove the caption beside it. */
   font-variant-numeric: tabular-nums;
 }

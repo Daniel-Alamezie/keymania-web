@@ -28,11 +28,17 @@ interface HealthBarProps {
   /** 'left' anchors the fill to the left edge; 'right' mirrors it. */
   align: 'left' | 'right';
   /**
-   * Where this seat stands, shown beside the name.
+   * Where this seat stands, shown under the bar.
    *
    * Absent for a bot duel, which moves nothing, and for anybody the server sent
    * no rating for. A duel that changes your standing should say what is at stake
    * before a word is typed rather than only reporting it on the way out.
+   *
+   * It began beside the name, small enough that it read as part of the name, and
+   * it sat next to a caption that said "player" — a word nobody needed, in the
+   * one line under the bar where the eye already goes. So it took that line and
+   * the caption lost it. This is the number a ranked duel is about; it should
+   * not be the quietest thing on the plate.
    */
   rating?: number;
   /** Optional caption under the name, e.g. live WPM or the bot's speed. */
@@ -122,11 +128,6 @@ export default function HealthBar({
       <div className={styles.info}>
         <div className={styles.top}>
           <span className={`${styles.name} pixel-font`} data-team={team}>{name}</span>
-          {/* Quiet beside the name rather than under it: it is context for who
-              you are facing, not a second thing to read mid-duel. */}
-          {rating !== undefined && (
-            <span className={styles.rating} aria-label={`rated ${rating}`}>{rating}</span>
-          )}
           <span className={`${styles.value} pixel-font`} data-state={state}>{Math.ceil(value)}</span>
         </div>
 
@@ -135,7 +136,27 @@ export default function HealthBar({
           <div className={styles.notches} aria-hidden="true" />
         </div>
 
-        {caption && !compact && <span className={styles.caption}>{caption}</span>}
+        {/*
+          * Under the bar: what this seat is rated, and whatever the caption has
+          * to say. One row rather than two, because a plate is already carrying
+          * a name, a number, a bar and a portrait, and the space under it is
+          * worth about one line.
+          *
+          * Labelled. A bare number under a health bar is one more number, and a
+          * player seeing it for the first time has no way to know it is the
+          * thing the duel is about to move.
+          */}
+        {!compact && (rating !== undefined || caption) && (
+          <span className={styles.below}>
+            {rating !== undefined && (
+              <span className={styles.rating}>
+                <span className={styles.ratingLabel}>RATING</span>
+                <span className={`${styles.ratingValue} pixel-font`}>{rating}</span>
+              </span>
+            )}
+            {caption && <span className={styles.caption}>{caption}</span>}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -464,6 +464,10 @@ export default function Game() {
             onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>
               send({ action: 'wordComplete', word, elapsedMs, accuracy, typos }),
             onResign: () => send({ action: 'resign' }),
+            // Carries nothing. It exists to give the server a reason to look at
+            // the clock, because until it did, going quiet stopped the other
+            // side dead. Sent in every duel, never only the ones that need it.
+            onPulse: () => send({ action: 'pulse' }),
             // No room code needed: the server knows which room this socket is
             // in, and that room now outlives the match played in it.
             onRematch: () => send({ action: 'rematch' }),

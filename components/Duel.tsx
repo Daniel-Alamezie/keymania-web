@@ -66,6 +66,15 @@ export interface MultiplayerConfig {
   onResign: () => void;
   /** Ask to play again with the same room. */
   onRematch: () => void;
+  /**
+   * A heartbeat while the duel is live.
+   *
+   * Some opponents are paced by a clock, and nothing was ever reading it except
+   * the handler that scores a finished word. That made putting the keyboard down
+   * a way to freeze the other side, which is both an obvious tell and a rule of
+   * the game inverted: against a person, going quiet is how you lose.
+   */
+  onPulse: () => void;
 }
 
 interface DuelProps {
@@ -105,6 +114,23 @@ const HEAT_COMBO = 4;
  */
 const FINISH_HOLD_MS = 1900;
 
+/**
+ * How often the client offers the server a look at the clock, and how recently a
+ * word has to have been sent for it to skip.
+ *
+ * The quiet window is a shade longer than the interval on purpose. Equal values
+ * would put a fast typist right on the boundary, flickering between sending and
+ * skipping on the jitter of their own typing; a window that clears the interval
+ * means a player producing words at all reliably sends none of these.
+ *
+ * Two seconds is well inside the gap that matters. A player who has stopped is
+ * usually stopped for far longer than that, and the arithmetic on the other side
+ * is a pure function of elapsed time, so a late beat computes the same answer a
+ * punctual one would.
+ */
+const PULSE_EVERY_MS = 2000;
+const PULSE_QUIET_MS = 2500;
+
 export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   /**
    * Who you fight as, straight from the profile store.
@@ -122,6 +148,15 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
   const screenRef = useRef<HTMLElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const handledHit = useRef(0);
+  /**
+   * When this client last told the server about a word.
+   *
+   * Read only by the heartbeat, to stay quiet while words are already waking the
+   * server on this player's behalf. A ref rather than state because nothing
+   * renders from it, and a re-render per keystroke to hold a number no pixel
+   * depends on would be the most expensive thing in the duel.
+   */
+  const lastWordSentAt = useRef(0);
   const flashRef = useRef<HTMLDivElement>(null);
   /** The words, so a treatment can hold them still while the arena shakes. */
   const streamRef = useRef<HTMLDivElement>(null);
@@ -398,6 +433,9 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         // figure for the record without a route of its own. It is measured up
         // to but not including this keystroke, which the reducer has yet to
         // fold in — near enough for a statistic that is advisory anyway.
+        // Stamped so the heartbeat below can stay quiet while words are already
+        // waking the server on this player's behalf.
+        lastWordSentAt.current = Date.now();
         multiplayer.onWord(
           word,
           Math.max(1, Date.now() - snapshot.wordStartedAt),
@@ -410,6 +448,36 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
 
       dispatch({ type: 'typed', char: key, now: Date.now() });
   }, [multiplayer]);
+
+  /**
+   * The heartbeat.
+   *
+   * A duel has opponents paced by a clock, and until this existed the only thing
+   * that ever made the server look at that clock was a human finishing a word.
+   * Three things followed, and a player watching from the outside named all
+   * three: the other side's damage always arrived bolted to yours, it never
+   * struck first, and putting the keyboard down made you unkillable.
+   *
+   * **Sent in every multiplayer duel, not only the ones that need it.** This
+   * client cannot tell which is which and must not be able to — a message that
+   * showed up only against a simulated opponent would be a far clearer tell than
+   * the ones it fixes.
+   *
+   * Skipped while words are recent, which is what keeps it close to free. Above
+   * about forty words a minute a player commits a word inside the window and no
+   * heartbeat is ever sent; they appear exactly when somebody has gone quiet,
+   * which is precisely the case that was broken.
+   */
+  useEffect(() => {
+    if (!multiplayer || state.phase !== 'playing') return;
+
+    const beat = window.setInterval(() => {
+      if (Date.now() - lastWordSentAt.current < PULSE_QUIET_MS) return;
+      multiplayer.onPulse();
+    }, PULSE_EVERY_MS);
+
+    return () => window.clearInterval(beat);
+  }, [multiplayer, state.phase]);
 
   /**
    * The soft keyboard, read through a native listener rather than React's prop.
@@ -1031,10 +1099,18 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                   character={fighter.character}
                   rating={multiplayer?.ratings?.[slot]}
                   defeated={isOut(fighter)}
+                  /*
+                   * Nothing at all against a person: the rating under the bar
+                   * now says who they are, and "player" said nothing anybody
+                   * needed while occupying the line it wanted.
+                   *
+                   * A bot keeps its caption, because a bot has no rating and its
+                   * speed is the honest answer to the same question.
+                   */
                   caption={
-                    foes.length > 1
+                    foes.length > 1 || isMulti
                       ? undefined
-                      : isMulti ? 'player' : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
+                      : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
                   }
                   big={plateIsTheFighter}
                   /*
