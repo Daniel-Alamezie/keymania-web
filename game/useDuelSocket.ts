@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { track } from './analytics';
 import type { ClientMessage, ServerMessage, SocketStatus } from '@/models/protocol';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? '';
@@ -74,12 +75,37 @@ export function useDuelSocket() {
     socket.onclose = () => { pending.current = []; setStatus('closed'); };
     socket.onerror = () => { pending.current = []; setStatus('error'); };
     socket.onmessage = (raw) => {
+      let message: ServerMessage;
       try {
-        const message = JSON.parse(raw.data as string) as ServerMessage;
-        listeners.current.forEach((handler) => handler(message));
+        message = JSON.parse(raw.data as string) as ServerMessage;
       } catch {
-        /* ignore anything that is not JSON */
+        return; // not JSON — API Gateway noise, genuinely ignorable
       }
+
+      /**
+       * Handlers crash on their own account, and loudly.
+       *
+       * One catch used to cover both the parse and the handlers, built for
+       * non-JSON frames — and it equally swallowed a handler throwing. A
+       * handler that throws on every message is a frozen screen with a live
+       * socket: the duel keeps sending, nothing renders, and not one error
+       * appears anywhere. Two duels froze exactly that way before this event
+       * existed to say which side broke.
+       *
+       * Per handler, so one crashing subscriber cannot starve the others.
+       */
+      listeners.current.forEach((handler) => {
+        try {
+          handler(message);
+        } catch (error) {
+          console.error('duel message handler crashed', message.type, error);
+          track({
+            name: 'handler_crashed',
+            messageType: message.type,
+            error: error instanceof Error ? `${error.name}: ${error.message}`.slice(0, 200) : 'unknown',
+          });
+        }
+      });
     };
   }, []);
 

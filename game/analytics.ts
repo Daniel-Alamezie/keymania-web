@@ -85,7 +85,17 @@ export type GameEvent =
    * failure is invisible from the outside and looks like a broken game from the
    * inside.
    */
-  | { name: 'queue_left'; seconds: number; reason: 'cancelled' | 'session_expired' };
+  | { name: 'queue_left'; seconds: number; reason: 'cancelled' | 'session_expired' }
+  /**
+   * A message handler threw while processing a server message.
+   *
+   * Diagnostics rather than product analytics, and it earns its place in this
+   * closed union the same way everything else does: it answers a question
+   * worth acting on. A crashing handler is a frozen duel on a live socket —
+   * no damage renders, typing still sends, and without this event the only
+   * evidence is a player's screenshot. Two of those arrived before it existed.
+   */
+  | { name: 'handler_crashed'; messageType: string; error: string };
 
 /**
  * Which sign-in wall somebody hit.
