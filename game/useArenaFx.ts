@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { ARENA_FX, asFx, DEFAULT_FX, nextFx, type ArenaFx, type FxId } from './arenaFx';
 
 export interface ArenaFxControl {
@@ -50,6 +50,24 @@ const announce = () => listeners.forEach((notify) => notify());
 
 const param = () => new URLSearchParams(window.location.search).get('fx');
 
+/**
+ * `?flash=` on its own, overriding whichever preset is running.
+ *
+ * Its own parameter rather than another preset, because the question is
+ * independent of the others: "does the white flash need toning down" has nothing
+ * to do with which layout is on screen, and folding it into the preset list
+ * would mean comparing two things at once and learning about neither.
+ *
+ * Absent means the preset decides, so a normal player is untouched.
+ */
+const FLASHES = ['full', 'heavy', 'taken', 'edge', 'none'] as const;
+export type FlashMode = (typeof FLASHES)[number];
+
+const readFlash = (): FlashMode | null => {
+  const asked = new URLSearchParams(window.location.search).get('flash');
+  return FLASHES.includes(asked as FlashMode) ? (asked as FlashMode) : null;
+};
+
 const readId = (): FxId => asFx(param());
 const readTesting = () => param() !== null;
 
@@ -73,6 +91,7 @@ export function useArenaFx(): ArenaFxControl {
   // The server has no query string, so it renders what an absent one means.
   const id = useSyncExternalStore(subscribe, readId, () => DEFAULT_FX);
   const testing = useSyncExternalStore(subscribe, readTesting, () => false);
+  const flash = useSyncExternalStore(subscribe, readFlash, () => null);
 
   const set = useCallback((next: FxId) => write(next), []);
   const cycle = useCallback((step: 1 | -1 = 1) => write(nextFx(readId(), step)), []);
@@ -95,5 +114,15 @@ export function useArenaFx(): ArenaFxControl {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [testing, cycle]);
 
-  return { fx: ARENA_FX[id], testing, cycle, set };
+  /**
+   * Memoised, because this is a fresh object whenever the override is present
+   * and `fx` is in the dependency list of effects that must not re-run — one of
+   * them re-applies a blade that has already landed.
+   */
+  const fx = useMemo(
+    () => (flash ? { ...ARENA_FX[id], flash } : ARENA_FX[id]),
+    [id, flash],
+  );
+
+  return { fx, testing, cycle, set };
 }

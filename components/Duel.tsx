@@ -611,10 +611,46 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
     const heavy = impact.damage >= 3.5;
     const amount = (heavy ? 10 : 4) * fx.shakeScale;
 
-    flashRef.current?.animate(
-      [{ opacity: heavy ? 0.5 : 0.24 }, { opacity: 0 }],
-      { duration: heavy ? 150 : 90, easing: 'ease-out' },
-    );
+    /**
+     * The contact flash, which players said was tiring and which was.
+     *
+     * It lit the whole viewport to 0.24 on a light hit and 0.5 on a heavy one,
+     * on every blade in both directions. Two people at ninety words a minute is
+     * three or four full-screen luminance changes a second — past distracting,
+     * and on the wrong side of the three-per-second photosensitivity guidance.
+     *
+     * It also carries nothing by itself. The damage number, the health bar, the
+     * shake, the particles and the sound all fire anyway, so this is emphasis on
+     * an event that was never in danger of being missed. That is why `none` is a
+     * serious option rather than a fallback.
+     *
+     * Which treatment runs is `?flash=` — see game/useArenaFx.ts.
+     */
+    /**
+     * `impact.side`, not a comparison against `state.mySlot`.
+     *
+     * The caller already resolved whose blade this was — `land` is given
+     * `'player'` exactly when the target slot is mine — so reading the slot
+     * again here would recompute a decision that has been made, and would put
+     * `state.mySlot` in this effect's dependencies. That effect must not re-run:
+     * it applies a blade, and applying one twice is a real bug this file has
+     * had before.
+     */
+    const takingIt = impact.side === 'player';
+    const flashing = fx.flash !== 'none'
+      && (fx.flash !== 'heavy' || heavy)
+      && (fx.flash !== 'taken' || takingIt);
+
+    if (flashing) {
+      // An edge treatment is a vignette rather than a fill, so the same peak
+      // opacity moves a fraction of the luminance. It can afford to be brighter
+      // and last longer, which is what makes a heavy hit still land.
+      const rim = fx.flash === 'edge';
+      flashRef.current?.animate(
+        [{ opacity: heavy ? (rim ? 0.7 : 0.5) : (rim ? 0.4 : 0.24) }, { opacity: 0 }],
+        { duration: heavy ? (rim ? 220 : 150) : (rim ? 140 : 90), easing: 'ease-out' },
+      );
+    }
 
     if (fx.shake === 'none' || amount === 0) return;
 
@@ -1100,7 +1136,12 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           </span>
         )}
 
-        <div ref={flashRef} className={styles.flash} aria-hidden="true" />
+        <div
+        ref={flashRef}
+        className={styles.flash}
+        data-flash={fx.flash}
+        aria-hidden="true"
+      />
 
         {!keyboardUp && stream}
 

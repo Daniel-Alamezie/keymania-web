@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ARENA_FX, asFx, DEFAULT_FX, FX_IDS, nextFx, type FxId } from '../arenaFx';
+import {
+  ARENA_FX, asFx, DEFAULT_FX, FX_IDS, nextFx, type ArenaFx, type FxId,
+} from '../arenaFx';
 
 /**
  * The arena-treatment harness.
@@ -23,6 +25,11 @@ describe('the control preset', () => {
       // Shakes the whole screen, words included. This is the behaviour a player
       // called "so much going on", and it is the thing being measured against.
       shake: 'screen',
+      // The full-viewport white fill on every hit. Pinned as the control even
+      // though it is the thing players complained about, because that is what a
+      // control is: the treatments are only meaningful measured against what
+      // they actually played.
+      flash: 'full',
       shakeScale: 1,
       particles: 1,
       particleFloor: 1,
@@ -87,7 +94,7 @@ describe('the three treatments', () => {
   const knobsOf = (id: FxId) => {
     const fx = ARENA_FX[id];
     return JSON.stringify([
-      fx.layout, fx.blade, fx.ambient,
+      fx.layout, fx.blade, fx.ambient, fx.flash,
       fx.shake, fx.shakeScale, fx.particles, fx.particleFloor,
       fx.trails, fx.arc, fx.loudFrom, fx.torches, fx.danger, fx.wpmEveryMs,
     ]);
@@ -226,5 +233,48 @@ describe('nextFx', () => {
   it('goes backwards too, wrapping the other way', () => {
     expect(nextFx(FX_IDS[0], -1)).toBe(FX_IDS[FX_IDS.length - 1]);
     expect(nextFx(FX_IDS[1], -1)).toBe(FX_IDS[0]);
+  });
+});
+
+/**
+ * The contact flash, which is its own question.
+ *
+ * Players called it distracting, and measuring it: a full-viewport white fill at
+ * up to 0.5 opacity, on every hit in both directions. Two people at ninety words
+ * a minute is three or four large luminance changes a second, which is past
+ * annoying and into the range the photosensitivity guidance is about.
+ *
+ * Driven by `?flash=` rather than by a preset, because it is independent of the
+ * layout question the presets exist to answer. Comparing two things at once
+ * teaches you about neither.
+ */
+describe('the flash treatments', () => {
+  /**
+   * The decision, pinned. Four quieter variants were built and compared and none
+   * of them beat removing it, because it was never carrying anything: the damage
+   * number, the health bar, the shake, the particles and the sound all fire
+   * regardless.
+   */
+  it('is gone from the preset players actually get', () => {
+    expect(ARENA_FX[DEFAULT_FX].flash).toBe('none');
+  });
+
+  /**
+   * And kept on the control, which is the one place it must stay. A baseline
+   * that has been improved cannot tell you whether the improvement helped.
+   */
+  it('survives on the control, so the comparison is still possible', () => {
+    expect(ARENA_FX.current.flash).toBe('full');
+  });
+
+  /**
+   * The one that matters. Every other cue a hit has — the damage number, the
+   * health bar, the shake, the particles, the sound — fires regardless of this
+   * knob, which is exactly why turning it off entirely is a serious option
+   * rather than a degradation.
+   */
+  it('offers a setting that removes it completely', () => {
+    const modes: ArenaFx['flash'][] = ['full', 'heavy', 'taken', 'edge', 'none'];
+    expect(modes).toContain('none');
   });
 });

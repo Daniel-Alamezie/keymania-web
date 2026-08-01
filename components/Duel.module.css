@@ -602,7 +602,19 @@
 /* Three plates need to share the width the single one had. */
 .foes[data-many] > * { flex: 1; min-width: 0; }
 
-/* Single-frame white flash on contact — the hit-stop cue. */
+/*
+ * The contact cue.
+ *
+ * A flat white fill across the whole viewport, which is what players reported as
+ * distracting and what put three or four large luminance changes a second on
+ * screen during a fast duel.
+ *
+ * The `edge` treatment keeps the same element and changes what it paints: a
+ * vignette that leaves the middle of the screen — the part being read — alone,
+ * and warms the rim instead. Roughly a fifth of the lit area for the same peak
+ * opacity, so the hit still registers in peripheral vision while the words stay
+ * still.
+ */
 .flash {
   position: absolute;
   inset: 0;
@@ -610,6 +622,15 @@
   background: #fff;
   opacity: 0;
   pointer-events: none;
+}
+
+.flash[data-flash='edge'] {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgba(255, 255, 255, 0.55) 78%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
 }
 
 .damage {

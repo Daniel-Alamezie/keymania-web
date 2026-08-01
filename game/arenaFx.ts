@@ -68,6 +68,26 @@ export interface ArenaFx {
    * except the words. `none` holds still.
    */
   shake: 'screen' | 'arena' | 'none';
+  /**
+   * The white overlay on contact, and how much of it there is.
+   *
+   * It shipped as `full`: the whole viewport lit to 0.24 opacity on a light hit
+   * and 0.5 on a heavy one, on every blade, dealt *and* taken. Two players at
+   * ninety words a minute is three or four full-screen luminance changes per
+   * second, which players called distracting and which sits on the wrong side of
+   * the three-per-second photosensitivity guidance.
+   *
+   * The flash also carries nothing on its own. A hit already has a damage
+   * number, a health bar moving, a shake, particles and a sound; this is
+   * emphasis on an event nobody could miss.
+   *
+   *   `full`   what shipped, kept only so it can be compared against
+   *   `heavy`  only the blades worth reacting to, roughly one word in five
+   *   `taken`  only when it is you being hit, which is the half that matters
+   *   `edge`   a vignette from the rim rather than the whole screen lighting up
+   *   `none`   nothing, and the other five cues carry it
+   */
+  flash: 'full' | 'heavy' | 'taken' | 'edge' | 'none';
   /** Multiplier on the shake distance. */
   shakeScale: number;
 
@@ -129,6 +149,7 @@ const CURRENT: ArenaFx = {
   layout: 'arena',
   blade: 'canvas',
   shake: 'screen',
+  flash: 'full',
   shakeScale: 1,
   particles: 1,
   particleFloor: 1,
@@ -155,6 +176,25 @@ const TRIM: ArenaFx = {
   label: 'Trim',
   blurb: 'Same hits. The constant background motion is gone.',
   shake: 'arena',
+  /**
+   * Gone, and not toned down.
+   *
+   * Players called it distracting and measuring it agreed: a full-viewport white
+   * fill at up to half opacity, on every hit in both directions, is three or four
+   * large luminance changes a second in a fast duel. That is past annoying and
+   * into the range the photosensitivity guidance exists for.
+   *
+   * Removed entirely rather than dimmed because it never carried anything. A hit
+   * already has a damage number, a health bar moving, a shake, particles and a
+   * sound, so this was emphasis on an event that was never at risk of being
+   * missed. Four quieter variants were built and compared; none of them beat
+   * simply not doing it.
+   *
+   * `current` keeps it, because a control that has been improved is not a
+   * control, and `?flash=` still reaches every variant for anyone who wants to
+   * argue the point with evidence.
+   */
+  flash: 'none',
   torches: 'still',
   danger: 'steady',
   wpmEveryMs: 2000,
