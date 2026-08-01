@@ -27,6 +27,14 @@ interface HealthBarProps {
   compact?: boolean;
   /** 'left' anchors the fill to the left edge; 'right' mirrors it. */
   align: 'left' | 'right';
+  /**
+   * Where this seat stands, shown beside the name.
+   *
+   * Absent for a bot duel, which moves nothing, and for anybody the server sent
+   * no rating for. A duel that changes your standing should say what is at stake
+   * before a word is typed rather than only reporting it on the way out.
+   */
+  rating?: number;
   /** Optional caption under the name, e.g. live WPM or the bot's speed. */
   caption?: string;
   /**
@@ -65,7 +73,7 @@ interface HealthBarProps {
  * The two plates mirror each other so the player's side is unmistakable.
  */
 export default function HealthBar({
-  name, value, team, align, character, caption, compact, targeted, defeated,
+  name, value, team, align, character, caption, compact, targeted, defeated, rating,
   hitTick = 0, big,
 }: HealthBarProps) {
   const pct = Math.max(0, Math.min(100, (value / MAX_HEALTH) * 100));
@@ -114,6 +122,11 @@ export default function HealthBar({
       <div className={styles.info}>
         <div className={styles.top}>
           <span className={`${styles.name} pixel-font`} data-team={team}>{name}</span>
+          {/* Quiet beside the name rather than under it: it is context for who
+              you are facing, not a second thing to read mid-duel. */}
+          {rating !== undefined && (
+            <span className={styles.rating} aria-label={`rated ${rating}`}>{rating}</span>
+          )}
           <span className={`${styles.value} pixel-font`} data-state={state}>{Math.ceil(value)}</span>
         </div>
 

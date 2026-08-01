@@ -130,6 +130,15 @@ export type ServerMessage =
      * Absent from an older server, in which case everyone draws as the default.
      */
     characters?: CharacterId[];
+    /**
+     * What each seat is rated, parallel to the roster.
+     *
+     * So a duel can show the stakes before a word is typed rather than only
+     * revealing them in the swing afterwards. Optional because an older server
+     * sends none, and a plate with no rating simply shows a name, which is what
+     * every plate did until now.
+     */
+    ratings?: number[];
     /** Legacy single-opponent name, sent only for two-player rooms. */
     opponent?: string;
   }

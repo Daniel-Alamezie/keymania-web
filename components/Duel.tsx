@@ -49,6 +49,14 @@ export interface MultiplayerConfig {
    * why an optional key was the thing that let this go missing.
    */
   characters: CharacterId[] | undefined;
+  /**
+   * What each seat is rated, parallel to the roster.
+   *
+   * Shown on the plates so a ranked duel says what is at stake before a word is
+   * typed rather than only reporting it afterwards. Undefined for a bot duel,
+   * which moves nothing, and from a server that predates the field.
+   */
+  ratings: number[] | undefined;
   /** The server's own countdown. The client must not assume its own. */
   countdownMs: number | undefined;
   /** Subscribe to server messages; returns an unsubscribe function. */
@@ -960,6 +968,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
           team="blue"
           align="left"
           character={me.character}
+          rating={multiplayer?.ratings?.[state.mySlot]}
           /*
            * No caption at all when the readout is switched off, rather than a
            * caption that never moves. Without this guard the interval never
@@ -1020,6 +1029,7 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
                   team="red"
                   align="right"
                   character={fighter.character}
+                  rating={multiplayer?.ratings?.[slot]}
                   defeated={isOut(fighter)}
                   caption={
                     foes.length > 1

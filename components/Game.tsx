@@ -58,6 +58,14 @@ interface Match {
    */
   characters: CharacterId[] | undefined;
   /**
+   * What each seat is rated, parallel to the roster.
+   *
+   * Undefined from a server that predates it, and from a bot duel, which has no
+   * standing to show. The plate falls back to a name alone, which is what every
+   * plate showed until now.
+   */
+  ratings: number[] | undefined;
+  /**
    * How long the server will wait before it starts accepting words.
    *
    * Required, though it may be undefined — the client must not invent this.
@@ -306,6 +314,7 @@ export default function Game() {
             // existed; nothing on this side read it, so every human duel drew
             // default fighters and made the picker look broken.
             characters: message.characters,
+            ratings: message.ratings,
             countdownMs: message.countdownMs,
           });
           setScreen('duel');
@@ -449,6 +458,7 @@ export default function Game() {
             mySlot: match.mySlot,
             powers: match.powers,
             characters: match.characters,
+            ratings: match.ratings,
             countdownMs: match.countdownMs,
             subscribe,
             onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>

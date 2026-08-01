@@ -48,6 +48,14 @@ export function previewMatch({ players, mySlot = 0 }: PreviewOptions): Multiplay
     mySlot: Math.max(0, Math.min(size - 1, mySlot)),
     powers: {},
     characters: FACES.slice(0, size),
+    /**
+     * Made up, because there is no server here and nobody has a standing.
+     *
+     * Given values rather than left undefined so the preview shows the plates as
+     * a real duel does — the whole point of this harness is checking a layout
+     * that is otherwise unreachable without four accounts at once.
+     */
+    ratings: Array.from({ length: size }, (_, i) => 300 + i * 17),
     countdownMs: 3000,
     subscribe: () => () => {},
     onWord: () => {},

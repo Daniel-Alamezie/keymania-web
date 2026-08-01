@@ -272,3 +272,17 @@
 .plate[data-compact][data-targeted] {
   border-color: var(--gold);
 }
+
+/*
+ * The rating beside the name.
+ *
+ * Deliberately quiet. It answers "who am I up against" once, before the
+ * countdown ends, and then has no business competing with the health bar or the
+ * words for attention. Tabular figures so a three-digit rating and a four-digit
+ * one do not shift the name beside them.
+ */
+.rating {
+  font-size: 10px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
