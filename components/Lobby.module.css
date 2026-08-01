@@ -7,7 +7,15 @@
   display: flex;
   flex-direction: column;
   gap: 13px;
-  width: min(520px, 92vw);
+  /*
+   * Of the container, not the viewport.
+   *
+   * The same slip the search card had, smaller: this sits inside Game's twenty
+   * pixels of padding on each side, so on a 375px phone `92vw` asks for 345 of
+   * an available 335 and hangs five pixels off each edge. A percentage is
+   * measured against the space that actually exists.
+   */
+  width: min(520px, 100%);
   animation: riseIn 300ms cubic-bezier(0.2, 1.2, 0.4, 1);
 }
 

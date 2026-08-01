@@ -81,37 +81,50 @@ export default function Searching({ rating, onCancel, onGiveUpWaiting }: {
     : seconds < 30 ? 'a wider range of players'
       : 'anybody who is available';
 
+  /**
+   * The card only, with no screen of its own.
+   *
+   * It used to wrap itself in a second full-height, padded, centring `<main>` —
+   * inside the one Game already provides. Two consequences, both of which
+   * players met on a phone. The card's width was `94vw`, measured against the
+   * viewport while sitting inside eighty pixels of nested padding, so on a
+   * 375px screen it asked for 353px of a 295px space and hung eighteen pixels
+   * off the right edge. And the inner `min-height: 100vh` demanded a full
+   * viewport inside a container that was already exactly that minus its
+   * padding, so it overflowed top and bottom as well.
+   *
+   * It was also a `<main>` inside a `<main>`, which is two page landmarks and
+   * one of them wrong.
+   */
   return (
-    <main className={styles.screen}>
-      <div className={`panel ${styles.card}`}>
-        <div className={styles.blades} aria-hidden="true">
-          {[1, 2, 3].map((tier) => (
-            <span key={tier} className={styles.blade} style={{ animationDelay: `${tier * 160}ms` }}>
-              <PixelSprite name={`blade-${tier}` as 'blade-1'} height={18 + tier * 4} />
-            </span>
-          ))}
-        </div>
-
-        <h1 className={`${styles.title} pixel-font`}>Finding a duel</h1>
-
-        <p className={styles.status}>
-          Looking for {reach}.
-        </p>
-
-        <p className={styles.clock}>
-          <span className={`${styles.seconds} pixel-font`}>{seconds}s</span>
-        </p>
-
-        {rating !== null && (
-          <p className={styles.note}>
-            Queued at {rating}. The longer this takes, the wider it looks.
-          </p>
-        )}
-
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Stop looking
-        </button>
+    <div className={`panel ${styles.card}`}>
+      <div className={styles.blades} aria-hidden="true">
+        {[1, 2, 3].map((tier) => (
+          <span key={tier} className={styles.blade} style={{ animationDelay: `${tier * 160}ms` }}>
+            <PixelSprite name={`blade-${tier}` as 'blade-1'} height={18 + tier * 4} />
+          </span>
+        ))}
       </div>
-    </main>
+
+      <h1 className={`${styles.title} pixel-font`}>Finding a duel</h1>
+
+      <p className={styles.status}>
+        Looking for {reach}.
+      </p>
+
+      <p className={styles.clock}>
+        <span className={`${styles.seconds} pixel-font`}>{seconds}s</span>
+      </p>
+
+      {rating !== null && (
+        <p className={styles.note}>
+          Queued at {rating}. The longer this takes, the wider it looks.
+        </p>
+      )}
+
+      <button type="button" className="btn btn-ghost" onClick={onCancel}>
+        Stop looking
+      </button>
+    </div>
   );
 }
