@@ -17,6 +17,24 @@
  * `.screen` does the centring, and this file describes a card.
  */
 .card {
+  /*
+   * Above the arena, and this is not decoration.
+   *
+   * The backdrop is `position: fixed`, so it is a positioned element and paints
+   * over ordinary in-flow content however early it appears in the document.
+   * Every content block in this app answers that the same way — see `.menu` and
+   * `.wide` in Game.module.css, both of which carry exactly this pair.
+   *
+   * It used to live on a `.screen` wrapper here, and deleting that wrapper to
+   * fix the mobile overflow took this with it. The failure was much stranger
+   * than "invisible": the card appeared for a third of a second and then went.
+   * `riseIn` animates a `transform`, and a transform creates a stacking context
+   * — so the card was lifted above the backdrop for exactly as long as the
+   * animation ran, and dropped behind it the moment `animation-fill-mode: none`
+   * gave the transform back.
+   */
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
