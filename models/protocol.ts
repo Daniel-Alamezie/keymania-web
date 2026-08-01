@@ -195,6 +195,40 @@ export type ServerMessage =
    * drops out of it rather than taking the room with them.
    */
   | { type: 'rematchState'; players: string[]; ready: boolean[] }
+  /**
+   * A seat successfully reclaimed on a fresh socket.
+   *
+   * Carries the full board, not a delta: the client has been blind for an
+   * unknown number of exchanges, so the only honest thing the server can hand
+   * it is the complete current state to repaint from. `status` says whether
+   * there is still a duel to rejoin or only a result to see.
+   */
+  | {
+    type: 'rejoined';
+    roomId: string;
+    status: 'playing' | 'over';
+    slot: number;
+    script: string[];
+    powers: Record<number, PowerKind>;
+    roster: string[];
+    characters: CharacterId[];
+    ratings: number[];
+    healths: number[];
+    progress: number[];
+    wards: boolean[];
+    surges: boolean[];
+    targets: number[];
+    countdownMs: number;
+    winnerSlot?: number;
+  }
+  /**
+   * The seat could not be reclaimed.
+   *
+   * A typed message rather than an error string, because the client acts on the
+   * difference: 'auth' means the session needs renewing and retrying might
+   * work, 'gone' means the duel no longer exists and the only move is the menu.
+   */
+  | { type: 'rejoinFailed'; reason: 'auth' | 'gone' }
   | { type: 'opponentLeft' }
   | { type: 'error'; message: string };
 
@@ -278,6 +312,16 @@ export type ClientMessage =
    * generating anyway.
    */
   | { action: 'pulse' }
+  /**
+   * Reclaim a seat after the socket died mid-duel.
+   *
+   * Identity is the token, never the connection — the entire premise is that
+   * the old connection id is dead and this one is a stranger. Sockets die for
+   * reasons nobody can prevent (phone locks, network handovers, API Gateway's
+   * hard two-hour cap), and $disconnect is best-effort, so recovery has to be
+   * driven by the side that knows it reconnected.
+   */
+  | { action: 'rejoin'; roomId: string; token: string }
   /**
    * Another duel with the people already here.
    *

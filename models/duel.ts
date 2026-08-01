@@ -177,6 +177,16 @@ export type DuelAction =
   | { type: 'land'; toSlot: number; damage: number; now: number }
   /** Authoritative health from the server — never computed locally in multiplayer. */
   | { type: 'setHealths'; healths: number[] }
+  /**
+   * Snap this player back to where the server says they stand.
+   *
+   * Dispatched once after a mid-duel rejoin. The server counts the words it has
+   * scored; anything typed while blind never landed, so the cursor moves to the
+   * word the server is still owed. A cursor left where the player thinks they
+   * are would have every later word judged against the wrong one and refused —
+   * the very bug the rejoin exists to end.
+   */
+  | { type: 'resync'; wordIndex: number; healths: number[]; now: number }
   /** Who each fighter is currently aiming at, recomputed by the server. */
   | {
       /**

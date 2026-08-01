@@ -1,6 +1,7 @@
 import {
   applyDamage, bladeTier, keepsCombo, sanitiseElapsed, scoreWord, wpmFor,
 } from './engine';
+import { seekTo } from './resync';
 import { BOT_CHARACTERS, COUNTDOWN_FROM, MAX_HEALTH } from './constants';
 import { OPENING_SENTENCE, randomSentence } from './sentences';
 import { chargeSentence, LEECH_SHARE, MEND_AMOUNT, SURGE_MULTIPLIER } from './powers';
@@ -427,6 +428,36 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         // Freeze the clock on the blow, not when the banner appears — the
         // cinematic that follows must never be counted as typing time.
         stats: winner !== null ? { ...state.stats, endedAt: action.now } : state.stats,
+      };
+    }
+
+    case 'resync': {
+      // No script means no multiplayer duel to find a place in.
+      if (!state.multiplayer || !state.script) return state;
+      const seek = seekTo(state.script, action.wordIndex);
+      return {
+        ...state,
+        // Straight to playing: whatever countdown was running belongs to the
+        // duel this player left, and that duel is mid-swing.
+        phase: 'playing',
+        scriptIndex: seek.scriptIndex,
+        sentence: seek.sentence,
+        upcoming: seek.upcoming,
+        cursor: seek.cursor,
+        /**
+         * The streak restarts. The server's own combo for this seat carried on
+         * — the seat never left the duel — so the local figure is only the
+         * visual prediction, and starting it at zero understates one word
+         * rather than overstating damage that will not come.
+         */
+        playerCombo: 0,
+        wordMistakes: 0,
+        wordStartedAt: action.now,
+        lastWordAt: action.now,
+        fighters: state.fighters.map((fighter, slot) => ({
+          ...fighter,
+          health: action.healths[slot] ?? fighter.health,
+        })),
       };
     }
 

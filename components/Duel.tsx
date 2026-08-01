@@ -67,6 +67,22 @@ export interface MultiplayerConfig {
   /** Ask to play again with the same room. */
   onRematch: () => void;
   /**
+   * Present only when this config is a duel picked back up mid-swing.
+   *
+   * The socket died and the seat was reclaimed; this is the board as the server
+   * holds it. Applied straight after startMulti in one effect, in that order,
+   * because startMulti resets the duel to word zero — the resume is what walks
+   * it back to the truth, and letting the two race was the first design and the
+   * wrong one.
+   */
+  resume?: {
+    wordIndex: number;
+    healths: number[];
+    wards: boolean[];
+    surges: boolean[];
+    targets: number[];
+  };
+  /**
    * A heartbeat while the duel is live.
    *
    * Some opponents are paced by a clock, and nothing was ever reading it except
@@ -81,6 +97,14 @@ interface DuelProps {
   difficulty: Difficulty;
   /** Present for a human duel; absent means play the local bot. */
   multiplayer?: MultiplayerConfig;
+  /**
+   * The socket under this duel is down and being re-established.
+   *
+   * Shown rather than swallowed: the old behaviour was typing into a dead
+   * socket with nothing on screen saying so, which read as the game being
+   * broken instead of the connection being lost.
+   */
+  linkDown?: boolean;
   onExit: () => void;
 }
 
@@ -136,7 +160,7 @@ const FINISH_HOLD_MS = 1900;
  */
 const PULSE_EVERY_MS = 2000;
 
-export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
+export default function Duel({ difficulty, multiplayer, linkDown, onExit }: DuelProps) {
   /**
    * Who you fight as, straight from the profile store.
    *
@@ -333,6 +357,31 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
       // is undefined for everybody and asCharacter falls back to the default.
       characters: multiplayer.characters,
     });
+    /**
+     * A reclaimed duel continues from where the server holds it.
+     *
+     * Ordered after startMulti on purpose — startMulti has just reset the board
+     * to word zero, and this walks it back to the truth. `duel_started` below
+     * is guarded for the same reason: a rejoin is the middle of one duel, not
+     * the start of a second.
+     */
+    if (multiplayer.resume) {
+      dispatch({
+        type: 'resync',
+        wordIndex: multiplayer.resume.wordIndex,
+        healths: multiplayer.resume.healths,
+        now: Date.now(),
+      });
+      dispatch({ type: 'setTargets', targets: multiplayer.resume.targets });
+      dispatch({
+        type: 'setPowers',
+        ward: multiplayer.resume.wards[multiplayer.mySlot] ?? false,
+        surge: multiplayer.resume.surges[multiplayer.mySlot] ?? false,
+        granted: undefined,
+        blocked: false,
+      });
+      return;
+    }
     // A human duel begins on the server's word rather than a button, so this
     // is the only honest place to count one starting.
     trackEvent({ name: 'duel_started', mode: 'human', difficulty, touch });
@@ -1358,6 +1407,17 @@ export default function Duel({ difficulty, multiplayer, onExit }: DuelProps) {
         * being looked at, and a tap anywhere on it is a gesture iOS accepts. The
         * button stays for every moment this overlay is gone.
         */}
+      {/*
+        * Said while it is true and gone the moment it is not. It sits above the
+        * arena rather than replacing it, because the duel state underneath is
+        * still real — the server is holding the seat.
+        */}
+      {linkDown && isMulti && state.phase !== 'over' && (
+        <div className={styles.linkDown} role="status">
+          Connection lost — rejoining the duel…
+        </div>
+      )}
+
       {state.phase === 'countdown' && (
         <div
           className={styles.overlay}

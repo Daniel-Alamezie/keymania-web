@@ -1086,3 +1086,31 @@
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
 }
+
+/*
+ * The connection strip.
+ *
+ * Loud enough to explain why nothing is landing, quiet enough not to read as a
+ * crash. Top centre because the plates own the corners and the words own the
+ * middle; pulsing opacity rather than flashing, for the same photosensitivity
+ * reason the damage flash died.
+ */
+.linkDown {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 8px 16px;
+  background: var(--panel);
+  border: 2px solid var(--bad);
+  color: var(--ink);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  animation: linkPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes linkPulse {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}

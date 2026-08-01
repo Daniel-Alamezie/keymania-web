@@ -45,6 +45,16 @@ type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival';
 const IGNITE_MS = 320;
 
 interface Match {
+  /** Which room this duel lives in — what a rejoin asks for after a drop. */
+  roomId: string;
+  /** Set only when this match is a duel picked back up after a socket death. */
+  resume?: {
+    wordIndex: number;
+    healths: number[];
+    wards: boolean[];
+    surges: boolean[];
+    targets: number[];
+  };
   script: string[];
   /** Every player's name in slot order, including yours. */
   roster: string[];
@@ -306,6 +316,7 @@ export default function Game() {
           }
 
           setMatch({
+            roomId: message.roomId,
             script: message.script,
             // Falls back to the legacy single-opponent field so an older
             // server release still produces a usable roster.
@@ -321,9 +332,96 @@ export default function Game() {
           });
           setScreen('duel');
         }
+
+        /**
+         * The seat came back. Rebuild the match from the full state so the
+         * duel repaints everything it missed while blind; the Duel component
+         * folds the volatile half (healths, progress, powers) via its own
+         * subscription to this same message.
+         */
+        if (message.type === 'rejoined') {
+          if (message.status === 'over') {
+            // Nothing to resume. The duel ended while this player was blind;
+            // the menu with an explanation beats a result screen for a match
+            // they never saw finish.
+            setError('That duel ended while you were disconnected.');
+            setMatch(null);
+            setScreen('menu');
+            return;
+          }
+          setMatch({
+            roomId: message.roomId,
+            script: message.script,
+            roster: message.roster,
+            mySlot: message.slot,
+            powers: message.powers ?? {},
+            characters: message.characters,
+            ratings: message.ratings,
+            countdownMs: message.countdownMs,
+            // The board as the server holds it, applied after the reset that
+            // rebuilding the match will trigger. See Duel's startMulti effect.
+            resume: {
+              wordIndex: message.progress[message.slot] ?? 0,
+              healths: message.healths,
+              wards: message.wards,
+              surges: message.surges,
+              targets: message.targets,
+            },
+          });
+          setScreen('duel');
+        }
+
+        if (message.type === 'rejoinFailed') {
+          setError(message.reason === 'auth'
+            ? 'Your session expired, so the duel could not be resumed.'
+            : 'That duel has ended.');
+          setMatch(null);
+          setScreen('menu');
+        }
       }),
     [subscribe],
   );
+
+  /**
+   * Pick the duel back up when the socket dies under it.
+   *
+   * Sockets die mid-duel for reasons nobody can prevent — a phone locking, a
+   * network handover, API Gateway's hard two-hour cap — and the reconnect used
+   * to be the trap: a fresh connection id the server had linked to nothing, so
+   * every word and every resign answered "not in a duel", silently, forever.
+   * Two players sat through exactly that on 1 Aug 2026, unable to hit or leave.
+   *
+   * `connect()` starts the new socket and `send` queues onto it before it is
+   * open, which is the one time that queue design really pays for itself. The
+   * token is fetched fresh because the drop may have outlived the old one.
+   *
+   * Bounded per socket generation: one attempt each time the status falls to
+   * closed or error. If the rejoin itself fails, `rejoinFailed` below decides —
+   * this effect must not loop against a server that is saying no.
+   */
+  const rejoinAsked = useRef(0);
+  useEffect(() => {
+    if (screen !== 'duel' || !match) return;
+    if (status !== 'closed' && status !== 'error') return;
+
+    const generation = rejoinAsked.current + 1;
+    rejoinAsked.current = generation;
+
+    void (async () => {
+      const token = await duelToken();
+      // A session that cannot mint a token cannot reclaim a seat. Leaving
+      // quietly would be this bug again with extra steps; say why instead.
+      if (!token) {
+        setError('Your session expired, so the duel could not be resumed.');
+        setMatch(null);
+        setScreen('menu');
+        return;
+      }
+      if (rejoinAsked.current !== generation) return;
+      connect();
+      send({ action: 'rejoin', roomId: match.roomId, token });
+    })();
+  }, [screen, match, status, connect, send]);
 
   /** Poll the lobby while it is on screen. */
   useEffect(() => {
@@ -495,6 +593,7 @@ export default function Game() {
             characters: match.characters,
             ratings: match.ratings,
             countdownMs: match.countdownMs,
+            resume: match.resume,
             subscribe,
             onWord: (word: string, elapsedMs: number, accuracy: number, typos: number) =>
               send({ action: 'wordComplete', word, elapsedMs, accuracy, typos }),
@@ -512,7 +611,16 @@ export default function Game() {
   );
 
   if (screen === 'duel' && match) {
-    return <Duel difficulty={difficulty} multiplayer={multiplayer} onExit={leave} />;
+    return (
+      <Duel
+        difficulty={difficulty}
+        multiplayer={multiplayer}
+        // The rejoin effect above is already re-establishing it; this is what
+        // tells the player so, instead of letting them type into the void.
+        linkDown={status !== 'open'}
+        onExit={leave}
+      />
+    );
   }
 
   if (screen === 'solo') {
