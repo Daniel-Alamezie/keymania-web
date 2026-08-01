@@ -24,7 +24,7 @@ import Survival from './Survival';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
-import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
+import SignInLink from './SignInLink';
 import { useAccount } from '@/game/useAccount';
 import type { CharacterId } from '@/models/character';
 import { track } from '@/game/analytics';
@@ -373,15 +373,41 @@ export default function Game() {
    * leave the button dead for a round trip, and the two outcomes both land here
    * anyway: `searching` if nobody suited, `matchStart` if somebody did.
    */
+  /**
+   * When the current search began, for measuring what the queue costs.
+   *
+   * A ref rather than state: nothing renders from it, and the search screen
+   * counts its own seconds for the player already.
+   */
+  const searchStartedAt = useRef(0);
+
   const findGame = useCallback(async () => {
     setError(null);
     connect();
     setScreen('searching');
+    searchStartedAt.current = Date.now();
+    /**
+     * Asking for a duel, which is not the same as getting one.
+     *
+     * `duel_started` fires when a match actually begins, so the gap between
+     * these two is the queue — and the queue was previously invisible. A launch
+     * that put 121 people on the page and 15 into a ranked duel could not say
+     * whether anybody was stuck here.
+     */
+    track({ name: 'quick_play_started' });
 
     const token = await duelToken();
     if (!token) {
       setError('Your session expired. Sign in again to duel.');
       setScreen('menu');
+      /**
+       * The quietest way to lose a player who did everything right.
+       *
+       * They pressed the button and were told to sign in again. From the
+       * outside it is indistinguishable from a broken game, and from the data
+       * it was previously indistinguishable from never pressing the button.
+       */
+      track({ name: 'queue_left', seconds: 0, reason: 'session_expired' });
       return;
     }
     send({ action: 'quickPlay', name: account.displayName ?? '', token });
@@ -397,6 +423,13 @@ export default function Game() {
   const stopSearching = useCallback(() => {
     send({ action: 'cancelQueue' });
     setScreen('menu');
+    // How long they were willing to wait is the number that says whether the
+    // queue needs to be faster or merely needs to say more while it runs.
+    track({
+      name: 'queue_left',
+      seconds: Math.round((Date.now() - searchStartedAt.current) / 1000),
+      reason: 'cancelled',
+    });
   }, [send]);
 
   /**
@@ -609,10 +642,10 @@ export default function Game() {
         ) : (
           // Bots stay open to everyone; only human duels need an account,
           // because only those results are server-verified enough to rank.
-          <LoginLink className={`btn btn-primary ${styles.play} ${styles.loginBtn}`}>
+          <SignInLink from="play" className={`btn btn-primary ${styles.play} ${styles.loginBtn}`}>
             Sign in to play
             <small className="btn-sub">Google or email · unlocks the leaderboard</small>
-          </LoginLink>
+          </SignInLink>
         )}
 
         {/*
@@ -683,10 +716,10 @@ export default function Game() {
                 {starting ? 'Stoking the forge' : 'Start a run'}
               </button>
             ) : (
-              <LoginLink className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
+              <SignInLink from="survival" className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
                 Sign in to run
                 <small className="btn-sub">a run needs a server to referee it</small>
-              </LoginLink>
+              </SignInLink>
             )}
           </div>
         )}

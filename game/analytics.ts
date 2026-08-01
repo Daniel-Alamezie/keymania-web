@@ -43,7 +43,67 @@ export type GameEvent =
   /** They needed the instructions, and how far they read. */
   | { name: 'guide_opened' }
   /** They cared enough about the game to make it theirs. */
-  | { name: 'character_saved'; character: string };
+  | { name: 'character_saved'; character: string }
+  /**
+   * The four below exist to answer one question: **where do the visitors go?**
+   *
+   * A launch put 121 people on the page and 15 of them into a ranked duel, and
+   * nothing recorded a single step in between. Every explanation for that gap
+   * was equally consistent with the data, and they have opposite fixes — if
+   * nobody presses the sign-in button, the wall is in the wrong place; if they
+   * press it and never come back, the wall is fine and the round trip is broken;
+   * if they come back and abandon the queue, neither is the problem and matching
+   * is. Guessing wrong costs a week building the wrong thing.
+   *
+   * So each of these is one edge of that funnel, and they only earn their place
+   * together. Individually they are trivia.
+   */
+  /**
+   * They pressed a sign-in button. `from` is which wall they hit, because the
+   * game has five and they are not equally important.
+   */
+  | { name: 'signin_started'; from: SignInSource }
+  /**
+   * They came back with a session. The other half of the round trip.
+   *
+   * Without this, "never clicked sign in" and "clicked it and was lost at the
+   * identity provider" are the same shape in the data, and they are the two most
+   * different problems on the list.
+   */
+  | { name: 'signin_returned'; from: SignInSource; seconds: number }
+  /**
+   * They asked for a duel. Note this is not `duel_started`, which fires when one
+   * actually begins — the gap between the two is the queue, and until now the
+   * queue was invisible.
+   */
+  | { name: 'quick_play_started' }
+  /**
+   * They left the queue without getting a duel, and why.
+   *
+   * `session_expired` is the one worth watching: it is a player who did
+   * everything right, pressed the button, and was told to sign in again. That
+   * failure is invisible from the outside and looks like a broken game from the
+   * inside.
+   */
+  | { name: 'queue_left'; seconds: number; reason: 'cancelled' | 'session_expired' };
+
+/**
+ * Which sign-in wall somebody hit.
+ *
+ * A closed union rather than a free string, and required rather than optional,
+ * so a new sign-in button cannot be added without saying where it is. The
+ * alternative is the failure this file already warns about: analytics that has
+ * to be remembered at every call site is analytics that ends up half-wired.
+ */
+export type SignInSource =
+  /** The primary button on the menu. The one that matters most. */
+  | 'play'
+  /** The survival panel. */
+  | 'survival'
+  /** The small link in the corner, pressed by somebody who went looking. */
+  | 'account_bar'
+  | 'profile'
+  | 'public_profile';
 
 // `challenge_earned` is deliberately absent. Noticing one *complete* means
 // diffing the challenge list across two profile loads, which is the unlock
@@ -113,6 +173,25 @@ export function startAnalytics(): void {
 export function track({ name, ...properties }: GameEvent): void {
   if (!started) return;
   posthog.capture(name, properties);
+}
+
+/**
+ * Whether this browser has an account, stamped on every event from here on.
+ *
+ * A super property rather than a field on each event, and rather than a
+ * `menu_viewed` event invented to carry it. The question is not "did they see
+ * the menu" — the page *is* the menu — it is "which of these numbers are about
+ * people who cannot play a ranked duel yet", and that applies to `$pageview`
+ * just as much as to anything the game sends. Registering it once answers that
+ * for events that already exist and for every event added later.
+ *
+ * Only called once the session is resolved. The account hook returns an
+ * optimistic guess from localStorage before Kinde answers, and stamping a guess
+ * onto events would quietly mislabel the very population being counted.
+ */
+export function setSignedIn(signedIn: boolean): void {
+  if (!started) return;
+  posthog.register({ signed_in: signedIn });
 }
 
 /**

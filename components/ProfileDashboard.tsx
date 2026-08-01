@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
+import SignInLink from './SignInLink';
 import {
   currentSpeed, EMPTY_TALLY, HANDLE_MAX, NAME_MAX, trend, useServerProfile, winRate,
   type DuelResult,
@@ -59,7 +59,7 @@ export default function ProfileDashboard() {
             Your profile lives with your account, so your name and history follow you
             between devices.
           </p>
-          <LoginLink className={`btn btn-primary ${styles.loginBtn}`}>Sign in</LoginLink>
+          <SignInLink from="profile" className={`btn btn-primary ${styles.loginBtn}`}>Sign in</SignInLink>
         </Notice>
       </Shell>
     );

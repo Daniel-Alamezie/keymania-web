@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { LoginLink, LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
+import { LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
+import SignInLink from './SignInLink';
 import { useAccount } from '@/game/useAccount';
 import { forgetProfile, resolveDisplayName, useDisplayName } from '@/game/serverProfile';
 import { forgetDuelToken } from '@/game/duelToken';
@@ -30,10 +31,10 @@ export default function AccountBar() {
   if (!signedIn) {
     return (
       <div className={styles.bar}>
-        <LoginLink className={`btn btn-ghost ${styles.action}`}>
+        <SignInLink from="account_bar" className={`btn btn-ghost ${styles.action}`}>
           Sign in
           <small className="btn-sub">to play others</small>
-        </LoginLink>
+        </SignInLink>
       </div>
     );
   }

@@ -5,7 +5,7 @@ import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LoginLink } from '@kinde-oss/kinde-auth-nextjs/components';
+import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import type { PublicProfile as Profile } from '@/models/profile';
@@ -93,7 +93,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
     return (
       <Shell>
         <p className={styles.muted}>Sign in to look at other players&apos; profiles.</p>
-        <LoginLink className={`btn btn-primary ${styles.cta}`}>Sign in</LoginLink>
+        <SignInLink from="public_profile" className={`btn btn-primary ${styles.cta}`}>Sign in</SignInLink>
       </Shell>
     );
   }
