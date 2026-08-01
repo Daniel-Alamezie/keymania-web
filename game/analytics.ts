@@ -102,6 +102,14 @@ export type SignInSource =
   | 'survival'
   /** The small link in the corner, pressed by somebody who went looking. */
   | 'account_bar'
+  /**
+   * The feedback box, opened by somebody signed out.
+   *
+   * Worth its own value rather than folding into the others: this is a player
+   * who had something to say and met an account requirement on the way to
+   * saying it. If they drop here, the requirement is costing reports.
+   */
+  | 'feedback'
   | 'profile'
   | 'public_profile';
 

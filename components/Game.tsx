@@ -19,6 +19,7 @@ import Embers from './Embers';
 import RecordPanel from './RecordPanel';
 import LeaderboardPanel from './LeaderboardPanel';
 import HowToPlay from './HowToPlay';
+import FeedbackBox from './FeedbackBox';
 import Searching from './Searching';
 import Survival from './Survival';
 import AccountBar from './AccountBar';
@@ -188,6 +189,7 @@ export default function Game() {
     () => null,
   );
   const [previewClosed, setPreviewClosed] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   /**
    * Built once per requested size rather than on every render, because the
@@ -787,11 +789,25 @@ export default function Game() {
           <Link href="/leaderboard" className={`${styles.guideLink} ${styles.narrowLink}`}>
             See the leaderboard
           </Link>
+
+          {/*
+            * The only route a player has to reach us.
+            *
+            * There is no subreddit and no issue tracker anybody outside the
+            * repository can find, so every report this game has acted on so far
+            * arrived as a Reddit comment on an unrelated thread. On the menu
+            * rather than buried in a profile page, because the moment somebody
+            * wants it is the moment something has just gone wrong.
+            */}
+          <button className={styles.guideLink} onClick={() => setShowFeedback(true)}>
+            Found a bug, or want something changed?
+          </button>
         </div>
         <LeaderboardPanel />
       </div>
 
       {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
+      {showFeedback && <FeedbackBox onClose={() => setShowFeedback(false)} />}
       {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
     </main>
   );

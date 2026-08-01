@@ -1,0 +1,93 @@
+/*
+ * Deliberately the same furniture as HowToPlay: same overlay, same rise, same
+ * close button in the same corner. Two dialogs in one game that dismiss
+ * differently is a small cost paid by every player who meets the second one.
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 6, 18, 0.88);
+  z-index: 40;
+  animation: fade 180ms ease-out;
+}
+
+@keyframes fade { from { opacity: 0; } }
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(520px, 94vw);
+  animation: riseIn 260ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes riseIn {
+  from { transform: translateY(16px) scale(0.97); opacity: 0; }
+}
+
+.head { display: flex; align-items: center; justify-content: space-between; }
+.title { margin: 0; font-size: 14px; color: var(--gold); }
+
+.close {
+  background: transparent;
+  border: none;
+  color: var(--faint);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.close:hover { color: var(--ink); }
+
+.blurb {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/*
+ * Two choices, side by side and equal weight, because they are alternatives
+ * rather than a list — the same shape the menu uses for Practice and Survival.
+ * On a narrow screen they stack rather than shrink: a truncated label is a
+ * choice somebody has to guess at.
+ */
+.kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+@media (max-width: 420px) {
+  .kinds { grid-template-columns: 1fr; }
+}
+
+.kind { text-align: left; }
+.kind[data-active] { border-color: var(--gold); color: var(--ink); }
+
+.message {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--panel-deep, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+}
+.message:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.message::placeholder { color: var(--faint); }
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.count { font-size: 10px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.error { margin: 0; font-size: 12px; color: var(--bad); }
