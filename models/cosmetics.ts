@@ -40,6 +40,18 @@ export interface Cosmetic {
 export const badgeSrc = (file: string) => `/badges/${file}`;
 
 /**
+ * The one badge that carries a number beside it.
+ *
+ * Mirrored from the API's lib/cosmetics.ts, and the single id this file knows
+ * by name. Everywhere else the server resolves ids to values first, but the
+ * appearance panel has to render its preview from an unsaved selection — the
+ * server has not been told yet, so it cannot be the one to decide whether a
+ * number belongs. The rendered surfaces still take a resolved
+ * `PublicCosmetics` and never see this.
+ */
+export const FOUNDER_BADGE = 'badge.founder';
+
+/**
  * The three groups, in the order the panel shows them.
  *
  * Badges first because they are the most visible thing a player can change and

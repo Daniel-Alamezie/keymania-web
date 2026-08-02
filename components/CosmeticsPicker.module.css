@@ -57,4 +57,58 @@
 
 .label { font-size: 10px; }
 .hint { font-size: 9px; line-height: 1.4; color: var(--faint); }
-.error { margin: 0; font-size: 12px; color: var(--bad); }
+.error { color: var(--bad); }
+
+/*
+ * The save bar.
+ *
+ * Sticks to the bottom of the scrolling panel so the control that commits a
+ * change is never somewhere a player has to go and find. Opaque rather than
+ * translucent: tiles scrolling visibly underneath a bar of buttons reads as a
+ * rendering fault.
+ */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-top: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+/* Only lit when there is something to lose, so the bar is quiet the rest of
+   the time and unmistakable the moment it matters. */
+.bar[data-dirty] { border-top-color: var(--gold); }
+
+.state { margin: 0; font-size: 11px; color: var(--muted); }
+.bar[data-dirty] .state { color: var(--gold); }
+
+.actions { display: flex; gap: 8px; margin-left: auto; }
+
+.save,
+.discard {
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.save { border-color: var(--gold); color: var(--gold); }
+.save:hover:not(:disabled) { background: var(--gold); color: var(--bg, #17102b); }
+.discard:hover:not(:disabled) { border-color: var(--muted); color: var(--ink); }
+
+/* Disabled is the resting state here, so it has to look deliberate rather than
+   broken: dimmed and inert, never greyed out of the layout. */
+.save:disabled,
+.discard:disabled { opacity: 0.4; cursor: default; }

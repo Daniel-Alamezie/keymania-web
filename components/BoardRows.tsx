@@ -16,9 +16,25 @@ import styles from './SidePanel.module.css';
  * what a crown means and which row is yours, and the rules below were each
  * arrived at by getting them wrong first.
  */
-export default function BoardRows({ entries, board }: {
+export default function BoardRows({ entries, board, asStranger }: {
   entries: BoardEntry[];
   board: BoardKind;
+  /**
+   * Render every row as though it belonged to somebody else.
+   *
+   * For the appearance preview, which exists to answer "what do other people
+   * see". Left to itself this component would recognise the player's own name
+   * and tint the row as theirs, and link it to their dashboard — both correct
+   * on a real board and both wrong in a preview, where the tint is a thing no
+   * stranger ever sees and the link goes somewhere the preview did not offer
+   * to take anybody.
+   *
+   * A flag on the real renderer rather than a hand-built copy of a row. A copy
+   * would look right on the day it was written and drift the first time a
+   * badge moved or a column changed width, which is precisely the failure this
+   * preview is meant to catch.
+   */
+  asStranger?: boolean;
 }) {
   /**
    * An earned name colour, or nothing.
@@ -80,9 +96,9 @@ export default function BoardRows({ entries, board }: {
              * the only thing to go on and being occasionally wrong beats never
              * highlighting anybody.
              */
-            data-me={(myHandle && entry.handle
+            data-me={(!asStranger && (myHandle && entry.handle
               ? entry.handle === myHandle
-              : Boolean(myName) && entry.name === myName) || undefined}
+              : Boolean(myName) && entry.name === myName)) || undefined}
             data-top={entry.position === 1 || undefined}
           >
             <span className={`${styles.rankPos} pixel-font`}>{entry.position}</span>
@@ -144,7 +160,7 @@ export default function BoardRows({ entries, board }: {
               </span>
             )}
 
-            {entry.handle ? (
+            {entry.handle && !asStranger ? (
               <Link
                 href={entry.handle === myHandle ? '/profile' : `/u/${entry.handle}`}
                 className={styles.rankName}

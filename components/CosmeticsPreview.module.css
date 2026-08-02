@@ -1,0 +1,43 @@
+/*
+ * The preview reads as a window onto somewhere else, not as another panel of
+ * controls. Inset and slightly darker than the page, so the eye files it as
+ * "this is what that looks like over there" rather than as more things to
+ * click.
+ */
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+.heading { margin: 0; font-size: 12px; color: var(--gold); }
+
+/*
+ * Side by side where there is room, stacked on a phone. Both surfaces have to
+ * be visible at once: the point is comparing how one choice reads in two
+ * places, and a preview that needs scrolling between them cannot answer that.
+ */
+.surfaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.surface { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.where {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* The plate is built for a full-width arena; give it a floor to sit on. */
+.plate { padding: 8px; background: var(--panel); }
+
+.note { margin: 0; font-size: 9px; line-height: 1.5; color: var(--faint); }

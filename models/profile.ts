@@ -113,6 +113,14 @@ export interface ServerProfile {
     title?: string;
     badge?: string;
     nameColour?: string;
+    /**
+     * This account's founder position, if it has one.
+     *
+     * Sent whether or not the star is currently worn, because the panel has to
+     * draw the number in the preview the moment somebody selects the badge —
+     * before anything is saved and before the server has been told.
+     */
+    founderNumber?: number;
   };
   /** Newest first, as the API stores it. */
   history: DuelResult[];

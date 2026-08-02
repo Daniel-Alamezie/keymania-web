@@ -241,6 +241,41 @@ export function forgetProfile(): void {
  * rationed differently upstream, and posting a handle that has not changed
  * alongside a new display name would spend a cooldown nobody asked to spend.
  */
+/** What the server reports a player is wearing after a save. Ids, never values. */
+type SavedCosmetics = { earned: string[]; title?: string; badge?: string; nameColour?: string };
+
+/**
+ * Fold a save response into what is already held.
+ *
+ * The three slots are **replaced, not merged**, and that distinction is the
+ * whole reason this is a named function rather than a spread. JSON has no
+ * `undefined`: a slot the server reports as empty arrives as a missing key,
+ * and a missing key in a spread leaves whatever was there before. Taking a
+ * title off would have saved correctly, been reported correctly, and still
+ * shown on screen until the next refetch — a bug whose every visible symptom
+ * points at the server, where nothing is wrong.
+ *
+ * The response describes a whole appearance, so it is read as one.
+ *
+ * The catalogue and the founder number come the other way, from what is
+ * already held. Neither is part of this response and neither can change by
+ * equipping anything.
+ */
+export function foldSavedCosmetics(
+  held: ServerProfile['cosmetics'],
+  saved: SavedCosmetics | undefined,
+): ServerProfile['cosmetics'] {
+  if (!saved) return held;
+  return {
+    catalogue: held?.catalogue ?? [],
+    founderNumber: held?.founderNumber,
+    earned: saved.earned,
+    title: saved.title,
+    badge: saved.badge,
+    nameColour: saved.nameColour,
+  };
+}
+
 async function savePatch(
   patch: {
     displayName?: string;
@@ -264,7 +299,7 @@ async function savePatch(
     displayName: string;
     handle?: string;
     character?: CharacterId;
-    cosmetics?: { earned: string[]; title?: string; badge?: string; nameColour?: string };
+    cosmetics?: SavedCosmetics;
   };
 
   // Trust the server's version: it sanitises and canonicalises, so what came
@@ -282,9 +317,7 @@ async function savePatch(
        * retired rather than refusing the write, so what came back may be less
        * than what was asked for — and the panel must show what actually stuck.
        */
-      cosmetics: saved.cosmetics
-        ? { ...snapshot.profile.cosmetics, ...saved.cosmetics, catalogue: snapshot.profile.cosmetics?.catalogue ?? [] }
-        : snapshot.profile.cosmetics,
+      cosmetics: foldSavedCosmetics(snapshot.profile.cosmetics, saved.cosmetics),
     };
     fetchedAt = Date.now();
     persist(profile);
