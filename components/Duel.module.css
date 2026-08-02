@@ -329,6 +329,19 @@
   height: auto;
   min-height: 0;
   row-gap: 0;
+  /*
+   * The forge centres as a unit, exactly as it reads on desktop.
+   *
+   * `place-self` on the child rather than `justify-items` trivia on the
+   * container: it shrinks the meter to its content and centres the whole
+   * assembly, which holds however the meter arranges its own insides. Without
+   * this the meter stretched to the row and its pieces settled left — the
+   * dagger hugging the edge in every phone screenshot.
+   */
+}
+
+.screen[data-layout='plain'][data-keyboard] .arena > * {
+  place-self: center;
 }
 
 /* Nothing needs pointing at when there is nothing between the two plates. */

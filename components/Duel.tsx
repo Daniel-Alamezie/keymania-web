@@ -16,6 +16,7 @@ import { useAccount } from '@/game/useAccount';
 import { BOT_PROFILES, PROJECTILE_FLIGHT_MS } from '@/game/constants';
 import { FALLBACK_COUNTDOWN_MS, SOLO_TICK_MS, tickDelay } from '@/game/countdown';
 import { useArenaFx } from '@/game/useArenaFx';
+import { useVisualViewport } from '@/game/useVisualViewport';
 import { confirmTarget, useConfirmKey } from '@/game/useConfirmKey';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
@@ -307,37 +308,7 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
    * reliable signal, and the threshold is generous because the bars at the top
    * and bottom of mobile browsers move on their own.
    */
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const sync = () => {
-      /**
-       * The visible rectangle, published to CSS.
-       *
-       * An open keyboard shrinks the visual viewport and leaves the layout
-       * viewport alone, and iOS additionally *scrolls* the page to reveal the
-       * focused field — so the top of the screen is no longer the top of what
-       * anybody can see. `offsetTop` is that scroll, and without it a panel
-       * pinned to `top: 0` sits above the fold where it does no good at all.
-       */
-      const root = screenRef.current;
-      if (root) {
-        root.style.setProperty('--vv-height', `${Math.round(vv.height)}px`);
-        root.style.setProperty('--vv-top', `${Math.round(vv.offsetTop)}px`);
-      }
-      setKeyboardUp(vv.height < window.innerHeight * 0.75);
-    };
-
-    sync();
-    vv.addEventListener('resize', sync);
-    // iOS moves the visual viewport by scrolling it, which is not a resize.
-    vv.addEventListener('scroll', sync);
-    return () => {
-      vv.removeEventListener('resize', sync);
-      vv.removeEventListener('scroll', sync);
-    };
-  }, []);
+  useVisualViewport(screenRef, setKeyboardUp);
 
   const track = (timer: ReturnType<typeof setTimeout>) => {
     timers.current.push(timer);

@@ -17,6 +17,7 @@ import HeatBar from './HeatBar';
 import ArenaScene from './ArenaScene';
 import SoundToggle from './SoundToggle';
 import styles from './Survival.module.css';
+import { useVisualViewport } from '@/game/useVisualViewport';
 
 export interface SurvivalConfig {
   script: string[];
@@ -76,7 +77,14 @@ export default function Survival({
    * has none: it reads `window.keydown` and draws its own caret.
    */
   const capture = useRef<HTMLInputElement>(null);
+  const screenRef = useRef<HTMLElement>(null);
   const [keyboardUp, setKeyboardUp] = useState(false);
+  /**
+   * The duel has had this since keyboards first covered its words; survival
+   * never did, so on a phone its sentence stayed pinned against the top while
+   * the space above the keys sat empty. Same screen problem, same cure.
+   */
+  useVisualViewport(screenRef, setKeyboardUp);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const track = (id: ReturnType<typeof setTimeout>) => { timers.current.push(id); return id; };
 
@@ -339,6 +347,7 @@ export default function Survival({
      * and there are no health plates in a run.
      */
     <main
+      ref={screenRef}
       className={styles.screen}
       data-layout="plain"
       data-keyboard={keyboardUp || undefined}

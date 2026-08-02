@@ -190,8 +190,43 @@
 }
 
 /* With a keyboard up the words own what is left of the screen. */
-.screen[data-keyboard] .arena { row-gap: 12px; }
-.screen[data-keyboard] .stream { --stream-size: clamp(20px, 6vw, 30px); }
+/*
+ * Keyboard up: size everything against what is visible, not the window.
+ *
+ * The same shape the duel uses, for the same reason: an open keyboard shrinks
+ * the visual viewport and (on iOS) scrolls the page, so a 100vh screen runs on
+ * underneath the keys and `align-content: center` centres the words against a
+ * height half of which is keyboard. `--vv-height`/`--vv-top` come from
+ * useVisualViewport, published on this element.
+ */
+.screen[data-keyboard] {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-height, 100vh);
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+}
+
+/*
+ * Words just above the middle of the visible space, score and heat directly
+ * beneath — the group floats with air either side rather than pinning to the
+ * plates. The lower spacer is deliberately the larger (1.3fr against 1fr):
+ * a block at the exact centre reads slightly low with a keyboard under it.
+ *
+ * Rows are explicit because with empty spacer tracks, auto-placement would
+ * drop the stream into the first spacer and quietly re-create the top-pinned
+ * layout this replaces.
+ */
+.screen[data-keyboard] .arena {
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1.3fr);
+  align-content: stretch;
+  row-gap: 12px;
+}
+.screen[data-keyboard] .stream { grid-row: 2; --stream-size: clamp(20px, 6vw, 30px); }
+.screen[data-keyboard] .gauge { grid-row: 3; }
 .screen[data-keyboard] .count { font-size: 22px; }
 
 @media (max-width: 700px) {

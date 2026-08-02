@@ -7,7 +7,23 @@
  * anything.
  */
 .page {
-  min-height: 100vh;
+  /*
+   * Its own scroll context, because the page cannot rely on the body's.
+   *
+   * html/body carry `overflow: hidden` for the game screens — a duel must
+   * never rubber-band mid-word on a phone. That is right for the game and
+   * wrong for every reading page: this one grows past a viewport as soon as
+   * the board has a dozen rows, and with the body locked there was no way to
+   * reach the bottom on a laptop or a phone. Scrolling here, inside the page,
+   * keeps both properties: the game stays pinned, the reading matter scrolls.
+   *
+   * dvh, matching ProfileDashboard's identical fix: a phone's collapsing
+   * address bar makes 100vh taller than the screen, hiding the last rows under
+   * the browser chrome even once the page scrolls.
+   */
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   align-items: center;
