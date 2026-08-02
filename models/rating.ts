@@ -30,6 +30,13 @@ export const LOSS_POINTS = -8;
 export const MAX_UPSET_BONUS = 3;
 
 /**
+ * The most a routine win is trimmed by. Mirrors the API's rule: beating
+ * somebody rated far below you pays less, one point per 25 of gap, and a win
+ * never pays less than WIN_POINTS minus this.
+ */
+export const MAX_ROUTINE_DISCOUNT = 5;
+
+/**
  * The flame that burns beside a rating.
  *
  * Bands rather than a crown. A crown means champion, and one beside every
