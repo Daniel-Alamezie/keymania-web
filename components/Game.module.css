@@ -337,3 +337,30 @@
   left: 20px;
   z-index: 6;
 }
+
+/*
+ * The rating on the menu.
+ *
+ * Quiet on purpose. The Play button has to stay the loudest thing on this
+ * screen — somebody arriving to play should not have to read a statistic first
+ * — so this reads as a status line rather than as a headline.
+ */
+.standing {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 2px;
+}
+
+.standingLabel {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.standingValue {
+  font-size: 15px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}

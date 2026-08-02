@@ -27,6 +27,7 @@ import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
 import SignInLink from './SignInLink';
 import { useAccount } from '@/game/useAccount';
+import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
 import { track } from '@/game/analytics';
@@ -219,6 +220,7 @@ export default function Game() {
   const [showGuide, setShowGuide] = useState(false);
   const [showSound, setShowSound] = useState(false);
   const account = useAccount();
+  const rating = useRating();
   const [match, setMatch] = useState<Match | null>(null);
 
   /** Lobby-level messages. The duel subscribes separately for its own. */
@@ -740,6 +742,25 @@ export default function Game() {
           Type each word, then hit <kbd className="kbd">SPACE</kbd> to forge a blade and hurl it at
           your opponent. Chain words fast to forge something bigger — a typo shatters your streak.
         </p>
+
+        {/*
+          * Your standing, on the screen you actually spend time on.
+          *
+          * Asked for by a player: the board only shows the top of it, so
+          * somebody outside that had no way to see the number that moves after
+          * every ranked duel without opening their profile. It is the one
+          * figure that changes on its own, which is exactly why it belongs
+          * where they will see it change.
+          *
+          * Only once it is known and only when signed in — a rating shown to a
+          * guest would be a starting number dressed as an achievement.
+          */}
+        {account.signedIn && rating !== null && (
+          <p className={styles.standing}>
+            <span className={styles.standingLabel}>RATING</span>
+            <span className={`${styles.standingValue} pixel-font`}>{rating}</span>
+          </p>
+        )}
 
         {/*
           * One obvious action, above everything else.

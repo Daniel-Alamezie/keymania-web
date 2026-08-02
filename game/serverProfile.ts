@@ -389,6 +389,25 @@ export function useChallenges(): ChallengeProgress[] {
   );
 }
 
+/**
+ * The player's standing, for showing outside the profile page.
+ *
+ * A player asked to see it on the menu: they are not always on the visible
+ * part of the board, and the number that moves after every ranked duel was
+ * two clicks away from the screen they spend the most time on.
+ *
+ * Null while genuinely unknown, so a caller can render nothing rather than a
+ * starting rating that is about to be replaced — a number that changes on its
+ * own a second after you read it is worse than one that arrives late.
+ */
+export function useRating(): number | null {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => readSnapshot().profile?.rating ?? null,
+    () => null,
+  );
+}
+
 export function useHandle(): string | null {
   return useSyncExternalStore(
     subscribeToStore,

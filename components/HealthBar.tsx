@@ -146,6 +146,9 @@ export default function HealthBar({
           {cosmetics?.badge && (
             <span className={styles.plateBadge}>
               <img src={badgeSrc(cosmetics.badge)} alt="" width={12} height={12} />
+              {cosmetics.badgeNumber !== undefined && (
+                <span className={styles.plateBadgeNo}>{cosmetics.badgeNumber}</span>
+              )}
             </span>
           )}
           <span className={`${styles.name} pixel-font`} data-team={team}>{name}</span>

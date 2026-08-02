@@ -318,7 +318,14 @@
  * A badge on the plate, sized to sit inside the name's line rather than push it.
  * Pixel art, so never smoothed on the way down.
  */
-.plateBadge { display: flex; align-items: center; flex: none; }
+.plateBadge { display: flex; align-items: center; gap: 2px; flex: none; }
+/* Provenance, not a stat. It must never compete with the health figure. */
+.plateBadgeNo {
+  font-size: 8px;
+  line-height: 1;
+  color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
 .plateBadge img { image-rendering: pixelated; }
 
 /*

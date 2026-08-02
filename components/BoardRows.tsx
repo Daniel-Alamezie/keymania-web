@@ -135,6 +135,12 @@ export default function BoardRows({ entries, board }: {
             {entry.cosmetics?.badge && (
               <span className={styles.rankBadge}>
                 <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={14} height={14} />
+                {/* The founder's position, and only ever theirs. Tiny, because
+                    it is provenance rather than a score — the column already
+                    has a number that means something else entirely. */}
+                {entry.cosmetics.badgeNumber !== undefined && (
+                  <span className={styles.rankBadgeNo}>{entry.cosmetics.badgeNumber}</span>
+                )}
               </span>
             )}
 
