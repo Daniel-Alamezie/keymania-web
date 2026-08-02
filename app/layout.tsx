@@ -16,10 +16,36 @@ const body = JetBrains_Mono({
   display: 'swap',
 });
 
+/**
+ * One canonical home: keymania.app.
+ *
+ * `metadataBase` plus the canonical alternate is what tells Google the two
+ * hosts serving this game are one site — without it, keymania.app and the
+ * vercel.app domain split their rank between them and both lose. The share
+ * image is the brand lockup regenerated from the header's own styling, so a
+ * link pasted into Discord or Reddit shows the game's actual face.
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL('https://keymania.app'),
+  alternates: { canonical: '/' },
   title: 'KeyMania — type fast, strike hard',
   description:
     'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent.',
+  openGraph: {
+    title: 'KeyMania — type fast, strike hard',
+    description:
+      'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent.',
+    url: 'https://keymania.app',
+    siteName: 'KeyMania',
+    images: [{ url: '/brand/keymania-wordmark-tagline.png', width: 1093, height: 347 }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'KeyMania — type fast, strike hard',
+    description: 'A real-time typing duel. Type fast, strike hard.',
+    images: ['/brand/keymania-wordmark-tagline.png'],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
