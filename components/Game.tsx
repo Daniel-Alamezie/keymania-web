@@ -767,9 +767,12 @@ export default function Game() {
            * than as a new device to learn.
            */
           <p className={styles.standing}>
+            {/* Stacked: the flame crowns the number it grades, which is the
+                same reading order as a board row turned upright. Side by side
+                the flame read as a bullet point next to a figure. */}
             <Flame kind={ratingFlame(rating)} height={19} />
-            <span className={styles.standingLabel}>RATING</span>
             <span className={`${styles.standingValue} pixel-font`}>{rating}</span>
+            <span className={styles.standingLabel}>RATING</span>
           </p>
         )}
 
