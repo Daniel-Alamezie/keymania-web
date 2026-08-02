@@ -30,7 +30,7 @@ import type { PublicCosmetics } from './cosmetics';
  * one wrong letter ended it — which is a distance rather than a rate or a
  * standing.
  */
-export const BOARDS = ['standings', 'speed', 'streak'] as const;
+export const BOARDS = ['standings', 'speed', 'streak', 'weekly'] as const;
 export type BoardKind = (typeof BOARDS)[number];
 
 export const DEFAULT_BOARD: BoardKind = 'standings';
@@ -157,6 +157,17 @@ export const BOARD_META: Record<BoardKind, {
     footnote: 'Words survived in one run, and the speed it took to get there.',
     empty: 'No runs have survived anything yet. Start one and see how far you get.',
   },
+  weekly: {
+    tab: 'Weekly',
+    heading: 'This week',
+    scoreLabel: 'words in thirty seconds',
+    /**
+     * The one board where every row typed the same words, which is the whole
+     * sales pitch, so the footnote is the place to make it.
+     */
+    footnote: 'Everyone types the same script. Thirty seconds, best run counts. New script Mondays, 12pm UK.',
+    empty: 'Nobody has run this week yet. Thirty seconds, and the top spot is yours.',
+  },
 };
 
 export interface BoardEntry {
@@ -180,6 +191,8 @@ export interface BoardEntry {
   handle?: string;
   /** Best sustained speed across a whole refereed duel. */
   wpm: number;
+  /** Words landed in the weekly sprint. Only on the weekly board. */
+  words?: number;
   /**
    * Best accuracy across refereed duels. Colour on the board, never part of
    * the ordering — the server sees completed words, never keystrokes, so it

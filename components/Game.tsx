@@ -24,6 +24,7 @@ import HowToPlay from './HowToPlay';
 import FeedbackBox from './FeedbackBox';
 import Searching from './Searching';
 import Survival from './Survival';
+import Weekly from './Weekly';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
@@ -37,7 +38,7 @@ import { duelToken } from '@/game/duelToken';
 import { previewMatch } from '@/game/previewMatch';
 import styles from './Game.module.css';
 
-type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival';
+type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'weekly';
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -164,6 +165,10 @@ export default function Game() {
   const [run, setRun] = useState<
     { id: number; script: string[]; countdownMs: number | undefined } | null
   >(null);
+  /** The weekly sprint in progress, keyed exactly as survival's run is. */
+  const [sprint, setSprint] = useState<
+    { id: number; script: string[]; countdownMs: number | undefined } | null
+  >(null);
   /**
    * A run has been asked for and the server has not answered yet.
    *
@@ -181,7 +186,7 @@ export default function Game() {
    * unfolds what it is about to do to you. Clicking the open one closes it,
    * because a player who opened it to look should be able to put it back.
    */
-  const [mode, setMode] = useState<'practice' | 'survival' | null>(null);
+  const [mode, setMode] = useState<'practice' | 'survival' | 'weekly' | null>(null);
 
   /**
    * A room with nobody in it, for looking at.
@@ -319,6 +324,19 @@ export default function Game() {
               countdownMs: message.countdownMs,
             }));
             setScreen('survival');
+            return;
+          }
+
+          // The weekly arms exactly as survival does: same message, same
+          // shape, told apart by mode and nothing else.
+          if (message.mode === 'weekly') {
+            setStarting(false);
+            setSprint((previous) => ({
+              id: (previous?.id ?? 0) + 1,
+              script: message.script,
+              countdownMs: message.countdownMs,
+            }));
+            setScreen('weekly');
             return;
           }
 
@@ -469,6 +487,21 @@ export default function Game() {
       return;
     }
     send({ action: 'createRoom', name: account.displayName ?? '', visibility: 'private', token, mode: 'survival' });
+  }, [connect, send, account.displayName]);
+
+  /** Same arming path as survival, pointed at the week's script. */
+  const startWeekly = useCallback(async () => {
+    setError(null);
+    setStarting(true);
+    connect();
+
+    const token = await duelToken();
+    if (!token) {
+      setError('Your session expired. Sign in again to play.');
+      setStarting(false);
+      return;
+    }
+    send({ action: 'createRoom', name: account.displayName ?? '', visibility: 'private', token, mode: 'weekly' });
   }, [connect, send, account.displayName]);
 
   /**
@@ -680,6 +713,22 @@ export default function Game() {
     );
   }
 
+  if (screen === 'weekly' && sprint) {
+    return (
+      <Weekly
+        key={sprint.id}
+        script={sprint.script}
+        countdownMs={sprint.countdownMs}
+        subscribe={subscribe}
+        onWord={(word) => send({ action: 'weeklyWord', word })}
+        onFinish={() => send({ action: 'weeklyWord', finish: true })}
+        starting={starting}
+        onAgain={() => void startWeekly()}
+        onExit={leave}
+      />
+    );
+  }
+
   if (screen === 'searching') {
     return (
       <main className={styles.screen}>
@@ -815,6 +864,7 @@ export default function Game() {
           {([
             { id: 'practice', label: 'Practice', note: 'against a bot' },
             { id: 'survival', label: 'Survival', note: 'one mistake ends it' },
+            { id: 'weekly', label: 'Weekly', note: 'same script for everyone' },
           ] as const).map((choice) => (
             <button
               key={choice.id}
@@ -849,6 +899,29 @@ export default function Game() {
           * the button looked broken rather than blocked.
           */}
         {error && <p className={styles.error} role="status">{error}</p>}
+
+        {mode === 'weekly' && (
+          <div className={styles.modePanel}>
+            <p className={styles.modeBlurb}>
+              One script for everybody, thirty seconds on the clock, your best
+              run goes on the board. New script every Monday at 12pm UK time.
+            </p>
+            {account.signedIn ? (
+              <button
+                className={`btn btn-primary ${styles.full}`}
+                onClick={() => void startWeekly()}
+                disabled={starting}
+                data-working={starting || undefined}
+              >
+                {starting ? 'Setting the line' : 'Run this week’s script'}
+              </button>
+            ) : (
+              <SignInLink from="weekly" className={`btn btn-primary ${styles.full} ${styles.loginBtn}`}>
+                Sign in to run the weekly
+              </SignInLink>
+            )}
+          </div>
+        )}
 
         {mode === 'survival' && (
           <div className={styles.modePanel}>

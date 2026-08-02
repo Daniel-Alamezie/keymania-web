@@ -110,6 +110,7 @@ export type SignInSource =
   | 'play'
   /** The survival panel. */
   | 'survival'
+  | 'weekly'
   /** The small link in the corner, pressed by somebody who went looking. */
   | 'account_bar'
   /**

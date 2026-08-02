@@ -109,6 +109,28 @@ export type ServerMessage =
     appended?: string;
   }
   /** A room filling up, before it is full enough to start. */
+  | {
+    /** One word of a weekly sprint, acknowledged. */
+    type: 'weeklyWord';
+    ended: boolean;
+    wordIndex: number;
+    chars: number;
+  }
+  | {
+    /**
+     * A weekly sprint, over and scored.
+     *
+     * `run` is this attempt and `best` the week's standing best after the
+     * write, both from the server's own clock — the end card renders these
+     * and never its own arithmetic. Absent `run` means the attempt was too
+     * short to measure, which the card words as encouragement, not an error.
+     */
+    type: 'weeklyEnd';
+    week: string;
+    run?: { chars: number; words: number; wpm: number; lastMs: number };
+    best?: { chars: number; words: number; wpm: number; lastMs: number };
+    improved: boolean;
+  }
   | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
   | {
     type: 'matchStart';
@@ -120,7 +142,7 @@ export type ServerMessage =
      * roster length, because a room of one is a legitimate thing for a duel to
      * become mid-match and a survival run is not something to fall into.
      */
-    mode?: 'duel' | 'survival';
+    mode?: 'duel' | 'survival' | 'weekly';
     roomId: string;
     script: string[];
     /** Charged words keyed by flat word index. */
@@ -273,7 +295,7 @@ export type ClientMessage =
      * The server starts a survival room the moment it exists, so the reply is
      * `matchStart` rather than `roomCreated`.
      */
-    mode?: 'survival';
+    mode?: 'survival' | 'weekly';
   }
   | { action: 'joinRoom'; roomId: string; name: string; token: string }
   | { action: 'listRooms' }
@@ -308,6 +330,11 @@ export type ClientMessage =
    * inside the handler carrying the lost-update, countdown and stagger fixes.
    */
   | { action: 'survivalWord'; word: string; elapsedMs: number; accuracy?: number; typos?: number }
+  /**
+   * One word of a weekly sprint, or `finish` when the local thirty seconds
+   * are up — trusted only to close the run, never to score it.
+   */
+  | { action: 'weeklyWord'; word?: string; finish?: boolean }
   // Running accuracy rides along here rather than on its own route. The server
   // cannot verify it, so it is stored for the player's record but never ranked.
   //

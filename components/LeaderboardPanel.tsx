@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useBoard } from '@/game/useBoard';
 import { BOARDS, BOARD_META, DEFAULT_BOARD, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
+import { untilRollover } from '@/game/weeklyClock';
 import BoardRows from './BoardRows';
 import BoardGuide from './BoardGuide';
 import styles from './SidePanel.module.css';
@@ -79,7 +80,14 @@ export default function LeaderboardPanel() {
         </Link>
       )}
 
-      <p className={styles.footnote}>{meta.footnote}</p>
+      <p className={styles.footnote}>
+        {meta.footnote}
+        {/* The countdown is what makes the tab feel alive between visits:
+            a board that says when it resets is a reason to come back before
+            it does. Computed on render, coarse on purpose (never seconds),
+            so it does not tick while somebody reads. */}
+        {board === 'weekly' && ` New script in ${untilRollover()}.`}
+      </p>
 
       {/*
         * Its own control, below the footnote rather than inside it.
