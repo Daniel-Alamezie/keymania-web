@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useBoard } from '@/game/useBoard';
 import { asBoard, BOARDS, BOARD_META, PAGE_LIMIT, type BoardKind } from '@/models/leaderboard';
+import { untilRollover } from '@/game/weeklyClock';
 import BoardRows from './BoardRows';
 import BoardGuide from './BoardGuide';
 import panel from './SidePanel.module.css';
@@ -104,6 +105,12 @@ export default function FullBoard({ initial }: { initial?: string }) {
           </button>
         )}
 
+        {board === 'weekly' && (
+          <p className={panel.resetChip}>
+            <span className={panel.resetChipLabel}>NEW SCRIPT IN</span>
+            <span className="pixel-font">{untilRollover()}</span>
+          </p>
+        )}
         <p className={panel.footnote}>{meta.footnote}</p>
 
         <button type="button" className={panel.footLink} onClick={() => setShowGuide(true)}>

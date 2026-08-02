@@ -80,14 +80,16 @@ export default function LeaderboardPanel() {
         </Link>
       )}
 
-      <p className={styles.footnote}>
-        {meta.footnote}
-        {/* The countdown is what makes the tab feel alive between visits:
-            a board that says when it resets is a reason to come back before
-            it does. Computed on render, coarse on purpose (never seconds),
-            so it does not tick while somebody reads. */}
-        {board === 'weekly' && ` New script in ${untilRollover()}.`}
-      </p>
+      {/* A deadline, dressed as one. Coarse on purpose - never seconds -
+          so it does not tick while somebody reads. */}
+      {board === 'weekly' && (
+        <p className={styles.resetChip}>
+          <span className={styles.resetChipLabel}>NEW SCRIPT IN</span>
+          <span className="pixel-font">{untilRollover()}</span>
+        </p>
+      )}
+
+      <p className={styles.footnote}>{meta.footnote}</p>
 
       {/*
         * Its own control, below the footnote rather than inside it.

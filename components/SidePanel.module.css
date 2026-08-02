@@ -256,24 +256,27 @@
  */
 .tabs {
   display: flex;
+  justify-content: space-between;
   gap: 2px;
   margin: 0 0 10px;
 }
 
 /*
- * Four tabs now, in a panel sized when there were two. Each tab gives up its
- * fixed padding for an equal share of the strip: they shrink together and
- * none can push a sibling off the panel's edge, which is exactly what the
- * fourth one did on arrival.
+ * Four tabs in a panel sized when there were two. Equal columns were tried
+ * first and looked worse than the overflow they fixed: "Standings" filled
+ * its cell to the walls while "Weekly" floated in space. Natural widths
+ * spread across the strip give every label the same breathing room on both
+ * sides, which is what a row of words needs to read as a row of tabs.
  */
 .tab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 1 1 0;
+  flex: 0 1 auto;
   min-width: 0;
   gap: 6px;
-  padding: 5px 2px;
+  font-size: 11px;
+  padding: 5px 3px;
   background: transparent;
   border: 2px solid transparent;
   color: var(--faint);
@@ -289,6 +292,29 @@
   color: var(--gold);
   border-bottom-color: var(--gold);
 }
+
+/*
+ * The weekly reset, worn as a timer rather than buried in a sentence.
+ *
+ * It was the last clause of the footnote and read as more small print. A
+ * board that resets is the whole reason to come back before Monday, so the
+ * countdown gets a chip: bordered, gold, sitting between the rows and the
+ * prose where a deadline belongs.
+ */
+.resetChip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 5px 8px 4px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  border: 1px solid var(--gold-deep);
+  background: rgba(0, 0, 0, 0.2);
+}
+.resetChipLabel { color: var(--faint); letter-spacing: 0.12em; }
 
 .badge {
   display: inline-grid;
