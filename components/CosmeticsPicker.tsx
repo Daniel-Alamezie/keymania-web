@@ -74,6 +74,7 @@ export default function CosmeticsPicker() {
   const preview: PublicCosmetics = {
     title: byId(chosen.title)?.label,
     badge: byId(chosen.badge)?.value,
+    badgeLabel: byId(chosen.badge)?.label,
     nameColour: byId(chosen.nameColour)?.value,
     badgeNumber: chosen.badge === FOUNDER_BADGE ? worn.founderNumber : undefined,
   };
@@ -171,7 +172,11 @@ export default function CosmeticsPicker() {
                     </span>
 
                     <span className={styles.label}>{item.label}</span>
-                    {!mine && <span className={styles.hint}>{item.hint}</span>}
+                    {/* On every tile, not only locked ones. It reads as "how
+                        to get this" while locked and flips to "what this is"
+                        once owned — a grid of owned marks with bare names
+                        assumed everybody remembers why they have things. */}
+                    <span className={styles.hint}>{item.hint}</span>
                   </button>
                 );
               })}

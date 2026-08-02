@@ -5,7 +5,7 @@ import { useDisplayName, useHandle } from '@/game/serverProfile';
 import { BOARD_META, type BoardEntry, type BoardKind } from '@/models/leaderboard';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import RankFlame, { Flame, type Podium } from './RankFlame';
-import { badgeSrc, founderTooltip } from '@/models/cosmetics';
+import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
 import styles from './SidePanel.module.css';
 
 /**
@@ -152,7 +152,7 @@ export default function BoardRows({ entries, board, asStranger }: {
               /* Hover says what the number means. The digits alone are two
                  quiet pixels of provenance; the words are for whoever cares
                  enough to ask. */
-              <span className={styles.rankBadge} data-tip={founderTooltip(entry.cosmetics.badgeNumber)}>
+              <span className={styles.rankBadge} data-tip={badgeTooltip(entry.cosmetics)}>
                 <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={14} height={14} />
                 {/* The founder's position, and only ever theirs. Tiny, because
                     it is provenance rather than a score — the column already

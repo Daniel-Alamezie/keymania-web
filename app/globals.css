@@ -206,7 +206,11 @@ button { font-family: inherit; }
   content: attr(data-tip);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 7px);
+  /* Below the mark, not above it. Above was the reflex and it failed on the
+     first real user of this rule: badges live on board rows inside panels,
+     the most decorated rows sit at the top, and a tooltip opening upward from
+     the top row dies against the panel edge before anybody sees it. */
+  top: calc(100% + 7px);
   transform: translateX(-50%);
   padding: 5px 8px 4px;
   font-family: var(--font-pixel), var(--font-body), monospace;

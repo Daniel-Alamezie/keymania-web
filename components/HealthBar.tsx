@@ -3,7 +3,7 @@
 import PixelSprite from './PixelSprite';
 import { characterFrame, characterHit, type CharacterId } from '@/models/character';
 import { MAX_HEALTH } from '@/game/constants';
-import { badgeSrc, founderTooltip, type PublicCosmetics } from '@/models/cosmetics';
+import { badgeSrc, badgeTooltip, type PublicCosmetics } from '@/models/cosmetics';
 import styles from './HealthBar.module.css';
 
 interface HealthBarProps {
@@ -144,7 +144,7 @@ export default function HealthBar({
       <div className={styles.info}>
         <div className={styles.top}>
           {cosmetics?.badge && (
-            <span className={styles.plateBadge} data-tip={founderTooltip(cosmetics.badgeNumber)}>
+            <span className={styles.plateBadge} data-tip={badgeTooltip(cosmetics)}>
               <img src={badgeSrc(cosmetics.badge)} alt="" width={12} height={12} />
               {cosmetics.badgeNumber !== undefined && (
                 <span className={styles.plateBadgeNo}>{cosmetics.badgeNumber}</span>

@@ -14,6 +14,8 @@ export interface PublicCosmetics {
   title?: string;
   /** A filename under /badges. */
   badge?: string;
+  /** What the badge is called, for the tooltip beside it. */
+  badgeLabel?: string;
   /** A CSS colour. */
   nameColour?: string;
   /**
@@ -41,13 +43,16 @@ export interface EarnedCosmetic {
 }
 
 /**
- * What hovering a founder badge says.
+ * What hovering a badge says.
  *
  * One function rather than a template repeated at each surface, because the
- * wording is a fact about the badge and the surfaces must agree on it.
+ * wording is a fact about the badge and the surfaces must agree on it. The
+ * founder's number outranks the plain label — "Founder #7" says both what the
+ * mark is and whose — and every other badge answers with its name, because a
+ * mark that cannot say what it is only speaks to people who already know.
  */
-export const founderTooltip = (number: number | undefined): string | undefined =>
-  (number === undefined ? undefined : `Founder #${number}`);
+export const badgeTooltip = (worn: PublicCosmetics | undefined): string | undefined =>
+  (worn?.badgeNumber !== undefined ? `Founder #${worn.badgeNumber}` : worn?.badgeLabel);
 
 /** One catalogue entry, as the customisation panel needs it. */
 export interface Cosmetic {

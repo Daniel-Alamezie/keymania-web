@@ -9,7 +9,7 @@ import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import type { PublicProfile as Profile } from '@/models/profile';
-import { badgeSrc, founderTooltip } from '@/models/cosmetics';
+import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
 
@@ -136,7 +136,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
             * in front of it is a mark on the person.
             */}
           {profile.cosmetics?.badge && (
-            <span className={styles.badge} data-tip={founderTooltip(profile.cosmetics.badgeNumber)}>
+            <span className={styles.badge} data-tip={badgeTooltip(profile.cosmetics)}>
               <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={22} height={22} />
               {profile.cosmetics.badgeNumber !== undefined && (
                 <span className={styles.badgeNo}>{profile.cosmetics.badgeNumber}</span>
@@ -185,7 +185,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
                 key={`${item.kind}-${item.label}`}
                 className={styles.collectionItem}
                 data-kind={item.kind}
-                data-tip={founderTooltip(item.number) ?? item.label}
+                data-tip={badgeTooltip({ badgeNumber: item.number, badgeLabel: item.label })}
               >
                 {item.kind === 'badge' && item.value && (
                   <img src={badgeSrc(item.value)} alt={item.label} width={18} height={18} />

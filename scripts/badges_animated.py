@@ -92,7 +92,14 @@ FLAG_PALETTE = {"#": GOLD, "@": GOLD_DEEP}
 # The resting frame is also first, so any renderer showing a still shows the
 # complete badge rather than one caught mid-shine.
 REST_MS = 1100
-SWEEP_MS = 100
+# Slow enough to be seen at the size it is actually watched at. The first cut
+# used a two-cell band at 100ms and it was invisible on a board row by plain
+# arithmetic: fourteen rendered pixels over a thirty-two cell grid puts each
+# cell under half a pixel, so a two-cell light was less than one pixel moving
+# faster than the eye settles. The band below is four cells and each step
+# lingers — at 128px it reads as a sheen, at 14px as a clear glint.
+SWEEP_MS = 130
+BAND = 4
 
 
 def load_cap() -> Image.Image:
@@ -146,10 +153,10 @@ def build_frames() -> list[Image.Image]:
         return image.resize((GRID * SCALE, GRID * SCALE), Image.Resampling.NEAREST)
 
     frames = [compose(set())]
-    # Two adjacent diagonals at a time, stepping two per frame: a light with
-    # width, moving quickly enough to be a pass rather than a crawl.
+    # A band of adjacent diagonals stepping two per frame, so successive
+    # frames overlap and the light travels rather than teleports.
     for step in range(0, len(diagonals), 2):
-        frames.append(compose(set(diagonals[step:step + 2])))
+        frames.append(compose(set(diagonals[step:step + BAND])))
     return frames
 
 
