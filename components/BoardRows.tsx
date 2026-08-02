@@ -152,7 +152,7 @@ export default function BoardRows({ entries, board, asStranger }: {
               /* Hover says what the number means. The digits alone are two
                  quiet pixels of provenance; the words are for whoever cares
                  enough to ask. */
-              <span className={styles.rankBadge} title={founderTooltip(entry.cosmetics.badgeNumber)}>
+              <span className={styles.rankBadge} data-tip={founderTooltip(entry.cosmetics.badgeNumber)}>
                 <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={14} height={14} />
                 {/* The founder's position, and only ever theirs. Tiny, because
                     it is provenance rather than a score — the column already

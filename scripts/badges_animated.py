@@ -1,7 +1,7 @@
 """Animated badges, for the ones that should feel rare.
 
-Same grid, same palette and the same hard pixel edges as scripts/badges.py —
-this is that file's vocabulary with a time axis, not a different art style.
+Same palette and the same hard pixel edges as scripts/badges.py — this is that
+file's vocabulary with a time axis, not a different art style.
 
 Two rules specific to movement, and both come from where these are shown:
 
@@ -25,79 +25,61 @@ from pathlib import Path
 
 from PIL import Image
 
-# The K-mark's own palette, sampled from public/brand/keymania-mark.png rather
-# than re-invented, so the badge and the logo are visibly the same object. The
-# golds are the shared badge golds from scripts/badges.py.
-BEVEL = (140, 120, 224, 255)   # the lit top edge of the cap
-BEVEL2 = (110, 92, 196, 255)   # the softer second bevel down the sides
-FACE = (79, 64, 158, 255)      # the face the star sits on
-SIDE = (61, 49, 128, 255)      # the lower lip, turning away from the light
-SKIRT = (36, 28, 74, 255)      # the cap's base
+ROOT = Path(__file__).resolve().parent.parent
+MARK = ROOT / "public" / "brand" / "keymania-mark.png"
+OUT = ROOT / "public" / "badges" / "animated"
+
+# The badge golds, from scripts/badges.py — not the K's golds, which belong to
+# the wordmark's palette. The flag is a badge standing on the brand's cap.
 GOLD = (255, 214, 110, 255)
+GOLD_DEEP = (201, 154, 42, 255)
 WHITE = (255, 250, 232, 255)
-NONE = (0, 0, 0, 0)
 
-GRID = 16
+# The mark's own colours, read to be erased and to find the face.
+K_GOLD = (255, 214, 110, 255)
+K_SHADOW = (150, 104, 26, 255)
+FACE = (79, 64, 158, 255)
+
+# The K-mark is drawn on an exact 32-cell grid (verified: downscaling to 32
+# and back reproduces all 512x512 pixels), so 32 is the native resolution of
+# the art, not a resample.
+GRID = 32
 SCALE = 4
-OUT = Path(__file__).resolve().parent.parent / "public" / "badges" / "animated"
 
-CAP_PALETTE = {"L": BEVEL, "l": BEVEL2, "F": FACE, "S": SIDE, "D": SKIRT}
-
-# The founder badge: a gold star set into the brand keycap.
+# The founder badge: the K-mark with a flag planted in its face.
 #
-# This is the third shape the badge has worn, and the first with a reason to
-# be the one that stays. A bare star said "special" without saying what of; a
-# bare key read well but belonged to nothing. The keycap is the K-mark — the
-# icon in the tab, the logo on the card — with the K swapped for a star, so
-# the badge says "part of this game from the start" in the game's own
-# letterhead. And unlike the bare keycap tried in an earlier round, which
-# collapsed into a dash at fourteen pixels, this one carries a gold-on-purple
-# star for contrast: at board-row size the cap softens into a frame and the
-# star stays the mark.
+# **Derived from the brand asset, not drawn to resemble it.** Two earlier
+# versions imitated the cap on a smaller grid and both read as merchandise
+# rather than the mark itself — the bevels were in the wrong places because
+# they were re-invented. This loads public/brand/keymania-mark.png, erases the
+# K, and stamps the flag into the cleared face, so the cap *is* the logo,
+# pixel for pixel, and cannot drift from it without this script failing.
 #
-# Same construction as the mark: lit bevel across the top, face, darker lip
-# and skirt at the base. Depth from light, not from outline.
-CAP = [
-    "................",
-    "...LLLLLLLLLL...",
-    "..LLLLLLLLLLLL..",
-    ".lFFFFFFFFFFFFl.",
-    ".lFFFFFFFFFFFFl.",
-    ".lFFFFFFFFFFFFl.",
-    ".lFFFFFFFFFFFFl.",
-    ".lFFFFFFFFFFFFl.",
-    ".lFFFFFFFFFFFFl.",
-    ".lFFFFFFFFFFFFl.",
-    ".SFFFFFFFFFFFFS.",
-    ".SSSSSSSSSSSSSS.",
-    "..DDDDDDDDDDDD..",
-    "...DDDDDDDDDD...",
-    "................",
-    "................",
+# A flag rather than the K or a star: planted first, still standing — which is
+# what a founder did. Drawn bold on purpose. The flag tried in an earlier
+# candidate round lost its pole at fourteen pixels because the pole was two
+# cells on a sixteen-grid; here the pole is three cells of thirty-two, and the
+# cloth is a single unbroken block that survives any downscale.
+FLAG = [
+    "..############",
+    "..############",
+    "..##########..",
+    "..########....",
+    "..######......",
+    "..###.........",
+    "..###.........",
+    "..###.........",
+    "..###.........",
+    "..###.........",
+    "..###.........",
+    "@@@@@@@.......",
+    "@@@@@@@@@.....",
 ]
+FLAG_PALETTE = {"#": GOLD, "@": GOLD_DEEP}
 
-# The star, drawn onto the cap's face. Four points rather than five: a
-# five-point star needs more pixels than the face has to keep its notches, and
-# a four-point sparkle is unambiguous down to the seven pixels a board row
-# leaves it. Every arm is two pixels thick because one-pixel arms are exactly
-# what nearest-neighbour downscaling throws away first.
-STAR = [
-    "...##...",
-    "...##...",
-    "..####..",
-    "########",
-    "########",
-    "..####..",
-    "...##...",
-    "...##...",
-]
-# Where the star's top-left cell lands on the cap: centred on the face.
-STAR_AT = (4, 3)
-
-# The twinkle: a white wave radiating from the star's centre to its tips, one
-# ring per frame, then gold again. It touches only pixels the star already
-# owns, so neither the cap nor the silhouette ever changes — the badge
-# glitters, it does not move.
+# The shine: a two-cell diagonal light crossing the cloth, then a long rest.
+# It brightens only pixels the flag already owns, so neither the cap nor the
+# silhouette ever changes — the badge glints, it does not move.
 #
 # **The rest is one long frame, not several short identical ones.** That is
 # not a tidiness preference: Pillow collapses consecutive identical frames
@@ -108,57 +90,85 @@ STAR_AT = (4, 3)
 # Stated as a duration, the rest cannot be optimised away.
 #
 # The resting frame is also first, so any renderer showing a still shows the
-# complete badge rather than one caught mid-twinkle.
-TWINKLE: list[tuple[float | None, int]] = [
-    (None, 900),   # at rest
-    (0.5, 120),    # the four centre cells
-    (1.5, 120),
-    (2.5, 120),
-    (3.5, 120),    # the tips
-]
+# complete badge rather than one caught mid-shine.
+REST_MS = 1100
+SWEEP_MS = 100
 
 
-def frame(ring: float | None) -> Image.Image:
-    image = Image.new("RGBA", (GRID, GRID), NONE)
-    pixels = image.load()
+def load_cap() -> Image.Image:
+    """The mark at its native grid, with the K erased back to the face."""
+    cap = Image.open(MARK).convert("RGBA").resize((GRID, GRID), Image.Resampling.NEAREST)
+    pixels = cap.load()
+    for y in range(GRID):
+        for x in range(GRID):
+            if pixels[x, y] in (K_GOLD, K_SHADOW):
+                pixels[x, y] = FACE
+    return cap
 
-    for y, row in enumerate(CAP):
-        for x, key in enumerate(row):
-            if key in CAP_PALETTE:
-                pixels[x, y] = CAP_PALETTE[key]
 
-    ox, oy = STAR_AT
-    # The star's centre falls between cells, so every cell is a half-step from
-    # it — which is what makes the rings clean.
-    cx, cy = (len(STAR[0]) - 1) / 2, (len(STAR) - 1) / 2
-    for y, row in enumerate(STAR):
-        for x, key in enumerate(row):
-            if key != "#":
-                continue
-            lit = ring is not None and max(abs(x - cx), abs(y - cy)) == ring
-            pixels[ox + x, oy + y] = WHITE if lit else GOLD
+def face_box(cap: Image.Image) -> tuple[int, int, int, int]:
+    """The face the flag is planted on, found rather than hard-coded."""
+    pixels = cap.load()
+    xs = [x for y in range(GRID) for x in range(GRID) if pixels[x, y] == FACE]
+    ys = [y for y in range(GRID) for x in range(GRID) if pixels[x, y] == FACE]
+    return min(xs), min(ys), max(xs), max(ys)
 
-    return image.resize((GRID * SCALE, GRID * SCALE), Image.Resampling.NEAREST)
+
+def build_frames() -> list[Image.Image]:
+    cap = load_cap()
+    x0, y0, x1, y1 = face_box(cap)
+
+    # Centred on the face, sitting a cell low: a flag stands on ground, and a
+    # cell of face below the base reads as ground where dead-centre reads as
+    # floating.
+    ox = x0 + ((x1 - x0 + 1) - len(FLAG[0])) // 2
+    oy = y0 + ((y1 - y0 + 1) - len(FLAG)) // 2 + 1
+
+    flag_cells = [
+        (ox + x, oy + y, FLAG_PALETTE[key])
+        for y, row in enumerate(FLAG)
+        for x, key in enumerate(row)
+        if key in FLAG_PALETTE
+    ]
+    # The shine crosses the cloth only — the wide gold block right of the
+    # pole. A glint running down the pole and base read as a leak, not a
+    # light.
+    cloth = [(x, y) for x, y, colour in flag_cells
+             if colour == GOLD and x >= ox + 5]
+    diagonals = sorted({x + y for x, y in cloth})
+
+    def compose(band: set[int]) -> Image.Image:
+        image = cap.copy()
+        pixels = image.load()
+        for x, y, colour in flag_cells:
+            lit = (x, y) in cloth and (x + y) in band
+            pixels[x, y] = WHITE if lit else colour
+        return image.resize((GRID * SCALE, GRID * SCALE), Image.Resampling.NEAREST)
+
+    frames = [compose(set())]
+    # Two adjacent diagonals at a time, stepping two per frame: a light with
+    # width, moving quickly enough to be a pass rather than a crawl.
+    for step in range(0, len(diagonals), 2):
+        frames.append(compose(set(diagonals[step:step + 2])))
+    return frames
 
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
-    # A typo in the art silently shifts every pixel after it, so the maps are
-    # checked rather than trusted.
-    for name, rows, width in (("CAP", CAP, GRID), ("STAR", STAR, len(STAR[0]))):
-        for index, row in enumerate(rows):
-            assert len(row) == width, f"{name} row {index} is {len(row)} wide, expected {width}"
+    width = len(FLAG[0])
+    for index, row in enumerate(FLAG):
+        assert len(row) == width, f"FLAG row {index} is {len(row)} wide, expected {width}"
 
-    frames = [frame(ring) for ring, _ in TWINKLE]
-    held = [ms for _, ms in TWINKLE]
+    frames = build_frames()
+    held = [REST_MS] + [SWEEP_MS] * (len(frames) - 1)
 
     path = OUT / "founder.png"
     frames[0].save(
         path,
         save_all=True,
         append_images=frames[1:],
-        # Per frame, so the long rest survives being written. See TWINKLE.
+        # Per frame, so the long rest survives being written. See REST_MS.
         duration=held,
         loop=0,
         # Pillow writes APNG frames as diffs against the previous one, which
@@ -166,16 +176,20 @@ def main() -> None:
         #
         # `disposal=2` was the obvious choice and is wrong here: it clears the
         # changed *region* before the next frame, so the badge loses whichever
-        # pixels the twinkle had touched and visibly erodes as it loops. `0`
+        # pixels the shine had touched and visibly erodes as it loops. `0`
         # leaves the canvas alone and `blend=0` makes each diff replace what
         # it covers rather than alpha-blending onto it — so the cap persists,
-        # the white paints over the star, and the next frame paints gold back.
-        # Verified by compositing the frames the way a browser would rather
-        # than by trusting the settings.
+        # the white paints over the cloth, and the next frame paints gold
+        # back. Verified by compositing the frames the way a browser would
+        # rather than by trusting the settings.
         disposal=0,
         blend=0,
     )
-    print(f"badges/animated/founder.png  {GRID * SCALE}x{GRID * SCALE}  {len(frames)} frames")
+    total = sum(held)
+    print(
+        f"badges/animated/founder.png  {GRID * SCALE}x{GRID * SCALE}  "
+        f"{len(frames)} frames, {total}ms loop, {round(100 * REST_MS / total)}% at rest"
+    )
 
 
 if __name__ == "__main__":

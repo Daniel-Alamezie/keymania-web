@@ -144,7 +144,7 @@ export default function HealthBar({
       <div className={styles.info}>
         <div className={styles.top}>
           {cosmetics?.badge && (
-            <span className={styles.plateBadge} title={founderTooltip(cosmetics.badgeNumber)}>
+            <span className={styles.plateBadge} data-tip={founderTooltip(cosmetics.badgeNumber)}>
               <img src={badgeSrc(cosmetics.badge)} alt="" width={12} height={12} />
               {cosmetics.badgeNumber !== undefined && (
                 <span className={styles.plateBadgeNo}>{cosmetics.badgeNumber}</span>
