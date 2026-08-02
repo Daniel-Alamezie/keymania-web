@@ -71,7 +71,18 @@ export default function FullBoard({ initial }: { initial?: string }) {
         )}
 
         {status === 'ready' && entries && entries.length > 0 && (
-          <BoardRows entries={entries} board={board} />
+          /*
+           * The one part of the cabinet that moves.
+           *
+           * The frame — header, tabs, footnote, the way out — stays fixed like
+           * every other screen in the game, and the rows scroll inside this
+           * window. A page that scrolled wholesale read as a website wearing
+           * the game's clothes; a fixed machine with a moving window of rows
+           * reads as an arcade board, which is what it is.
+           */
+          <div className={styles.window}>
+            <BoardRows entries={entries} board={board} />
+          </div>
         )}
 
         {/*

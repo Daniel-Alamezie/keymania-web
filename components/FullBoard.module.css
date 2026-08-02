@@ -22,8 +22,16 @@
    * the browser chrome even once the page scrolls.
    */
   height: 100dvh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  /*
+   * Fixed, like every other screen in the game — the scrolling moved inward.
+   *
+   * The first fix made this whole page scroll, which cured "the bottom is
+   * unreachable" and introduced "the leaderboard is a webpage": header, tabs
+   * and footnotes all sliding around. The frame is pinned again and only the
+   * window of rows scrolls (see .window), which is how an arcade cabinet
+   * board behaves — the machine stands still, the list moves.
+   */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -68,6 +76,25 @@
   gap: 12px;
   width: min(520px, 100%);
   padding: 20px 22px;
+  /*
+   * Shrinkable, never stretched. With a short board the panel hugs its
+   * content exactly as before; when the rows outgrow the viewport the panel
+   * gives ground instead of overflowing it, and the row window inside takes
+   * up the slack by scrolling. `min-height: 0` is the load-bearing half —
+   * without it flex refuses to shrink below content height and the footnote
+   * slides off screen again, which is the original bug in new clothes.
+   */
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+/* The moving part. Everything around it is cabinet. */
+.window {
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  /* A breath of inset so the scrollbar does not sit on the rank numbers. */
+  padding-right: 4px;
 }
 
 .note {
