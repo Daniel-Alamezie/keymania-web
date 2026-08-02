@@ -9,6 +9,8 @@ import { BOT_PROFILES } from '@/game/constants';
 import { BOT_UNLOCK_WPM, bestSpeed, isBotUnlocked, suggestedBot } from '@/game/botLadder';
 import { useProfile } from '@/game/profile';
 import { useServerProfile } from '@/game/serverProfile';
+import { Flame } from './RankFlame';
+import { ratingFlame } from '@/models/rating';
 import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
 import type { PowerKind } from '@/game/powers';
 import { DIFFICULTIES, type Difficulty } from '@/models/bot';
@@ -756,7 +758,16 @@ export default function Game() {
           * guest would be a starting number dressed as an achievement.
           */}
         {account.signedIn && rating !== null && (
+          /*
+           * A chip, not a floating line. The first cut was a bare label and
+           * number under the blurb and it read as a typo in the copy — two
+           * words that belonged to nothing. The border gives the figure a
+           * thing to be, and the band flame is the standings' own mark, so
+           * this reads as your row on the board reaching the menu rather
+           * than as a new device to learn.
+           */
           <p className={styles.standing}>
+            <Flame kind={ratingFlame(rating)} height={19} />
             <span className={styles.standingLabel}>RATING</span>
             <span className={`${styles.standingValue} pixel-font`}>{rating}</span>
           </p>

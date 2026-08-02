@@ -137,7 +137,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
             */}
           {profile.cosmetics?.badge && (
             <span className={styles.badge} data-tip={badgeTooltip(profile.cosmetics)}>
-              <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={22} height={22} />
+              <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={26} height={26} />
               {profile.cosmetics.badgeNumber !== undefined && (
                 <span className={styles.badgeNo}>{profile.cosmetics.badgeNumber}</span>
               )}
@@ -188,7 +188,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
                 data-tip={badgeTooltip({ badgeNumber: item.number, badgeLabel: item.label })}
               >
                 {item.kind === 'badge' && item.value && (
-                  <img src={badgeSrc(item.value)} alt={item.label} width={18} height={18} />
+                  <img src={badgeSrc(item.value)} alt={item.label} width={28} height={28} />
                 )}
                 {item.kind === 'badge' && item.number !== undefined && (
                   <span className={styles.badgeNo}>{item.number}</span>

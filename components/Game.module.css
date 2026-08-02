@@ -347,20 +347,27 @@
  */
 .standing {
   display: flex;
-  align-items: baseline;
-  justify-content: center;
+  align-items: center;
+  width: max-content;
   gap: 8px;
-  margin: -4px 0 2px;
+  margin: -2px auto 6px;
+  padding: 6px 14px 5px;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
 }
 
 .standingLabel {
   font-size: 9px;
   letter-spacing: 0.16em;
   color: var(--faint);
+  /* Optically centred against the number's cap height; baseline alignment
+     left the tiny caps hanging low beside a 16px figure. */
+  transform: translateY(1px);
 }
 
 .standingValue {
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
 }

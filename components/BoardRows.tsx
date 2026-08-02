@@ -153,7 +153,7 @@ export default function BoardRows({ entries, board, asStranger }: {
                  quiet pixels of provenance; the words are for whoever cares
                  enough to ask. */
               <span className={styles.rankBadge} data-tip={badgeTooltip(entry.cosmetics)}>
-                <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={14} height={14} />
+                <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={18} height={18} />
                 {/* The founder's position, and only ever theirs. Tiny, because
                     it is provenance rather than a score — the column already
                     has a number that means something else entirely. */}

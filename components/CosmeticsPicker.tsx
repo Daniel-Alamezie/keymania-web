@@ -149,7 +149,7 @@ export default function CosmeticsPicker() {
                     <span className={styles.face}>
                       {item.kind === 'badge' && item.value && (
                         <>
-                          <img src={badgeSrc(item.value)} alt="" width={24} height={24} />
+                          <img src={badgeSrc(item.value)} alt="" width={32} height={32} />
                           {/* Your number, on your tile. The rest of the app
                               shows it to other people; this is the one place
                               it is shown to you, and hiding it here made the
