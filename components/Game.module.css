@@ -137,6 +137,10 @@
   width: 100%;
 }
 
+/* One button borrowing Play's full width. The two-column grid is the row's
+   default, so a lone chip inside it sat in column one at half width. */
+.modes[data-solo] { grid-template-columns: 1fr; }
+
 .mode { min-width: 0; }
 
 /*

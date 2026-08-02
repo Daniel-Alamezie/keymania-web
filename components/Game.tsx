@@ -869,7 +869,7 @@ export default function Game() {
           * should trip over, so it borrows the visual grammar of the main
           * button - full width, first in the reading order after Play.
           */}
-        <div className={styles.modes}>
+        <div className={styles.modes} data-solo>
           <button
             role="tab"
             aria-selected={mode === 'weekly'}
