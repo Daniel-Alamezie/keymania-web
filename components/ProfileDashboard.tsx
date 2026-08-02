@@ -9,6 +9,7 @@ import {
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
 import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
+import { formatPlayTime } from '@/models/profile';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import CharacterPicker from './CharacterPicker';
@@ -164,15 +165,21 @@ export default function ProfileDashboard() {
 
               <section className={styles.section}>
                 <h2 className={`${styles.heading} pixel-font`}>Where you are</h2>
-                {/* Two, not six — so it fills its row rather than leaving a
-                    gap where a third tile would go. */}
-                <dl className={styles.stats} data-pair>
+                {/* Three exactly, so the row is full at the default grid. */}
+                <dl className={styles.stats}>
                   <Stat label="Current speed" value={now} unit="wpm" highlight
                         note={movement === null ? 'building a baseline'
                           : movement === 0 ? 'holding steady'
                           : `${movement > 0 ? '+' : ''}${movement} wpm vs earlier`} />
                   <Stat label="Best ranked speed" value={profile.bestRankedWpm} unit="wpm"
                         note="what the board orders on" />
+                  {/* Belongs up here rather than in either column below: time
+                      is spent across ranked, practice and survival alike, and
+                      filing it under one would claim it was earned there. */}
+                  {profile.playMs !== undefined && (
+                    <Stat label="Time played" value={formatPlayTime(profile.playMs)}
+                          note="across every mode" />
+                  )}
                 </dl>
                 <p className={styles.muted}>
                   Speed counts wherever you earn it — practice is still typing. Records
@@ -587,7 +594,8 @@ function RecentRow({ duel }: { duel: DuelResult }) {
 function Stat({ icon, label, value, unit, prefix, suffix, note, highlight }: {
   /** Sits beside the figure. Used for the rating's flame. */
   icon?: React.ReactNode;
-  label: string; value: number; unit?: string; prefix?: string;
+  /* A string for the figures that are already words, like "12h 40m". */
+  label: string; value: number | string; unit?: string; prefix?: string;
   suffix?: string; note?: string; highlight?: boolean;
 }) {
   return (

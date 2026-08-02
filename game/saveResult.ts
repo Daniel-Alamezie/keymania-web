@@ -43,6 +43,9 @@ export function saveResult({
     // ever ask you to beat a particular one.
     body: JSON.stringify({
       wpm, accuracy, won, maxCombo: stats.maxCombo, opponent: 'Bot', difficulty,
+      // The duel's own clock, for the hours-played total. The server caps
+      // what one game may add, so this is a report, not a claim.
+      durationMs: stats.endedAt && stats.startedAt ? stats.endedAt - stats.startedAt : 0,
     }),
   }).catch(() => {});
 }
