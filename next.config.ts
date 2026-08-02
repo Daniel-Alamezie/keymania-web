@@ -21,6 +21,20 @@ const nextConfig: NextConfig = {
         destination: 'https://keymania.app/:path*',
         permanent: true,
       },
+      /**
+       * www folds into the apex, for the same reason the vercel.app host does.
+       *
+       * Both were serving the site independently and answering 200, which is
+       * the duplicate-content split the canonical work exists to prevent —
+       * and it would also have meant a second set of Kinde callback URLs to
+       * keep in step forever. One host answers; the other points at it.
+       */
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.keymania.app' }],
+        destination: 'https://keymania.app/:path*',
+        permanent: true,
+      },
     ];
   },
   images: {
