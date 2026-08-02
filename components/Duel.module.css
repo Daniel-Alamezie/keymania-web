@@ -980,11 +980,25 @@
   max-width: 100%;
   padding: 6px 10px 8px;
   gap: 6px;
-  /* Health, then the words, then the fight. Every row sized to its content or
-     to the visible height — never to `1fr`, which competes for space that is
-     already spoken for. */
-  grid-template-rows: auto auto auto;
-  align-content: start;
+  /*
+   * Health at the top, then the words and the forge floated as a group just
+   * above the middle of what is visible, with flexible space either side.
+   *
+   * The first version packed every row to the top, which on a phone put the
+   * sentence right against the plates and left a void the size of the keyboard
+   * beneath — the player's eyes pinned to the top edge of the screen while
+   * two-thirds of it sat empty. Reading happens most comfortably at the upper
+   * middle, so the spacer below (1.3fr) is deliberately bigger than the one
+   * above (1fr): a group at the exact centre reads as slightly low once a
+   * keyboard is under it.
+   *
+   * Rows are assigned explicitly (see .stream and .arena below) because with
+   * empty spacer tracks in the template, auto-placement would drop the words
+   * into the first spacer and the whole arrangement would silently collapse
+   * back to top-packed.
+   */
+  grid-template-rows: auto minmax(0, 1fr) auto auto minmax(0, 1.3fr);
+  align-content: stretch;
 }
 
 /*
@@ -999,11 +1013,17 @@
 .screen[data-keyboard] .stream {
   position: static;
   padding: 0;
+  /* Row three: after the plates and the upper spacer. Explicit, or
+     auto-placement puts the words in the spacer track. */
+  grid-row: 3;
 }
 /* The scrim belongs to the arena version; here there is nothing behind it. */
 .screen[data-keyboard] .stream::before { display: none; }
 
 .screen[data-keyboard] .arena {
+  /* Directly under the words — the forge (or the fighters, in the arena
+     layout) travels with the sentence rather than being pinned to an edge. */
+  grid-row: 4;
   min-height: 0;
   /*
    * A share of what is *visible*, not of the window.
