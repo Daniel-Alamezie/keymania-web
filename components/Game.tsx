@@ -860,11 +860,33 @@ export default function Game() {
           * six bots stop being six buttons a player has to read past on the way
           * to anything else.
           */}
+        {/*
+          * Weekly gets Play's own width, directly beneath it.
+          *
+          * It sat in the two-across row first and wrapped onto a lonely half
+          * row of its own, which read as an afterthought. It is the opposite:
+          * the mode that resets every Monday is the one a returning player
+          * should trip over, so it borrows the visual grammar of the main
+          * button - full width, first in the reading order after Play.
+          */}
+        <div className={styles.modes}>
+          <button
+            role="tab"
+            aria-selected={mode === 'weekly'}
+            className={`btn ${styles.mode} ${styles.full}`}
+            data-active={mode === 'weekly' || undefined}
+            data-mode="weekly"
+            onClick={() => setMode(mode === 'weekly' ? null : 'weekly')}
+          >
+            Weekly
+            <small className="btn-sub">same script for everyone, resets Monday</small>
+          </button>
+        </div>
+
         <div className={styles.modes} role="tablist" aria-label="Game modes">
           {([
             { id: 'practice', label: 'Practice', note: 'against a bot' },
             { id: 'survival', label: 'Survival', note: 'one mistake ends it' },
-            { id: 'weekly', label: 'Weekly', note: 'same script for everyone' },
           ] as const).map((choice) => (
             <button
               key={choice.id}
