@@ -122,8 +122,30 @@ export interface ServerProfile {
      */
     founderNumber?: number;
   };
+  /**
+   * Time actually playing, in milliseconds. Measured per game by whoever
+   * refereed it; seeded at the average duel length for games recorded before
+   * measurement existed. Absent from an older server.
+   */
+  playMs?: number;
   /** Newest first, as the API stores it. */
   history: DuelResult[];
+}
+
+/**
+ * Milliseconds of play as a card would say it.
+ *
+ * Hours and minutes, never seconds: this is a career total, and a figure that
+ * ticks in seconds invites watching it tick. Under a minute reads as "<1m"
+ * rather than zero, because a player who has genuinely played should never be
+ * told they have not.
+ */
+export function formatPlayTime(ms: number): string {
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return ms > 0 ? '<1m' : '0m';
+  const hours = Math.floor(minutes / 60);
+  if (hours < 1) return `${minutes}m`;
+  return `${hours}h ${minutes % 60}m`;
 }
 
 /**
@@ -208,6 +230,12 @@ export interface PublicProfile {
    * is a choice; this is the record behind it.
    */
   collection?: EarnedCosmetic[];
+  /**
+   * Public for the same reason the rating is: hours in the arena are
+   * standing, not activity. A total never says when somebody last played,
+   * which is the fact this card is careful not to give away.
+   */
+  playMs?: number;
 }
 
 /** `POST /api/me/duels` — a bot practice result, stored unranked. */

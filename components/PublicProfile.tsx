@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
-import type { PublicProfile as Profile } from '@/models/profile';
+import { formatPlayTime, type PublicProfile as Profile } from '@/models/profile';
 import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
@@ -164,6 +164,11 @@ export default function PublicProfile({ handle }: { handle: string }) {
         />
         <Stat label="Best speed" value={profile.bestRankedWpm} unit="wpm" highlight />
         <Stat label="Ranked duels" value={ranked.duels} />
+        {/* Absent from an older server rather than shown as zero: "0m" under
+            a hundred duels is a claim the card cannot mean. */}
+        {profile.playMs !== undefined && (
+          <Stat label="Time played" value={formatPlayTime(profile.playMs)} />
+        )}
         <Stat label="Win rate" value={rate ?? '—'} unit={rate === null ? '' : '%'} />
         <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
       </dl>
