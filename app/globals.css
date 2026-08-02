@@ -36,6 +36,47 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * The scrollbar, dressed for the game.
+ *
+ * Declared once for everything rather than per scroll container, because the
+ * board window, the profile pages and any panel that learns to scroll later
+ * should all move under the same thumb — two different scrollbars in one app
+ * reads as two apps.
+ *
+ * Square corners on purpose: every other edge in this game is a hard pixel
+ * edge, and a rounded lozenge floating beside pixel-art panels is the one
+ * detail that would look borrowed from somebody else's site. The thumb wears
+ * the panel-edge purple and warms to old gold under the pointer, which is the
+ * exact treatment buttons already get. A transparent inset keeps the visible
+ * bar to a slim 4px without shrinking the 10px grab target.
+ *
+ * Firefox gets the two-property version of the same idea; iOS draws its own
+ * overlay scrollbar and rightly ignores all of it.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track { background: transparent; }
+
+*::-webkit-scrollbar-thumb {
+  background: var(--edge);
+  border-radius: 0;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gold-deep);
+}
+
 html, body {
   margin: 0;
   padding: 0;
