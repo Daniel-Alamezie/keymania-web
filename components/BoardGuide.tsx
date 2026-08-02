@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import {
-  AZURE_FROM, GOLD_FROM, LOSS_POINTS, MAX_UPSET_BONUS,
-  RATING_FLOOR, START_RATING, WIN_POINTS,
+  AZURE_FROM, GOLD_FROM, LOSS_POINTS, MAX_ROUTINE_DISCOUNT, MAX_UPSET_BONUS,
+  MAX_UPSET_COST, RATING_FLOOR, START_RATING, WIN_POINTS,
 } from '@/models/rating';
 import { COOL_PER_WORDS, requiredWpm } from '@/game/heat';
 import PixelSprite from './PixelSprite';
@@ -64,12 +64,15 @@ const PAGES = [
     visual: <RatingSwing />,
   },
   {
-    title: 'Beating someone better pays more',
+    title: 'Who you beat decides the pay',
     body: (
       <>
         Win against a player rated above you and you earn up to{' '}
-        {MAX_UPSET_BONUS} extra points. The bigger the gap, the more you get,
-        and only the winner gets any of it.
+        {MAX_UPSET_BONUS} extra points. Win against one rated far below you and
+        the win pays less, down to {WIN_POINTS - MAX_ROUTINE_DISCOUNT} at most.
+        And losing to them costs extra, up to{' '}
+        {Math.abs(LOSS_POINTS) + MAX_UPSET_COST}. A high rating is held, not
+        banked.
       </>
     ),
     visual: <Upset />,
