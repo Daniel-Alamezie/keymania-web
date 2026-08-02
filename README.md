@@ -8,7 +8,7 @@ shatters your streak.
 
 Type fast, strike hard.
 
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)
 
@@ -139,7 +139,7 @@ testable and can be reused by the server-side referee.
 
 ## License
 
-[MIT](./LICENSE) © Daniel Alamezie
+[Apache 2.0](./LICENSE) © Daniel Alamezie
 
 Fonts are loaded via `next/font` from Google Fonts: Press Start 2P and
 JetBrains Mono, both under the SIL Open Font License.

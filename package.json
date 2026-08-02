@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "A real-time typing duel — every word you finish forges a blade and hurls it at your opponent.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Daniel Alamezie",
   "homepage": "https://github.com/Daniel-Alamezie/keymania-web",
   "repository": {
