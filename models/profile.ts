@@ -10,7 +10,7 @@
  * `GET /profile` on keymania-api. See lib/upstream.ts for why it is proxied.
  */
 
-import type { Cosmetic, PublicCosmetics } from './cosmetics';
+import type { Cosmetic, EarnedCosmetic, PublicCosmetics } from './cosmetics';
 import type { CharacterId } from './character';
 import type { DuelStats } from './duel';
 import type { Difficulty } from './bot';
@@ -203,6 +203,11 @@ export interface PublicProfile {
    * in it, so it is also the one addition that gave up nothing to include.
    */
   cosmetics?: PublicCosmetics;
+  /**
+   * Everything they have unlocked, in the order they earned it. What is worn
+   * is a choice; this is the record behind it.
+   */
+  collection?: EarnedCosmetic[];
 }
 
 /** `POST /api/me/duels` — a bot practice result, stored unranked. */

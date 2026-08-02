@@ -68,6 +68,49 @@
   color: var(--gold-deep);
 }
 
+/*
+ * The collection: what they have unlocked, shown as small quiet chips.
+ *
+ * Deliberately less prominent than the stats above it — it is a cabinet, not
+ * a scoreboard, and a visitor came for the numbers first.
+ */
+.collection { margin-top: var(--gap-lg); }
+
+.collectionHeading {
+  margin: 0 0 var(--gap-sm);
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.collectionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.collectionItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  font-size: 10px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+.collectionItem img { image-rendering: pixelated; }
+
+/* Titles read as what they are: words, in the same small caps they are worn in. */
+.collectionItem[data-kind='title'] {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
 .handle {
   color: var(--faint);
   font-size: 12px;

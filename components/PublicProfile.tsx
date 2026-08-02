@@ -9,7 +9,7 @@ import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import type { PublicProfile as Profile } from '@/models/profile';
-import { badgeSrc } from '@/models/cosmetics';
+import { badgeSrc, founderTooltip } from '@/models/cosmetics';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
 
@@ -136,7 +136,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
             * in front of it is a mark on the person.
             */}
           {profile.cosmetics?.badge && (
-            <span className={styles.badge}>
+            <span className={styles.badge} title={founderTooltip(profile.cosmetics.badgeNumber)}>
               <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={22} height={22} />
               {profile.cosmetics.badgeNumber !== undefined && (
                 <span className={styles.badgeNo}>{profile.cosmetics.badgeNumber}</span>
@@ -167,6 +167,41 @@ export default function PublicProfile({ handle }: { handle: string }) {
         <Stat label="Win rate" value={rate ?? '—'} unit={rate === null ? '' : '%'} />
         <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
       </dl>
+
+      {/*
+        * Everything they have unlocked, not just what they wear.
+        *
+        * In the order it was earned, because a collection is a history. Every
+        * entry names itself on hover — the founder badge with its number,
+        * everything else with its label — since unlike the owner's picker
+        * there is no caption under each tile to say what a mark means.
+        */}
+      {(profile.collection?.length ?? 0) > 0 && (
+        <section className={styles.collection} aria-label="Unlocked cosmetics">
+          <h2 className={`${styles.collectionHeading} pixel-font`}>Collection</h2>
+          <ul className={styles.collectionList}>
+            {profile.collection!.map((item) => (
+              <li
+                key={`${item.kind}-${item.label}`}
+                className={styles.collectionItem}
+                data-kind={item.kind}
+                title={founderTooltip(item.number) ?? item.label}
+              >
+                {item.kind === 'badge' && item.value && (
+                  <img src={badgeSrc(item.value)} alt={item.label} width={18} height={18} />
+                )}
+                {item.kind === 'badge' && item.number !== undefined && (
+                  <span className={styles.badgeNo}>{item.number}</span>
+                )}
+                {item.kind === 'title' && <span>{item.label}</span>}
+                {item.kind === 'nameColour' && (
+                  <span style={{ color: item.value }}>{item.label}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.actions}>
         {already && <span className={styles.settled}>You are friends.</span>}

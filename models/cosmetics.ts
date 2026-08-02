@@ -17,7 +17,7 @@ export interface PublicCosmetics {
   /** A CSS colour. */
   nameColour?: string;
   /**
-   * The number drawn beside the founder's key.
+   * The number drawn beside the founder badge.
    *
    * Present only alongside that badge — a number on its own would be a fact
    * about somebody nobody asked for, and beside any other badge it would mean
@@ -25,6 +25,29 @@ export interface PublicCosmetics {
    */
   badgeNumber?: number;
 }
+
+/**
+ * One earned cosmetic on somebody's public card, resolved by the server.
+ *
+ * No hint, deliberately: a hint is an instruction for the owner about how to
+ * earn things, not a fact about them for a visitor.
+ */
+export interface EarnedCosmetic {
+  kind: 'title' | 'badge' | 'nameColour';
+  label: string;
+  value?: string;
+  /** The founder's position, on that entry alone. */
+  number?: number;
+}
+
+/**
+ * What hovering a founder badge says.
+ *
+ * One function rather than a template repeated at each surface, because the
+ * wording is a fact about the badge and the surfaces must agree on it.
+ */
+export const founderTooltip = (number: number | undefined): string | undefined =>
+  (number === undefined ? undefined : `Founder #${number}`);
 
 /** One catalogue entry, as the customisation panel needs it. */
 export interface Cosmetic {

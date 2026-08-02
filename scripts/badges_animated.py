@@ -25,8 +25,15 @@ from pathlib import Path
 
 from PIL import Image
 
+# The K-mark's own palette, sampled from public/brand/keymania-mark.png rather
+# than re-invented, so the badge and the logo are visibly the same object. The
+# golds are the shared badge golds from scripts/badges.py.
+BEVEL = (140, 120, 224, 255)   # the lit top edge of the cap
+BEVEL2 = (110, 92, 196, 255)   # the softer second bevel down the sides
+FACE = (79, 64, 158, 255)      # the face the star sits on
+SIDE = (61, 49, 128, 255)      # the lower lip, turning away from the light
+SKIRT = (36, 28, 74, 255)      # the cap's base
 GOLD = (255, 214, 110, 255)
-GOLD_DEEP = (201, 154, 42, 255)
 WHITE = (255, 250, 232, 255)
 NONE = (0, 0, 0, 0)
 
@@ -34,91 +41,102 @@ GRID = 16
 SCALE = 4
 OUT = Path(__file__).resolve().parent.parent / "public" / "badges" / "animated"
 
-PALETTE = {"#": GOLD, "@": GOLD_DEEP}
+CAP_PALETTE = {"L": BEVEL, "l": BEVEL2, "F": FACE, "S": SIDE, "D": SKIRT}
 
-# The founder's key.
+# The founder badge: a gold star set into the brand keycap.
 #
-# This replaced a star, and the reason is worth keeping. A star is the default
-# "this one is special" mark, which is exactly its problem: it says special
-# without saying what of, and it was already competing with a crown, a medal
-# and a rating flame on the same row. This game is called KeyMania and a key is
-# what you are handed for being early — so the badge means something before
-# anybody is told what it means, and the number drawn beside it finishes the
-# sentence: keyholder number seven.
+# This is the third shape the badge has worn, and the first with a reason to
+# be the one that stays. A bare star said "special" without saying what of; a
+# bare key read well but belonged to nothing. The keycap is the K-mark — the
+# icon in the tab, the logo on the card — with the K swapped for a star, so
+# the badge says "part of this game from the start" in the game's own
+# letterhead. And unlike the bare keycap tried in an earlier round, which
+# collapsed into a dash at fourteen pixels, this one carries a gold-on-purple
+# star for contrast: at board-row size the cap softens into a frame and the
+# star stays the mark.
 #
-# Upright rather than lying down, which is not a style choice. The first
-# attempt was horizontal, and a sixteen-wide by six-tall shape inside a square
-# slot is a letterbox: by the time it was scaled to the fourteen pixels a
-# leaderboard row gives it, the vertical detail was five pixels and the whole
-# thing had turned into a dash. Upright, the bow is large enough that its hole
-# is still a hole at that size, which is the single feature that makes this
-# read as a key rather than as a lollipop.
-#
-# Two tones, shading the outer right edge and the bottom only. An earlier pass
-# shaded the inside of the bow ring and it read as a dent rather than as depth
-# — at this size a darker pixel surrounded by lighter ones is a hole, whatever
-# was intended.
-KEY = [
+# Same construction as the mark: lit bevel across the top, face, darker lip
+# and skirt at the base. Depth from light, not from outline.
+CAP = [
     "................",
-    ".....#####@.....",
-    "...#########@...",
-    "..####....###@..",
-    "..###......##@..",
-    "..###......##@..",
-    "..####....###@..",
-    "...#########@...",
-    ".....#####@.....",
-    "......###@......",
-    "......###@......",
-    "......######@...",
-    "......###@......",
-    "......######@...",
-    "......@@@@......",
+    "...LLLLLLLLLL...",
+    "..LLLLLLLLLLLL..",
+    ".lFFFFFFFFFFFFl.",
+    ".lFFFFFFFFFFFFl.",
+    ".lFFFFFFFFFFFFl.",
+    ".lFFFFFFFFFFFFl.",
+    ".lFFFFFFFFFFFFl.",
+    ".lFFFFFFFFFFFFl.",
+    ".lFFFFFFFFFFFFl.",
+    ".SFFFFFFFFFFFFS.",
+    ".SSSSSSSSSSSSSS.",
+    "..DDDDDDDDDDDD..",
+    "...DDDDDDDDDD...",
+    "................",
     "................",
 ]
 
-# Where the glint lands, and how long each frame is held.
+# The star, drawn onto the cap's face. Four points rather than five: a
+# five-point star needs more pixels than the face has to keep its notches, and
+# a four-point sparkle is unambiguous down to the seven pixels a board row
+# leaves it. Every arm is two pixels thick because one-pixel arms are exactly
+# what nearest-neighbour downscaling throws away first.
+STAR = [
+    "...##...",
+    "...##...",
+    "..####..",
+    "########",
+    "########",
+    "..####..",
+    "...##...",
+    "...##...",
+]
+# Where the star's top-left cell lands on the cap: centred on the face.
+STAR_AT = (4, 3)
+
+# The twinkle: a white wave radiating from the star's centre to its tips, one
+# ring per frame, then gold again. It touches only pixels the star already
+# owns, so neither the cap nor the silhouette ever changes — the badge
+# glitters, it does not move.
 #
-# It crosses the bow, pauses, then drops down the shaft — a light travelling
-# along the key rather than a sparkle sitting on it.
+# **The rest is one long frame, not several short identical ones.** That is
+# not a tidiness preference: Pillow collapses consecutive identical frames
+# when it writes an APNG, and it collapses them without carrying their time
+# across. Six rest frames at 150ms once silently became one at 150ms, turning
+# a loop that was two thirds rest into a badge that glinted almost
+# continuously — with nothing in the source to suggest anything was wrong.
+# Stated as a duration, the rest cannot be optimised away.
 #
-# **The rest is one long frame, not several short identical ones.** That is not
-# a tidiness preference: Pillow collapses consecutive identical frames when it
-# writes an APNG, and it collapses them without carrying their time across. Six
-# rest frames at 150ms silently became one at 150ms, turning two thirds of a
-# loop at rest into a badge that glinted almost continuously — with nothing in
-# the source to suggest anything was wrong. Stated as a duration, the rest
-# cannot be optimised away.
-#
-# The resting frame is also first, so any renderer showing a still shows a
-# complete key rather than one caught mid-glint.
-SHINE_PATH: list[tuple[list[tuple[int, int]], int]] = [
-    ([], 900),
-    ([(4, 2), (5, 2)], 110),
-    ([(3, 3), (4, 3)], 110),
-    ([(2, 4), (3, 4)], 110),
-    ([(2, 5)], 110),
-    ([], 140),
-    ([(6, 9), (7, 9)], 110),
-    ([(6, 11), (7, 11)], 110),
+# The resting frame is also first, so any renderer showing a still shows the
+# complete badge rather than one caught mid-twinkle.
+TWINKLE: list[tuple[float | None, int]] = [
+    (None, 900),   # at rest
+    (0.5, 120),    # the four centre cells
+    (1.5, 120),
+    (2.5, 120),
+    (3.5, 120),    # the tips
 ]
 
 
-def frame(shine: list[tuple[int, int]]) -> Image.Image:
+def frame(ring: float | None) -> Image.Image:
     image = Image.new("RGBA", (GRID, GRID), NONE)
     pixels = image.load()
 
-    for y, row in enumerate(KEY):
+    for y, row in enumerate(CAP):
         for x, key in enumerate(row):
-            if key in PALETTE:
-                pixels[x, y] = PALETTE[key]
+            if key in CAP_PALETTE:
+                pixels[x, y] = CAP_PALETTE[key]
 
-    # The glint only ever brightens pixels the key already occupies, so it can
-    # never change the silhouette — the shape stays constant and only its
-    # surface moves.
-    for x, y in shine:
-        if 0 <= x < GRID and 0 <= y < GRID and KEY[y][x] in PALETTE:
-            pixels[x, y] = WHITE
+    ox, oy = STAR_AT
+    # The star's centre falls between cells, so every cell is a half-step from
+    # it — which is what makes the rings clean.
+    cx, cy = (len(STAR[0]) - 1) / 2, (len(STAR) - 1) / 2
+    for y, row in enumerate(STAR):
+        for x, key in enumerate(row):
+            if key != "#":
+                continue
+            lit = ring is not None and max(abs(x - cx), abs(y - cy)) == ring
+            pixels[ox + x, oy + y] = WHITE if lit else GOLD
 
     return image.resize((GRID * SCALE, GRID * SCALE), Image.Resampling.NEAREST)
 
@@ -126,34 +144,34 @@ def frame(shine: list[tuple[int, int]]) -> Image.Image:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
-    # A typo in the art silently shifts every pixel after it, so the map is
+    # A typo in the art silently shifts every pixel after it, so the maps are
     # checked rather than trusted.
-    assert len(KEY) == GRID, f"{len(KEY)} rows, expected {GRID}"
-    for index, row in enumerate(KEY):
-        assert len(row) == GRID, f"row {index} is {len(row)} wide, expected {GRID}"
+    for name, rows, width in (("CAP", CAP, GRID), ("STAR", STAR, len(STAR[0]))):
+        for index, row in enumerate(rows):
+            assert len(row) == width, f"{name} row {index} is {len(row)} wide, expected {width}"
 
-    frames = [frame(shine) for shine, _ in SHINE_PATH]
-    held = [ms for _, ms in SHINE_PATH]
+    frames = [frame(ring) for ring, _ in TWINKLE]
+    held = [ms for _, ms in TWINKLE]
 
     path = OUT / "founder.png"
     frames[0].save(
         path,
         save_all=True,
         append_images=frames[1:],
-        # Per frame, so the long rest survives being written. See SHINE_PATH.
+        # Per frame, so the long rest survives being written. See TWINKLE.
         duration=held,
         loop=0,
         # Pillow writes APNG frames as diffs against the previous one, which
         # decides what these two have to be.
         #
         # `disposal=2` was the obvious choice and is wrong here: it clears the
-        # changed *region* before the next frame, so the key loses whichever
-        # pixels the glint had touched and the badge visibly erodes as it
-        # loops. `0` leaves the canvas alone and `blend=0` makes each diff
-        # replace what it covers rather than alpha-blending onto it — so the
-        # key persists, the glint paints over it, and the next frame paints
-        # gold back. Verified by compositing the frames the way a browser
-        # would rather than by trusting the settings.
+        # changed *region* before the next frame, so the badge loses whichever
+        # pixels the twinkle had touched and visibly erodes as it loops. `0`
+        # leaves the canvas alone and `blend=0` makes each diff replace what
+        # it covers rather than alpha-blending onto it — so the cap persists,
+        # the white paints over the star, and the next frame paints gold back.
+        # Verified by compositing the frames the way a browser would rather
+        # than by trusting the settings.
         disposal=0,
         blend=0,
     )
