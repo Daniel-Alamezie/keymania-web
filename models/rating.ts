@@ -37,6 +37,13 @@ export const MAX_UPSET_BONUS = 3;
 export const MAX_ROUTINE_DISCOUNT = 5;
 
 /**
+ * The most being upset adds to a loss. Mirrors the API: lose to somebody
+ * rated far below you and the loss costs extra, up to this, on the same
+ * slope as the discount. Losing upward stays flat.
+ */
+export const MAX_UPSET_COST = 5;
+
+/**
  * The flame that burns beside a rating.
  *
  * Bands rather than a crown. A crown means champion, and one beside every
