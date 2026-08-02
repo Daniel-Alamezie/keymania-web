@@ -9,6 +9,7 @@ import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import type { PublicProfile as Profile } from '@/models/profile';
+import { badgeSrc } from '@/models/cosmetics';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
 
@@ -109,6 +110,14 @@ export default function PublicProfile({ handle }: { handle: string }) {
   const ranked = profile.ranked ?? EMPTY_TALLY;
   const rate = winRate(ranked);
 
+  /**
+   * An earned name colour, inline because the palette lives on the server and
+   * a stylesheet cannot hold a colour it has not been told about. Undefined
+   * rather than an empty object, so the default styling is untouched for the
+   * great majority of players, who wear nothing.
+   */
+  const colour = profile.cosmetics?.nameColour ? { color: profile.cosmetics.nameColour } : undefined;
+
   // Derived from the list rather than tracked separately, so it stays right
   // after any change without this component knowing the rules.
   const already = friends.data.friends.some((f) => f.handle === profile.handle);
@@ -118,8 +127,30 @@ export default function PublicProfile({ handle }: { handle: string }) {
   return (
     <Shell>
       <header className={styles.header}>
-        <h1 className={`${styles.name} pixel-font`}>{profile.displayName}</h1>
+        <h1 className={`${styles.name} pixel-font`} style={colour}>
+          {/*
+            * The badge leads the name rather than trailing it, which is the
+            * opposite of the leaderboard and deliberate. A board row is a
+            * column being scanned, so a badge before the name would put every
+            * name at a different x; this is one heading being read, and a mark
+            * in front of it is a mark on the person.
+            */}
+          {profile.cosmetics?.badge && (
+            <span className={styles.badge}>
+              <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={22} height={22} />
+              {profile.cosmetics.badgeNumber !== undefined && (
+                <span className={styles.badgeNo}>{profile.cosmetics.badgeNumber}</span>
+              )}
+            </span>
+          )}
+          {profile.displayName}
+        </h1>
         <p className={styles.handle}>@{profile.handle}</p>
+        {/* Here rather than on a board row, which has no width to spare for
+            one. This is the surface titles were made for. */}
+        {profile.cosmetics?.title && (
+          <p className={`${styles.title} pixel-font`}>{profile.cosmetics.title}</p>
+        )}
       </header>
 
       <dl className={styles.stats}>
