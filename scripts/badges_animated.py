@@ -34,41 +34,73 @@ GRID = 16
 SCALE = 4
 OUT = Path(__file__).resolve().parent.parent / "public" / "badges" / "animated"
 
-# The founder star. A star is the least ambiguous "you were early" mark there
-# is, and unlike a numeral it does not need to be legible at sixteen pixels —
-# the number itself is drawn beside the badge as text, so one asset serves
-# every holder rather than two hundred near-identical files.
-STAR = [
+PALETTE = {"#": GOLD, "@": GOLD_DEEP}
+
+# The founder's key.
+#
+# This replaced a star, and the reason is worth keeping. A star is the default
+# "this one is special" mark, which is exactly its problem: it says special
+# without saying what of, and it was already competing with a crown, a medal
+# and a rating flame on the same row. This game is called KeyMania and a key is
+# what you are handed for being early — so the badge means something before
+# anybody is told what it means, and the number drawn beside it finishes the
+# sentence: keyholder number seven.
+#
+# Upright rather than lying down, which is not a style choice. The first
+# attempt was horizontal, and a sixteen-wide by six-tall shape inside a square
+# slot is a letterbox: by the time it was scaled to the fourteen pixels a
+# leaderboard row gives it, the vertical detail was five pixels and the whole
+# thing had turned into a dash. Upright, the bow is large enough that its hole
+# is still a hole at that size, which is the single feature that makes this
+# read as a key rather than as a lollipop.
+#
+# Two tones, shading the outer right edge and the bottom only. An earlier pass
+# shaded the inside of the bow ring and it read as a dent rather than as depth
+# — at this size a darker pixel surrounded by lighter ones is a hole, whatever
+# was intended.
+KEY = [
     "................",
-    "................",
-    ".......##.......",
-    ".......##.......",
-    "......####......",
-    "..############..",
-    "...##########...",
-    "....########....",
-    "....########....",
-    "...###....###...",
-    "..###......###..",
-    "..##........##..",
-    "................",
-    "................",
-    "................",
+    ".....#####@.....",
+    "...#########@...",
+    "..####....###@..",
+    "..###......##@..",
+    "..###......##@..",
+    "..####....###@..",
+    "...#########@...",
+    ".....#####@.....",
+    "......###@......",
+    "......###@......",
+    "......######@...",
+    "......###@......",
+    "......######@...",
+    "......@@@@......",
     "................",
 ]
 
-# Where the shine lands, frame by frame. The highlight crosses the star's face
-# and leaves; the last frames are deliberately empty so the badge spends most
-# of its loop at rest, which is what stops a board of these from shimmering.
-SHINE_PATH = [
-    [],
-    [(6, 5), (7, 5)],
-    [(7, 6), (8, 6), (7, 5)],
-    [(8, 7), (9, 7), (8, 6)],
-    [(9, 8), (10, 8)],
-    [],
-    [],
-    [],
+# Where the glint lands, and how long each frame is held.
+#
+# It crosses the bow, pauses, then drops down the shaft — a light travelling
+# along the key rather than a sparkle sitting on it.
+#
+# **The rest is one long frame, not several short identical ones.** That is not
+# a tidiness preference: Pillow collapses consecutive identical frames when it
+# writes an APNG, and it collapses them without carrying their time across. Six
+# rest frames at 150ms silently became one at 150ms, turning two thirds of a
+# loop at rest into a badge that glinted almost continuously — with nothing in
+# the source to suggest anything was wrong. Stated as a duration, the rest
+# cannot be optimised away.
+#
+# The resting frame is also first, so any renderer showing a still shows a
+# complete key rather than one caught mid-glint.
+SHINE_PATH: list[tuple[list[tuple[int, int]], int]] = [
+    ([], 900),
+    ([(4, 2), (5, 2)], 110),
+    ([(3, 3), (4, 3)], 110),
+    ([(2, 4), (3, 4)], 110),
+    ([(2, 5)], 110),
+    ([], 140),
+    ([(6, 9), (7, 9)], 110),
+    ([(6, 11), (7, 11)], 110),
 ]
 
 
@@ -76,16 +108,16 @@ def frame(shine: list[tuple[int, int]]) -> Image.Image:
     image = Image.new("RGBA", (GRID, GRID), NONE)
     pixels = image.load()
 
-    for y, row in enumerate(STAR):
+    for y, row in enumerate(KEY):
         for x, key in enumerate(row):
-            if key == "#":
-                pixels[x, y] = GOLD
+            if key in PALETTE:
+                pixels[x, y] = PALETTE[key]
 
-    # The shine only ever brightens pixels the star already occupies, so it can
+    # The glint only ever brightens pixels the key already occupies, so it can
     # never change the silhouette — the shape stays constant and only its
     # surface moves.
     for x, y in shine:
-        if 0 <= x < GRID and 0 <= y < GRID and STAR[y][x] == "#":
+        if 0 <= x < GRID and 0 <= y < GRID and KEY[y][x] in PALETTE:
             pixels[x, y] = WHITE
 
     return image.resize((GRID * SCALE, GRID * SCALE), Image.Resampling.NEAREST)
@@ -93,25 +125,33 @@ def frame(shine: list[tuple[int, int]]) -> Image.Image:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    frames = [frame(shine) for shine in SHINE_PATH]
+
+    # A typo in the art silently shifts every pixel after it, so the map is
+    # checked rather than trusted.
+    assert len(KEY) == GRID, f"{len(KEY)} rows, expected {GRID}"
+    for index, row in enumerate(KEY):
+        assert len(row) == GRID, f"row {index} is {len(row)} wide, expected {GRID}"
+
+    frames = [frame(shine) for shine, _ in SHINE_PATH]
+    held = [ms for _, ms in SHINE_PATH]
 
     path = OUT / "founder.png"
     frames[0].save(
         path,
         save_all=True,
         append_images=frames[1:],
-        # 150ms a frame over eight frames is a 1.2s loop, most of it at rest.
-        duration=150,
+        # Per frame, so the long rest survives being written. See SHINE_PATH.
+        duration=held,
         loop=0,
         # Pillow writes APNG frames as diffs against the previous one, which
         # decides what these two have to be.
         #
         # `disposal=2` was the obvious choice and is wrong here: it clears the
-        # changed *region* before the next frame, so the star loses whichever
-        # pixels the shine had touched and the badge visibly erodes as it
+        # changed *region* before the next frame, so the key loses whichever
+        # pixels the glint had touched and the badge visibly erodes as it
         # loops. `0` leaves the canvas alone and `blend=0` makes each diff
         # replace what it covers rather than alpha-blending onto it — so the
-        # star persists, the shine paints over it, and the next frame paints
+        # key persists, the glint paints over it, and the next frame paints
         # gold back. Verified by compositing the frames the way a browser
         # would rather than by trusting the settings.
         disposal=0,

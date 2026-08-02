@@ -17,7 +17,7 @@ export interface PublicCosmetics {
   /** A CSS colour. */
   nameColour?: string;
   /**
-   * The number drawn beside the founder star.
+   * The number drawn beside the founder's key.
    *
    * Present only alongside that badge — a number on its own would be a fact
    * about somebody nobody asked for, and beside any other badge it would mean
