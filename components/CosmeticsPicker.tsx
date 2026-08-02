@@ -147,7 +147,17 @@ export default function CosmeticsPicker() {
                   >
                     <span className={styles.face}>
                       {item.kind === 'badge' && item.value && (
-                        <img src={badgeSrc(item.value)} alt="" width={24} height={24} />
+                        <>
+                          <img src={badgeSrc(item.value)} alt="" width={24} height={24} />
+                          {/* Your number, on your tile. The rest of the app
+                              shows it to other people; this is the one place
+                              it is shown to you, and hiding it here made the
+                              tile the only surface that undersold the badge
+                              it was selling. */}
+                          {item.id === FOUNDER_BADGE && worn.founderNumber !== undefined && (
+                            <span className={styles.faceNo}>{worn.founderNumber}</span>
+                          )}
+                        </>
                       )}
                       {item.kind === 'nameColour' && (
                         /* Shown as a name rather than a swatch: a colour in

@@ -47,6 +47,15 @@
 /* Pixel art: never smoothed, at any size. */
 .face img { image-rendering: pixelated; }
 
+/* The founder number beside its badge, in the same voice it speaks everywhere
+   else: small, deep gold, tabular so #2 and #200 sit identically. */
+.faceNo {
+  margin-left: 3px;
+  font-size: 10px;
+  color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
 .sample { font-size: 15px; letter-spacing: 0.04em; }
 .sampleTitle {
   font-size: 9px;
