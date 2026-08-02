@@ -291,7 +291,8 @@ export default function ProfileDashboard() {
               <h2 className={`${styles.heading} pixel-font`}>Appearance</h2>
               <p className={styles.blurb}>
                 How you look to everyone else. Badges show on the boards and beside
-                your name in a duel; a title shows to whoever you are fighting.
+                your name in a duel; a name colour changes how you read on the
+                boards.
               </p>
               <CosmeticsPicker />
             </section>
