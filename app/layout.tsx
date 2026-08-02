@@ -28,6 +28,15 @@ const body = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://keymania.app'),
   alternates: { canonical: '/' },
+  /**
+   * Search Console, via the meta tag.
+   *
+   * The domain property is verified by DNS TXT and this does not replace it —
+   * it verifies the URL-prefix property as well, which is the one that reports
+   * per-page performance. Not a secret: the same token is published in DNS for
+   * anybody to read.
+   */
+  verification: { google: 'duvYI8nbtED1XNGCzc-aiQK4iVVfXg948RR4IrVTHz8' },
   title: 'KeyMania — type fast, strike hard',
   description:
     'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent.',
@@ -37,14 +46,23 @@ export const metadata: Metadata = {
       'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent.',
     url: 'https://keymania.app',
     siteName: 'KeyMania',
-    images: [{ url: '/brand/keymania-wordmark-tagline.png', width: 1093, height: 347 }],
+    /**
+     * 1200x630, the frame every platform crops to.
+     *
+     * The banner wordmark is 1093x347 and was getting letterboxed or
+     * centre-cropped — usually losing the tagline. This card is composed into
+     * the 1.91:1 frame instead of salvaged from a wider one, and carries one
+     * line of what the game is, because a shared link is often the only pitch
+     * anybody reads.
+     */
+    images: [{ url: '/brand/og.png', width: 1200, height: 630, alt: 'KeyMania — type fast, strike hard' }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'KeyMania — type fast, strike hard',
     description: 'A real-time typing duel. Type fast, strike hard.',
-    images: ['/brand/keymania-wordmark-tagline.png'],
+    images: ['/brand/og.png'],
   },
 };
 
