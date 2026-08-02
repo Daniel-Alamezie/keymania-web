@@ -60,6 +60,13 @@ export type ServerMessage =
     rating: number;
     /** How much of `delta` was the upset bonus, so this can say why. */
     bonus: number;
+    /**
+     * The speed the record was written with — the leaderboard's own number.
+     *
+     * Optional because an older server does not send it, in which case the
+     * result card falls back to its local estimate, exactly as it always did.
+     */
+    wpm?: number;
   }
   /**
    * One word of a survival run, judged.

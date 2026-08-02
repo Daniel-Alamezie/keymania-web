@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import EffectsCanvas, { type EffectsHandle } from '@/render/EffectsCanvas';
 import {
-  accuracy, currentTier, duelReducer, finalWpm, initialState, isOut, overallWpm,
+  accuracy, currentTier, duelReducer, finalWpm, initialState, isOut, overallWpm, settledWpm,
   rivals, you, type Fighter as FighterState,
 } from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
@@ -227,7 +227,7 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
    * to read without it, so a message that never arrives costs the sentence
    * rather than the screen.
    */
-  const [swing, setSwing] = useState<{ delta: number; rating: number; bonus: number } | null>(null);
+  const [swing, setSwing] = useState<{ delta: number; rating: number; bonus: number; wpm?: number } | null>(null);
 
   /**
    * The words.
@@ -988,7 +988,7 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
        * motivating moment the game has and it has never been shown to anybody.
        */
       if (message.type === 'rating') {
-        setSwing({ delta: message.delta, rating: message.rating, bonus: message.bonus });
+        setSwing({ delta: message.delta, rating: message.rating, bonus: message.bonus, wpm: message.wpm });
       }
     });
 
@@ -1489,7 +1489,13 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
 
             <dl className={styles.stats}>
               {/* Sustained speed leads — a single fast word is mostly luck. */}
-              <Stat label="Speed" value={`${finalWpm(state.stats)} wpm`} />
+              {/*
+                * The recorded speed where there is a record. The local figure
+                * and the server's routinely land one apart — different rulers —
+                * and a card that disagrees with the profile it sits next to
+                * reads as the game docking a point. See settledWpm.
+                */}
+              <Stat label="Speed" value={`${settledWpm(swing?.wpm, finalWpm(state.stats))} wpm`} />
               <Stat label="Accuracy" value={`${accuracy(state.stats)}%`} />
               <Stat label="Best combo" value={`x${state.stats.maxCombo}`} />
               <Stat label="Peak word" value={`${state.stats.bestWpm} wpm`} />

@@ -571,4 +571,23 @@ export function finalWpm(stats: DuelStats): number {
   return Math.round(wpmFor(stats.charsTyped, stats.endedAt - stats.startedAt));
 }
 
+/**
+ * The speed the result card shows.
+ *
+ * The official figure when the server sent one, the local estimate otherwise.
+ * The two are computed by different machines from different measurements — the
+ * local count includes a half-typed final word and a clock that runs until the
+ * client learned the duel ended — and they routinely land one apart, which a
+ * player reads as the game docking them a point between the result screen and
+ * their profile. The record is what ranks them, so the record is what is shown.
+ *
+ * `typeof` rather than `??` on purpose: zero is a real recorded speed — a
+ * player the duel ended before they finished a word — and falling back to the
+ * local estimate over a legitimate zero would resurrect the disagreement this
+ * exists to end, in exactly the case where the two differ most.
+ */
+export function settledWpm(official: number | undefined, local: number): number {
+  return typeof official === 'number' ? official : local;
+}
+
 export type { DuelStats, DuelState, Fighter, DuelAction } from '@/models/duel';
