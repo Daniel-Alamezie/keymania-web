@@ -30,7 +30,13 @@ import type { PublicCosmetics } from './cosmetics';
  * one wrong letter ended it — which is a distance rather than a rate or a
  * standing.
  */
-export const BOARDS = ['standings', 'speed', 'streak', 'weekly'] as const;
+/**
+ * Tab order, deliberately: Weekly second because it is the tab with a clock
+ * on it — the one that has changed since a player's last visit — and Fastest
+ * ahead of Survival only because speed is the game's own currency. The array
+ * is the strip; there is no second place encoding this order.
+ */
+export const BOARDS = ['standings', 'weekly', 'speed', 'streak'] as const;
 export type BoardKind = (typeof BOARDS)[number];
 
 export const DEFAULT_BOARD: BoardKind = 'standings';

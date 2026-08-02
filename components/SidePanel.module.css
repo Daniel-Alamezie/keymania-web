@@ -256,15 +256,24 @@
  */
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   margin: 0 0 10px;
 }
 
+/*
+ * Four tabs now, in a panel sized when there were two. Each tab gives up its
+ * fixed padding for an equal share of the strip: they shrink together and
+ * none can push a sibling off the panel's edge, which is exactly what the
+ * fourth one did on arrival.
+ */
 .tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
   gap: 6px;
-  padding: 5px 9px;
+  padding: 5px 2px;
   background: transparent;
   border: 2px solid transparent;
   color: var(--faint);
