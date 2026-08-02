@@ -34,10 +34,18 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
    * 3 duels" outranks "340 of 350 rating" — ten rating points is further away
    * than one duel, however much smaller the number looks.
    */
-  const ordered = [...challenges].sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    return (b.progress / b.goal) - (a.progress / a.goal);
-  });
+  /**
+   * Finished challenges leave the list rather than sinking to the bottom.
+   *
+   * A completed challenge has nothing left to say here: its reward is worn
+   * or waiting in the picker, and its row is a done thing crowding the ones
+   * still worth chasing. What remains of it is one line of tally at the top
+   * — the trophies live in the Appearance and Characters tabs, where they
+   * are things rather than history.
+   */
+  const ordered = challenges
+    .filter((c) => !c.done)
+    .sort((a, b) => (b.progress / b.goal) - (a.progress / a.goal));
 
   const shown = limit ? ordered.slice(0, limit) : ordered;
 
@@ -72,6 +80,13 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
       <p className={styles.tally}>
         <strong>{done}</strong> of {challenges.length} complete
       </p>
+
+      {shown.length === 0 && (
+        <p className={styles.empty}>
+          All of them. New challenges arrive with new seasons — and the weekly
+          resets every Monday.
+        </p>
+      )}
 
       <ul className={styles.list}>
         {shown.map((challenge) => {
