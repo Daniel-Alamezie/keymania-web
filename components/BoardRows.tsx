@@ -5,6 +5,7 @@ import { useDisplayName, useHandle } from '@/game/serverProfile';
 import { BOARD_META, type BoardEntry, type BoardKind } from '@/models/leaderboard';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import RankFlame, { Flame, type Podium } from './RankFlame';
+import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
 import styles from './SidePanel.module.css';
 
 /**
@@ -15,10 +16,37 @@ import styles from './SidePanel.module.css';
  * what a crown means and which row is yours, and the rules below were each
  * arrived at by getting them wrong first.
  */
-export default function BoardRows({ entries, board }: {
+export default function BoardRows({ entries, board, asStranger }: {
   entries: BoardEntry[];
   board: BoardKind;
+  /**
+   * Render every row as though it belonged to somebody else.
+   *
+   * For the appearance preview, which exists to answer "what do other people
+   * see". Left to itself this component would recognise the player's own name
+   * and tint the row as theirs, and link it to their dashboard — both correct
+   * on a real board and both wrong in a preview, where the tint is a thing no
+   * stranger ever sees and the link goes somewhere the preview did not offer
+   * to take anybody.
+   *
+   * A flag on the real renderer rather than a hand-built copy of a row. A copy
+   * would look right on the day it was written and drift the first time a
+   * badge moved or a column changed width, which is precisely the failure this
+   * preview is meant to catch.
+   */
+  asStranger?: boolean;
 }) {
+  /**
+   * An earned name colour, or nothing.
+   *
+   * Inline rather than a class, because the palette lives on the server and a
+   * stylesheet cannot hold a colour it has not been told about. Returning
+   * undefined rather than an empty object keeps the default styling entirely
+   * untouched for the great majority of rows.
+   */
+  const colourOf = (entry: BoardEntry) =>
+    (entry.cosmetics?.nameColour ? { color: entry.cosmetics.nameColour } : undefined);
+
   const myName = useDisplayName();
   const myHandle = useHandle();
   const meta = BOARD_META[board];
@@ -68,9 +96,9 @@ export default function BoardRows({ entries, board }: {
              * the only thing to go on and being occasionally wrong beats never
              * highlighting anybody.
              */
-            data-me={(myHandle && entry.handle
+            data-me={(!asStranger && (myHandle && entry.handle
               ? entry.handle === myHandle
-              : Boolean(myName) && entry.name === myName) || undefined}
+              : Boolean(myName) && entry.name === myName)) || undefined}
             data-top={entry.position === 1 || undefined}
           >
             <span className={`${styles.rankPos} pixel-font`}>{entry.position}</span>
@@ -106,16 +134,46 @@ export default function BoardRows({ entries, board }: {
                 instead would render the public card and then bounce, and the
                 flash of somebody else's view of you is exactly what the redirect
                 is there to avoid. */}
-            {entry.handle ? (
+            {/*
+              * A badge, where one is worn.
+              *
+              * Its own fixed slot rather than inline with the name, for the
+              * same reason the podium flame has one: a row whose name starts
+              * at a different x depending on what somebody earned is a column
+              * that no longer scans. The slot collapses to nothing when empty,
+              * so a board of players wearing nothing looks exactly as it did.
+              *
+              * Deliberately no title here. The row already carries a position,
+              * a podium mark, a name, a figure and a score, and a title would
+              * push the name into an ellipsis on a phone — so titles live on
+              * the profile and the duel plate, where there is room to read one.
+              */}
+            {entry.cosmetics?.badge && (
+              /* Hover says what the number means. The digits alone are two
+                 quiet pixels of provenance; the words are for whoever cares
+                 enough to ask. */
+              <span className={styles.rankBadge} data-tip={badgeTooltip(entry.cosmetics)}>
+                <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={14} height={14} />
+                {/* The founder's position, and only ever theirs. Tiny, because
+                    it is provenance rather than a score — the column already
+                    has a number that means something else entirely. */}
+                {entry.cosmetics.badgeNumber !== undefined && (
+                  <span className={styles.rankBadgeNo}>{entry.cosmetics.badgeNumber}</span>
+                )}
+              </span>
+            )}
+
+            {entry.handle && !asStranger ? (
               <Link
                 href={entry.handle === myHandle ? '/profile' : `/u/${entry.handle}`}
                 className={styles.rankName}
+                style={colourOf(entry)}
                 data-link
               >
                 {entry.name}
               </Link>
             ) : (
-              <span className={styles.rankName}>{entry.name}</span>
+              <span className={styles.rankName} style={colourOf(entry)}>{entry.name}</span>
             )}
 
             <span className={styles.rankSub}>{sub}</span>

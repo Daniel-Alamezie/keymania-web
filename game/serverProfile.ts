@@ -33,6 +33,14 @@ export interface ProfileState {
   saveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
   saveHandle: (handle: string) => Promise<{ ok: boolean; error?: string }>;
   saveCharacter: (character: CharacterId) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Equip a badge, title or name colour. `null` takes one off; an omitted
+   * field is left alone, which is what lets the panel send one change at a
+   * time rather than restating the player's whole appearance every click.
+   */
+  saveCosmetics: (
+    wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
+  ) => Promise<{ ok: boolean; error?: string }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -233,8 +241,48 @@ export function forgetProfile(): void {
  * rationed differently upstream, and posting a handle that has not changed
  * alongside a new display name would spend a cooldown nobody asked to spend.
  */
+/** What the server reports a player is wearing after a save. Ids, never values. */
+type SavedCosmetics = { earned: string[]; title?: string; badge?: string; nameColour?: string };
+
+/**
+ * Fold a save response into what is already held.
+ *
+ * The three slots are **replaced, not merged**, and that distinction is the
+ * whole reason this is a named function rather than a spread. JSON has no
+ * `undefined`: a slot the server reports as empty arrives as a missing key,
+ * and a missing key in a spread leaves whatever was there before. Taking a
+ * title off would have saved correctly, been reported correctly, and still
+ * shown on screen until the next refetch — a bug whose every visible symptom
+ * points at the server, where nothing is wrong.
+ *
+ * The response describes a whole appearance, so it is read as one.
+ *
+ * The catalogue and the founder number come the other way, from what is
+ * already held. Neither is part of this response and neither can change by
+ * equipping anything.
+ */
+export function foldSavedCosmetics(
+  held: ServerProfile['cosmetics'],
+  saved: SavedCosmetics | undefined,
+): ServerProfile['cosmetics'] {
+  if (!saved) return held;
+  return {
+    catalogue: held?.catalogue ?? [],
+    founderNumber: held?.founderNumber,
+    earned: saved.earned,
+    title: saved.title,
+    badge: saved.badge,
+    nameColour: saved.nameColour,
+  };
+}
+
 async function savePatch(
-  patch: { displayName?: string; handle?: string; character?: CharacterId },
+  patch: {
+    displayName?: string;
+    handle?: string;
+    character?: CharacterId;
+    cosmetics?: { title?: string | null; badge?: string | null; nameColour?: string | null };
+  },
   fallback: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const response = await fetch('/api/me/profile', {
@@ -248,7 +296,10 @@ async function savePatch(
   }
 
   const saved = (await response.json()) as {
-    displayName: string; handle?: string; character?: CharacterId;
+    displayName: string;
+    handle?: string;
+    character?: CharacterId;
+    cosmetics?: SavedCosmetics;
   };
 
   // Trust the server's version: it sanitises and canonicalises, so what came
@@ -261,6 +312,12 @@ async function savePatch(
       displayName: saved.displayName,
       handle: saved.handle,
       character: saved.character,
+      /**
+       * The server's answer, not the request. It drops anything unearned or
+       * retired rather than refusing the write, so what came back may be less
+       * than what was asked for — and the panel must show what actually stuck.
+       */
+      cosmetics: foldSavedCosmetics(snapshot.profile.cosmetics, saved.cosmetics),
     };
     fetchedAt = Date.now();
     persist(profile);
@@ -281,9 +338,13 @@ const saveHandle = (handle: string) =>
 const saveCharacter = (character: CharacterId) =>
   savePatch({ character }, 'Could not save that character.');
 
+const saveCosmetics = (
+  wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
+) => savePatch({ cosmetics: wanted }, 'Could not save that.');
+
 export function useServerProfile(): ProfileState {
   const state = useSyncExternalStore(subscribeToStore, readSnapshot, () => EMPTY);
-  return { ...state, saveName, saveHandle, saveCharacter };
+  return { ...state, saveName, saveHandle, saveCharacter, saveCosmetics };
 }
 
 /**
@@ -358,6 +419,25 @@ export function useChallenges(): ChallengeProgress[] {
     subscribeToStore,
     () => readSnapshot().profile?.challenges ?? NO_CHALLENGES,
     () => NO_CHALLENGES,
+  );
+}
+
+/**
+ * The player's standing, for showing outside the profile page.
+ *
+ * A player asked to see it on the menu: they are not always on the visible
+ * part of the board, and the number that moves after every ranked duel was
+ * two clicks away from the screen they spend the most time on.
+ *
+ * Null while genuinely unknown, so a caller can render nothing rather than a
+ * starting rating that is about to be replaced — a number that changes on its
+ * own a second after you read it is worse than one that arrives late.
+ */
+export function useRating(): number | null {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => readSnapshot().profile?.rating ?? null,
+    () => null,
   );
 }
 

@@ -138,6 +138,37 @@
 }
 .rank[data-top] .rankPos { color: var(--gold); }
 
+/*
+ * The badge slot. Fixed like the podium flame beside it, so a row's name
+ * starts at the same x whether or not its owner has earned anything — a
+ * column whose left edge moves per row is a column that stops scanning.
+ */
+.rankBadge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  /* Auto rather than fixed once a number can sit beside the mark; the mark
+     itself keeps a fixed width so names still start in line. */
+  height: 14px;
+}
+.rankBadge img { flex: none; width: 14px; height: 14px; }
+
+/*
+ * A founder's position. Deliberately the quietest number on the row: the rank
+ * column already carries a number that means something else, and two competing
+ * figures beside one name is a row that has to be decoded rather than read.
+ */
+.rankBadgeNo {
+  font-size: 8px;
+  line-height: 1;
+  color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pixel art, so it must never be smoothed on the way down to 14px. */
+.rankBadge img { image-rendering: pixelated; }
+
 .rankName {
   flex: 1;
   overflow: hidden;

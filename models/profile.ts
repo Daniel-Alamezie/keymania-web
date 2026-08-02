@@ -10,6 +10,7 @@
  * `GET /profile` on keymania-api. See lib/upstream.ts for why it is proxied.
  */
 
+import type { Cosmetic, EarnedCosmetic, PublicCosmetics } from './cosmetics';
 import type { CharacterId } from './character';
 import type { DuelStats } from './duel';
 import type { Difficulty } from './bot';
@@ -98,6 +99,29 @@ export interface ServerProfile {
   unlocked?: CharacterId[];
   /** Every open challenge, with progress. Absent from an older server. */
   challenges?: ChallengeProgress[];
+  /**
+   * The whole cosmetic catalogue, plus what this player owns and wears.
+   *
+   * The full list rather than only the earned ids, for the same reason the
+   * challenge list above is sent whole: a panel showing only what you have
+   * tells you nothing about what there is to want, which is the frustrating
+   * half of a progression system with none of the pull.
+   */
+  cosmetics?: {
+    catalogue: Cosmetic[];
+    earned: string[];
+    title?: string;
+    badge?: string;
+    nameColour?: string;
+    /**
+     * This account's founder position, if it has one.
+     *
+     * Sent whether or not the star is currently worn, because the panel has to
+     * draw the number in the preview the moment somebody selects the badge —
+     * before anything is saved and before the server has been told.
+     */
+    founderNumber?: number;
+  };
   /** Newest first, as the API stores it. */
   history: DuelResult[];
 }
@@ -105,11 +129,14 @@ export interface ServerProfile {
 /**
  * What finishing a challenge grants.
  *
- * A tagged union mirroring `Reward` in keymania-api. One member today; weekly
- * challenges will need more, since they cannot keep handing out characters
- * from a roster of six.
+ * A tagged union mirroring `Reward` in keymania-api. The cosmetic variant is
+ * what lets a weekly challenge award something, since they cannot keep handing
+ * out characters from a roster of six.
  */
-export type Reward = { kind: 'character'; character: CharacterId };
+export type Reward =
+  | { kind: 'character'; character: CharacterId }
+  /** A cosmetic, by id. The catalogue on the profile resolves what it means. */
+  | { kind: 'cosmetic'; cosmetic: string };
 
 /** One challenge and how far along it is, as `GET /profile` reports it. */
 export interface ChallengeProgress {
@@ -169,6 +196,18 @@ export interface PublicProfile {
    * somebody last played and who with, this says only how they have done.
    */
   rating?: number;
+  /**
+   * Already resolved to labels, files and colours by the server.
+   *
+   * The one thing on this card a player chose specifically in order to be seen
+   * in it, so it is also the one addition that gave up nothing to include.
+   */
+  cosmetics?: PublicCosmetics;
+  /**
+   * Everything they have unlocked, in the order they earned it. What is worn
+   * is a choice; this is the record behind it.
+   */
+  collection?: EarnedCosmetic[];
 }
 
 /** `POST /api/me/duels` — a bot practice result, stored unranked. */

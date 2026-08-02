@@ -9,6 +9,7 @@ import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import type { PublicProfile as Profile } from '@/models/profile';
+import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
 
@@ -109,6 +110,14 @@ export default function PublicProfile({ handle }: { handle: string }) {
   const ranked = profile.ranked ?? EMPTY_TALLY;
   const rate = winRate(ranked);
 
+  /**
+   * An earned name colour, inline because the palette lives on the server and
+   * a stylesheet cannot hold a colour it has not been told about. Undefined
+   * rather than an empty object, so the default styling is untouched for the
+   * great majority of players, who wear nothing.
+   */
+  const colour = profile.cosmetics?.nameColour ? { color: profile.cosmetics.nameColour } : undefined;
+
   // Derived from the list rather than tracked separately, so it stays right
   // after any change without this component knowing the rules.
   const already = friends.data.friends.some((f) => f.handle === profile.handle);
@@ -118,8 +127,30 @@ export default function PublicProfile({ handle }: { handle: string }) {
   return (
     <Shell>
       <header className={styles.header}>
-        <h1 className={`${styles.name} pixel-font`}>{profile.displayName}</h1>
+        <h1 className={`${styles.name} pixel-font`} style={colour}>
+          {/*
+            * The badge leads the name rather than trailing it, which is the
+            * opposite of the leaderboard and deliberate. A board row is a
+            * column being scanned, so a badge before the name would put every
+            * name at a different x; this is one heading being read, and a mark
+            * in front of it is a mark on the person.
+            */}
+          {profile.cosmetics?.badge && (
+            <span className={styles.badge} data-tip={badgeTooltip(profile.cosmetics)}>
+              <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={22} height={22} />
+              {profile.cosmetics.badgeNumber !== undefined && (
+                <span className={styles.badgeNo}>{profile.cosmetics.badgeNumber}</span>
+              )}
+            </span>
+          )}
+          {profile.displayName}
+        </h1>
         <p className={styles.handle}>@{profile.handle}</p>
+        {/* Here rather than on a board row, which has no width to spare for
+            one. This is the surface titles were made for. */}
+        {profile.cosmetics?.title && (
+          <p className={`${styles.title} pixel-font`}>{profile.cosmetics.title}</p>
+        )}
       </header>
 
       <dl className={styles.stats}>
@@ -136,6 +167,41 @@ export default function PublicProfile({ handle }: { handle: string }) {
         <Stat label="Win rate" value={rate ?? '—'} unit={rate === null ? '' : '%'} />
         <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
       </dl>
+
+      {/*
+        * Everything they have unlocked, not just what they wear.
+        *
+        * In the order it was earned, because a collection is a history. Every
+        * entry names itself on hover — the founder badge with its number,
+        * everything else with its label — since unlike the owner's picker
+        * there is no caption under each tile to say what a mark means.
+        */}
+      {(profile.collection?.length ?? 0) > 0 && (
+        <section className={styles.collection} aria-label="Unlocked cosmetics">
+          <h2 className={`${styles.collectionHeading} pixel-font`}>Collection</h2>
+          <ul className={styles.collectionList}>
+            {profile.collection!.map((item) => (
+              <li
+                key={`${item.kind}-${item.label}`}
+                className={styles.collectionItem}
+                data-kind={item.kind}
+                data-tip={badgeTooltip({ badgeNumber: item.number, badgeLabel: item.label })}
+              >
+                {item.kind === 'badge' && item.value && (
+                  <img src={badgeSrc(item.value)} alt={item.label} width={18} height={18} />
+                )}
+                {item.kind === 'badge' && item.number !== undefined && (
+                  <span className={styles.badgeNo}>{item.number}</span>
+                )}
+                {item.kind === 'title' && <span>{item.label}</span>}
+                {item.kind === 'nameColour' && (
+                  <span style={{ color: item.value }}>{item.label}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.actions}>
         {already && <span className={styles.settled}>You are friends.</span>}

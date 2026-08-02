@@ -1,0 +1,123 @@
+.picker { display: flex; flex-direction: column; gap: 22px; }
+
+.group { display: flex; flex-direction: column; gap: 6px; }
+
+.heading { margin: 0; font-size: 12px; color: var(--gold); }
+
+.blurb { margin: 0 0 6px; font-size: 11px; color: var(--muted); }
+
+/*
+ * Auto-fill rather than a fixed count, so the grid reflows on a phone instead
+ * of forcing a horizontal scroll — the character picker learned this already.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 8px;
+  background: var(--panel);
+  border: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+/*
+ * Locked tiles are dimmed but never hidden, and they keep their hint. A grid
+ * of question marks says there is more without saying how to get it.
+ */
+.tile:not([data-owned]) { opacity: 0.45; cursor: default; }
+.tile[data-owned]:hover { border-color: var(--gold-deep); }
+.tile[data-on] { border-color: var(--gold); color: var(--ink); }
+
+.face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+}
+/* Pixel art: never smoothed, at any size. */
+.face img { image-rendering: pixelated; }
+
+/* The founder number beside its badge, in the same voice it speaks everywhere
+   else: small, deep gold, tabular so #2 and #200 sit identically. */
+.faceNo {
+  margin-left: 3px;
+  font-size: 10px;
+  color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.sample { font-size: 15px; letter-spacing: 0.04em; }
+.sampleTitle {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.label { font-size: 10px; }
+.hint { font-size: 9px; line-height: 1.4; color: var(--faint); }
+.error { color: var(--bad); }
+
+/*
+ * The save bar.
+ *
+ * Sticks to the bottom of the scrolling panel so the control that commits a
+ * change is never somewhere a player has to go and find. Opaque rather than
+ * translucent: tiles scrolling visibly underneath a bar of buttons reads as a
+ * rendering fault.
+ */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-top: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+/* Only lit when there is something to lose, so the bar is quiet the rest of
+   the time and unmistakable the moment it matters. */
+.bar[data-dirty] { border-top-color: var(--gold); }
+
+.state { margin: 0; font-size: 11px; color: var(--muted); }
+.bar[data-dirty] .state { color: var(--gold); }
+
+.actions { display: flex; gap: 8px; margin-left: auto; }
+
+.save,
+.discard {
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.save { border-color: var(--gold); color: var(--gold); }
+.save:hover:not(:disabled) { background: var(--gold); color: var(--bg, #17102b); }
+.discard:hover:not(:disabled) { border-color: var(--muted); color: var(--ink); }
+
+/* Disabled is the resting state here, so it has to look deliberate rather than
+   broken: dimmed and inert, never greyed out of the layout. */
+.save:disabled,
+.discard:disabled { opacity: 0.4; cursor: default; }

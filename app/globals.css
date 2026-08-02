@@ -185,6 +185,55 @@ button { font-family: inherit; }
 .field:focus { border-color: var(--player); }
 .field::placeholder { color: var(--faint); }
 
+/*
+ * The tooltip, dressed for the game.
+ *
+ * Global for the same reason the scrollbar is: a tooltip is one voice, and
+ * anything wearing `data-tip` anywhere in the app must produce the same box.
+ * It replaces the browser's `title`, which was wrong here twice over — it
+ * renders in the operating system's own chrome, the one surface in the app
+ * the game's style cannot reach, and it holds its content back for about a
+ * second, which on a badge reads as nothing happening.
+ *
+ * Built from the panel vocabulary: pixel font, hard edges, the flat offset
+ * shadow every panel casts. No fade-in — things in this game arrive, they do
+ * not materialise — just a short delay so sweeping the cursor across a board
+ * does not strobe labels.
+ */
+[data-tip] { position: relative; }
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  /* Below the mark, not above it. Above was the reflex and it failed on the
+     first real user of this rule: badges live on board rows inside panels,
+     the most decorated rows sit at the top, and a tooltip opening upward from
+     the top row dies against the panel edge before anybody sees it. */
+  top: calc(100% + 7px);
+  transform: translateX(-50%);
+  padding: 5px 8px 4px;
+  font-family: var(--font-pixel), var(--font-body), monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  color: var(--gold);
+  background: var(--panel-2);
+  border: 2px solid var(--gold-deep);
+  box-shadow: var(--shadow);
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 40;
+  /* The delay lives on visibility, so appearing is instant once it fires and
+     there is no half-faded state for a pixel UI to be caught in. */
+  transition: visibility 0s linear 150ms;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  visibility: visible;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
