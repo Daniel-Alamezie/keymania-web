@@ -1,3 +1,4 @@
+import type { PublicCosmetics } from './cosmetics';
 /**
  * The global standings — `GET /api/board`, proxying `GET /leaderboard`.
  *
@@ -161,6 +162,13 @@ export const BOARD_META: Record<BoardKind, {
 export interface BoardEntry {
   position: number;
   name: string;
+  /**
+   * What this player is wearing, already resolved by the server.
+   *
+   * Absent for anyone who has earned nothing, which is most of the board, so
+   * every consumer treats it as optional rather than as a gap to fill.
+   */
+  cosmetics?: PublicCosmetics;
   /**
    * Present only once a player has claimed one, which is what decides whether
    * their row is a link.

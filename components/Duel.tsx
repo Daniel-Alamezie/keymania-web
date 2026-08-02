@@ -21,6 +21,7 @@ import { confirmTarget, useConfirmKey } from '@/game/useConfirmKey';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import type { PowerKind } from '@/game/powers';
 import type { Difficulty } from '@/models/bot';
+import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
 import type { Side } from '@/models/duel';
 import type { BladeTier } from '@/models/scoring';
@@ -58,6 +59,8 @@ export interface MultiplayerConfig {
    * which moves nothing, and from a server that predates the field.
    */
   ratings: number[] | undefined;
+  /** What each seat is wearing, parallel to the roster. See HealthBar. */
+  cosmetics: (PublicCosmetics | undefined)[] | undefined;
   /** The server's own countdown. The client must not assume its own. */
   countdownMs: number | undefined;
   /** Subscribe to server messages; returns an unsubscribe function. */
@@ -1060,6 +1063,7 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
           align="left"
           character={me.character}
           rating={multiplayer?.ratings?.[state.mySlot]}
+          cosmetics={multiplayer?.cosmetics?.[state.mySlot]}
           /*
            * No caption at all when the readout is switched off, rather than a
            * caption that never moves. Without this guard the interval never
@@ -1121,6 +1125,7 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
                   align="right"
                   character={fighter.character}
                   rating={multiplayer?.ratings?.[slot]}
+                  cosmetics={multiplayer?.cosmetics?.[slot]}
                   defeated={isOut(fighter)}
                   /*
                    * Nothing at all against a person: the rating under the bar

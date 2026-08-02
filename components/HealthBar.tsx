@@ -3,6 +3,7 @@
 import PixelSprite from './PixelSprite';
 import { characterFrame, characterHit, type CharacterId } from '@/models/character';
 import { MAX_HEALTH } from '@/game/constants';
+import { badgeSrc, type PublicCosmetics } from '@/models/cosmetics';
 import styles from './HealthBar.module.css';
 
 interface HealthBarProps {
@@ -41,6 +42,21 @@ interface HealthBarProps {
    * not be the quietest thing on the plate.
    */
   rating?: number;
+  /**
+   * What this fighter is wearing, resolved by the server.
+   *
+   * The badge sits by the name and the title under the bar, beside the rating.
+   * Both restrained on purpose: this plate already carries a name, a rating, a
+   * health figure, a bar and a portrait, and the bar has to stay the loudest
+   * thing on it. A badge is a mark, not a second thing to read mid-duel.
+   *
+   * Name colour is deliberately *not* applied here. The plate speaks in team
+   * colours — blue is you, red is the opponent — and a player wearing the
+   * other side's colour on their own plate is not self-expression, it is
+   * misinformation. Colours stay on the boards, where nothing else is saying
+   * anything with hue.
+   */
+  cosmetics?: PublicCosmetics;
   /** Optional caption under the name, e.g. live WPM or the bot's speed. */
   caption?: string;
   /**
@@ -79,7 +95,7 @@ interface HealthBarProps {
  * The two plates mirror each other so the player's side is unmistakable.
  */
 export default function HealthBar({
-  name, value, team, align, character, caption, compact, targeted, defeated, rating,
+  name, value, team, align, character, caption, compact, targeted, defeated, rating, cosmetics,
   hitTick = 0, big,
 }: HealthBarProps) {
   const pct = Math.max(0, Math.min(100, (value / MAX_HEALTH) * 100));
@@ -127,6 +143,11 @@ export default function HealthBar({
 
       <div className={styles.info}>
         <div className={styles.top}>
+          {cosmetics?.badge && (
+            <span className={styles.plateBadge}>
+              <img src={badgeSrc(cosmetics.badge)} alt="" width={12} height={12} />
+            </span>
+          )}
           <span className={`${styles.name} pixel-font`} data-team={team}>{name}</span>
           <span className={`${styles.value} pixel-font`} data-state={state}>{Math.ceil(value)}</span>
         </div>
@@ -154,6 +175,7 @@ export default function HealthBar({
                 <span className={`${styles.ratingValue} pixel-font`}>{rating}</span>
               </span>
             )}
+            {cosmetics?.title && <span className={styles.title}>{cosmetics.title}</span>}
             {caption && <span className={styles.caption}>{caption}</span>}
           </span>
         )}

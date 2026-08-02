@@ -33,6 +33,14 @@ export interface ProfileState {
   saveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
   saveHandle: (handle: string) => Promise<{ ok: boolean; error?: string }>;
   saveCharacter: (character: CharacterId) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Equip a badge, title or name colour. `null` takes one off; an omitted
+   * field is left alone, which is what lets the panel send one change at a
+   * time rather than restating the player's whole appearance every click.
+   */
+  saveCosmetics: (
+    wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
+  ) => Promise<{ ok: boolean; error?: string }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -234,7 +242,12 @@ export function forgetProfile(): void {
  * alongside a new display name would spend a cooldown nobody asked to spend.
  */
 async function savePatch(
-  patch: { displayName?: string; handle?: string; character?: CharacterId },
+  patch: {
+    displayName?: string;
+    handle?: string;
+    character?: CharacterId;
+    cosmetics?: { title?: string | null; badge?: string | null; nameColour?: string | null };
+  },
   fallback: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const response = await fetch('/api/me/profile', {
@@ -248,7 +261,10 @@ async function savePatch(
   }
 
   const saved = (await response.json()) as {
-    displayName: string; handle?: string; character?: CharacterId;
+    displayName: string;
+    handle?: string;
+    character?: CharacterId;
+    cosmetics?: { earned: string[]; title?: string; badge?: string; nameColour?: string };
   };
 
   // Trust the server's version: it sanitises and canonicalises, so what came
@@ -261,6 +277,14 @@ async function savePatch(
       displayName: saved.displayName,
       handle: saved.handle,
       character: saved.character,
+      /**
+       * The server's answer, not the request. It drops anything unearned or
+       * retired rather than refusing the write, so what came back may be less
+       * than what was asked for — and the panel must show what actually stuck.
+       */
+      cosmetics: saved.cosmetics
+        ? { ...snapshot.profile.cosmetics, ...saved.cosmetics, catalogue: snapshot.profile.cosmetics?.catalogue ?? [] }
+        : snapshot.profile.cosmetics,
     };
     fetchedAt = Date.now();
     persist(profile);
@@ -281,9 +305,13 @@ const saveHandle = (handle: string) =>
 const saveCharacter = (character: CharacterId) =>
   savePatch({ character }, 'Could not save that character.');
 
+const saveCosmetics = (
+  wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
+) => savePatch({ cosmetics: wanted }, 'Could not save that.');
+
 export function useServerProfile(): ProfileState {
   const state = useSyncExternalStore(subscribeToStore, readSnapshot, () => EMPTY);
-  return { ...state, saveName, saveHandle, saveCharacter };
+  return { ...state, saveName, saveHandle, saveCharacter, saveCosmetics };
 }
 
 /**

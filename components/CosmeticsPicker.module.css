@@ -1,0 +1,60 @@
+.picker { display: flex; flex-direction: column; gap: 22px; }
+
+.group { display: flex; flex-direction: column; gap: 6px; }
+
+.heading { margin: 0; font-size: 12px; color: var(--gold); }
+
+.blurb { margin: 0 0 6px; font-size: 11px; color: var(--muted); }
+
+/*
+ * Auto-fill rather than a fixed count, so the grid reflows on a phone instead
+ * of forcing a horizontal scroll — the character picker learned this already.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 8px;
+  background: var(--panel);
+  border: 2px solid var(--line, rgba(255, 255, 255, 0.1));
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+/*
+ * Locked tiles are dimmed but never hidden, and they keep their hint. A grid
+ * of question marks says there is more without saying how to get it.
+ */
+.tile:not([data-owned]) { opacity: 0.45; cursor: default; }
+.tile[data-owned]:hover { border-color: var(--gold-deep); }
+.tile[data-on] { border-color: var(--gold); color: var(--ink); }
+
+.face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+}
+/* Pixel art: never smoothed, at any size. */
+.face img { image-rendering: pixelated; }
+
+.sample { font-size: 15px; letter-spacing: 0.04em; }
+.sampleTitle {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.label { font-size: 10px; }
+.hint { font-size: 9px; line-height: 1.4; color: var(--faint); }
+.error { margin: 0; font-size: 12px; color: var(--bad); }

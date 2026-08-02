@@ -12,6 +12,7 @@ import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import CharacterPicker from './CharacterPicker';
+import CosmeticsPicker from './CosmeticsPicker';
 import ChallengeList from './ChallengeList';
 import FriendsPanel from './FriendsPanel';
 import { useUiSounds } from './SoundToggle';
@@ -30,7 +31,7 @@ export default function ProfileDashboard() {
    * expects the back button to walk through, and putting it in the route would
    * mean a router push on every click for no gain.
    */
-  const [tab, setTab] = useState<'profile' | 'challenges' | 'characters'>('profile');
+  const [tab, setTab] = useState<'profile' | 'challenges' | 'characters' | 'look'>('profile');
 
   // Its own route, so it never mounts Game and would otherwise be the one
   // silent screen in the app.
@@ -137,6 +138,7 @@ export default function ProfileDashboard() {
               ['profile', 'Profile'],
               ['challenges', 'Challenges'],
               ['characters', 'Characters'],
+              ['look', 'Appearance'],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -274,6 +276,17 @@ export default function ProfileDashboard() {
                 before the challenge existed.
               </p>
               <ChallengeList challenges={profile.challenges ?? []} />
+            </section>
+          )}
+
+          {tab === 'look' && (
+            <section className={styles.section}>
+              <h2 className={`${styles.heading} pixel-font`}>Appearance</h2>
+              <p className={styles.blurb}>
+                How you look to everyone else. Badges show on the boards and beside
+                your name in a duel; a title shows to whoever you are fighting.
+              </p>
+              <CosmeticsPicker />
             </section>
           )}
 

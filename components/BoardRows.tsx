@@ -5,6 +5,7 @@ import { useDisplayName, useHandle } from '@/game/serverProfile';
 import { BOARD_META, type BoardEntry, type BoardKind } from '@/models/leaderboard';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import RankFlame, { Flame, type Podium } from './RankFlame';
+import { badgeSrc } from '@/models/cosmetics';
 import styles from './SidePanel.module.css';
 
 /**
@@ -19,6 +20,17 @@ export default function BoardRows({ entries, board }: {
   entries: BoardEntry[];
   board: BoardKind;
 }) {
+  /**
+   * An earned name colour, or nothing.
+   *
+   * Inline rather than a class, because the palette lives on the server and a
+   * stylesheet cannot hold a colour it has not been told about. Returning
+   * undefined rather than an empty object keeps the default styling entirely
+   * untouched for the great majority of rows.
+   */
+  const colourOf = (entry: BoardEntry) =>
+    (entry.cosmetics?.nameColour ? { color: entry.cosmetics.nameColour } : undefined);
+
   const myName = useDisplayName();
   const myHandle = useHandle();
   const meta = BOARD_META[board];
@@ -106,16 +118,37 @@ export default function BoardRows({ entries, board }: {
                 instead would render the public card and then bounce, and the
                 flash of somebody else's view of you is exactly what the redirect
                 is there to avoid. */}
+            {/*
+              * A badge, where one is worn.
+              *
+              * Its own fixed slot rather than inline with the name, for the
+              * same reason the podium flame has one: a row whose name starts
+              * at a different x depending on what somebody earned is a column
+              * that no longer scans. The slot collapses to nothing when empty,
+              * so a board of players wearing nothing looks exactly as it did.
+              *
+              * Deliberately no title here. The row already carries a position,
+              * a podium mark, a name, a figure and a score, and a title would
+              * push the name into an ellipsis on a phone — so titles live on
+              * the profile and the duel plate, where there is room to read one.
+              */}
+            {entry.cosmetics?.badge && (
+              <span className={styles.rankBadge}>
+                <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={14} height={14} />
+              </span>
+            )}
+
             {entry.handle ? (
               <Link
                 href={entry.handle === myHandle ? '/profile' : `/u/${entry.handle}`}
                 className={styles.rankName}
+                style={colourOf(entry)}
                 data-link
               >
                 {entry.name}
               </Link>
             ) : (
-              <span className={styles.rankName}>{entry.name}</span>
+              <span className={styles.rankName} style={colourOf(entry)}>{entry.name}</span>
             )}
 
             <span className={styles.rankSub}>{sub}</span>

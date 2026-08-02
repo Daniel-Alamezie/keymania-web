@@ -313,3 +313,29 @@
   /* So a four-digit rating cannot shove the caption beside it. */
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * A badge on the plate, sized to sit inside the name's line rather than push it.
+ * Pixel art, so never smoothed on the way down.
+ */
+.plateBadge { display: flex; align-items: center; flex: none; }
+.plateBadge img { image-rendering: pixelated; }
+
+/*
+ * A title, under the bar beside the rating.
+ *
+ * Quieter than the rating and louder than nothing: it is a thing somebody
+ * earned and should be legible to the opponent, but it must not compete with
+ * the number the duel is actually about. Truncated rather than wrapped, since
+ * a plate that grows a second line mid-duel shifts everything under it.
+ */
+.title {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

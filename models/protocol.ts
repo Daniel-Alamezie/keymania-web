@@ -10,6 +10,7 @@
  * damage or health.
  */
 
+import type { PublicCosmetics } from './cosmetics';
 import type { CharacterId } from './character';
 import type { PowerKind } from './powers';
 import type { RoomSize, RoomSummary, Visibility } from './room';
@@ -146,6 +147,16 @@ export type ServerMessage =
      * every plate did until now.
      */
     ratings?: number[];
+    /**
+     * What each seat is wearing, parallel to the roster.
+     *
+     * Resolved server-side through the same function the leaderboard uses, so
+     * a player looks identical wherever they are seen. Entries are undefined
+     * for a simulated opponent, which has no account and therefore wears
+     * nothing — a ghost with a tournament badge would be the loudest tell the
+     * feature could produce.
+     */
+    cosmetics?: (PublicCosmetics | undefined)[];
     /** Legacy single-opponent name, sent only for two-player rooms. */
     opponent?: string;
   }
@@ -220,6 +231,12 @@ export type ServerMessage =
     roster: string[];
     characters: CharacterId[];
     ratings: number[];
+    /**
+     * What each seat is wearing. Carried here too, or a duel picked back up
+     * after a dropped socket would silently lose every badge on screen — the
+     * rejoin's whole promise is that nothing about the duel changed.
+     */
+    cosmetics?: (PublicCosmetics | undefined)[];
     healths: number[];
     progress: number[];
     wards: boolean[];

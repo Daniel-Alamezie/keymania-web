@@ -63,5 +63,7 @@ export function previewMatch({ players, mySlot = 0 }: PreviewOptions): Multiplay
     onRematch: () => {},
     // No socket to beat against. The preview is a still frame of a room.
     onPulse: () => {},
+    // The preview shows a plain roster; cosmetics are a signed-in concern.
+    cosmetics: undefined,
   };
 }

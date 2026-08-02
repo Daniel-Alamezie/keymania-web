@@ -27,6 +27,7 @@ import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import SoundSettings from './SoundSettings';
 import SignInLink from './SignInLink';
 import { useAccount } from '@/game/useAccount';
+import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
 import { track } from '@/game/analytics';
 import { duelToken } from '@/game/duelToken';
@@ -76,6 +77,8 @@ interface Match {
    * plate showed until now.
    */
   ratings: number[] | undefined;
+  /** What each seat is wearing, parallel to the roster. */
+  cosmetics: (PublicCosmetics | undefined)[] | undefined;
   /**
    * How long the server will wait before it starts accepting words.
    *
@@ -328,6 +331,7 @@ export default function Game() {
             // default fighters and made the picker look broken.
             characters: message.characters,
             ratings: message.ratings,
+            cosmetics: message.cosmetics,
             countdownMs: message.countdownMs,
           });
           setScreen('duel');
@@ -357,6 +361,7 @@ export default function Game() {
             powers: message.powers ?? {},
             characters: message.characters,
             ratings: message.ratings,
+            cosmetics: message.cosmetics,
             countdownMs: message.countdownMs,
             // The board as the server holds it, applied after the reset that
             // rebuilding the match will trigger. See Duel's startMulti effect.
@@ -592,6 +597,7 @@ export default function Game() {
             powers: match.powers,
             characters: match.characters,
             ratings: match.ratings,
+            cosmetics: match.cosmetics,
             countdownMs: match.countdownMs,
             resume: match.resume,
             subscribe,
