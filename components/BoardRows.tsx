@@ -77,6 +77,9 @@ export default function BoardRows({ entries, board, asStranger }: {
           standings: { score: rating, sub: `${entry.wpm} wpm` },
           speed: { score: entry.wpm, sub: `${entry.accuracy}%` },
           streak: { score: entry.streak ?? 0, sub: `${entry.wpm} wpm` },
+          // Words, because everybody typed the same script: the count alone
+          // is comparable in a way it never is on the other boards.
+          weekly: { score: entry.words ?? 0, sub: `${entry.wpm} wpm` },
         } satisfies Record<BoardKind, { score: number; sub: string }>)[board];
 
         return (

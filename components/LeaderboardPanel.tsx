@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useBoard } from '@/game/useBoard';
-import { BOARDS, BOARD_META, DEFAULT_BOARD, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
+import { BOARD_META, DEFAULT_BOARD, PANEL_BOARDS, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
+import { untilRollover } from '@/game/weeklyClock';
 import BoardRows from './BoardRows';
 import BoardGuide from './BoardGuide';
 import styles from './SidePanel.module.css';
@@ -41,7 +42,7 @@ export default function LeaderboardPanel() {
           screen rather than growing a second box above itself. Same pattern as
           the record panel opposite. */}
       <div className={styles.tabs} role="tablist" aria-label="Leaderboard">
-        {BOARDS.map((kind) => (
+        {PANEL_BOARDS.map((kind) => (
           <button
             key={kind}
             role="tab"
@@ -77,6 +78,15 @@ export default function LeaderboardPanel() {
         <Link href={`/leaderboard?board=${board}`} className={styles.footLink}>
           See the full board
         </Link>
+      )}
+
+      {/* A deadline, dressed as one. Coarse on purpose - never seconds -
+          so it does not tick while somebody reads. */}
+      {board === 'weekly' && (
+        <p className={styles.resetChip}>
+          <span className={styles.resetChipLabel}>NEW SCRIPT IN</span>
+          <span className="pixel-font">{untilRollover()}</span>
+        </p>
       )}
 
       <p className={styles.footnote}>{meta.footnote}</p>

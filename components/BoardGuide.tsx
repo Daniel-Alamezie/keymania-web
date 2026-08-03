@@ -41,13 +41,14 @@ const signed = (points: number) => (points > 0 ? `+${points}` : `${points}`);
 
 const PAGES = [
   {
-    title: 'Three boards',
+    title: 'Four boards',
     body: (
       <>
         <strong>Standings</strong> is your rating, and it moves every time you
         duel a person. <strong>Fastest</strong> is the quickest duel you have
         ever typed. <strong>Survival</strong> is how far one run got before a
-        mistake ended it.
+        mistake ended it. <strong>Weekly</strong> is thirty seconds on one
+        shared script, with a fresh one every Monday.
       </>
     ),
     visual: <ThreeBoards />,

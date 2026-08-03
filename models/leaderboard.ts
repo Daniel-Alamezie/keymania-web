@@ -30,8 +30,25 @@ import type { PublicCosmetics } from './cosmetics';
  * one wrong letter ended it — which is a distance rather than a rate or a
  * standing.
  */
-export const BOARDS = ['standings', 'speed', 'streak'] as const;
+/**
+ * Tab order, deliberately: Weekly second because it is the tab with a clock
+ * on it — the one that has changed since a player's last visit — and Fastest
+ * ahead of Survival only because speed is the game's own currency. The array
+ * is the strip; there is no second place encoding this order.
+ */
+export const BOARDS = ['standings', 'weekly', 'speed', 'streak'] as const;
 export type BoardKind = (typeof BOARDS)[number];
+
+/**
+ * What the menu panel offers, which is deliberately less than what exists.
+ *
+ * Fastest lives only on the full board page. It is the career museum - a
+ * max() that one clean run tops forever - and the panel is the glance on the
+ * way to a duel: the three tabs that earn a place there are the ones that
+ * move (standings), reset (weekly) and belong to a mode (survival). Anyone
+ * who wants the museum taps through to the full board, where all four wait.
+ */
+export const PANEL_BOARDS = ['standings', 'weekly', 'streak'] as const satisfies readonly BoardKind[];
 
 export const DEFAULT_BOARD: BoardKind = 'standings';
 
@@ -157,6 +174,17 @@ export const BOARD_META: Record<BoardKind, {
     footnote: 'Words survived in one run, and the speed it took to get there.',
     empty: 'No runs have survived anything yet. Start one and see how far you get.',
   },
+  weekly: {
+    tab: 'Weekly',
+    heading: 'This week',
+    scoreLabel: 'words in thirty seconds',
+    /**
+     * The one board where every row typed the same words, which is the whole
+     * sales pitch, so the footnote is the place to make it.
+     */
+    footnote: 'Everyone types the same script. Thirty seconds, best run counts. New script Mondays, 12pm UK.',
+    empty: 'Nobody has run this week yet. Thirty seconds, and the top spot is yours.',
+  },
 };
 
 export interface BoardEntry {
@@ -180,6 +208,8 @@ export interface BoardEntry {
   handle?: string;
   /** Best sustained speed across a whole refereed duel. */
   wpm: number;
+  /** Words landed in the weekly sprint. Only on the weekly board. */
+  words?: number;
   /**
    * Best accuracy across refereed duels. Colour on the board, never part of
    * the ordering — the server sees completed words, never keystrokes, so it

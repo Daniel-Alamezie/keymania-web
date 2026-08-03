@@ -137,6 +137,10 @@
   width: 100%;
 }
 
+/* One button borrowing Play's full width. The two-column grid is the row's
+   default, so a lone chip inside it sat in column one at half width. */
+.modes[data-solo] { grid-template-columns: 1fr; }
+
 .mode { min-width: 0; }
 
 /*
@@ -151,6 +155,10 @@
 /* Survival warns before it is chosen, so its label runs warm even closed. */
 .mode[data-mode='survival'] { border-color: var(--opponent-deep, var(--edge)); }
 .mode[data-mode='survival'][data-active] { border-color: var(--opponent); color: var(--opponent); }
+/* Gold: the weekly is the board with prizes on it, and gold is what the
+   game already means by "worth winning". */
+.mode[data-mode='weekly'] { border-color: var(--gold-deep, var(--edge)); }
+.mode[data-mode='weekly'][data-active] { border-color: var(--gold); color: var(--gold); }
 
 .modePanel {
   display: flex;

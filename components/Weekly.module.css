@@ -1,0 +1,41 @@
+/*
+ * Only what the sprint adds to Survival's shell: the clock, its bar, and the
+ * word count riding under them. Everything shared lives in Survival.module.css
+ * on purpose — two screens, one skeleton, no drift.
+ */
+
+.clock {
+  font-size: 34px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The last five seconds burn. The number is the drama; the bar just agrees. */
+.clock[data-late] { color: var(--opponent); }
+
+.track {
+  width: 180px;
+  max-width: 60vw;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--edge-soft);
+}
+
+.fill {
+  height: 100%;
+  background: var(--gold);
+  /* Stepped by the display tick, not animated: a pixel game's clock jumps. */
+}
+
+.words {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.newBest {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
