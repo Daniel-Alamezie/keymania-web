@@ -26,10 +26,10 @@ export default function InviteToast({ invites, onAccept, onDismiss }: {
   onAccept: (invite: PendingInvite) => Promise<InviteError | null>;
   onDismiss: (fromHandle: string) => void;
 }) {
-  if (invites.length === 0) return null;
-
+  // The dock belongs to InviteHost, which shares it with the waiting pill.
+  // Rendering a second one here would stack two fixed corners on each other.
   return (
-    <div className={styles.dock} aria-live="polite" aria-label="Game invites">
+    <>
       {invites.map((invite) => (
         <Toast
           key={invite.fromHandle}
@@ -38,7 +38,7 @@ export default function InviteToast({ invites, onAccept, onDismiss }: {
           onDismiss={onDismiss}
         />
       ))}
-    </div>
+    </>
   );
 }
 

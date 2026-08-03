@@ -6,7 +6,7 @@ import { Flame } from './RankFlame';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { pathLabel, previousPath } from '@/game/lastPath';
-import { rememberInvite } from '@/game/inviteIntent';
+import { sendInvite } from '@/game/sendInvite';
 import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
@@ -241,10 +241,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => {
-              rememberInvite(profile.handle);
-              router.push('/');
-            }}
+            onClick={() => { void sendInvite(profile.handle, profile.displayName); }}
           >
             Invite to a duel
           </button>

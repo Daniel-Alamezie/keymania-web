@@ -11,15 +11,30 @@ export interface PendingInvite {
   fromHandle: string;
   fromName: string;
   fromRating?: number;
-  /** The private room they are sitting in. */
-  roomId: string;
   /** When this stops being good, as an epoch millisecond. */
   expiresAt: number;
 }
 
-/** `POST /api/me/presence` — the heartbeat, and how an invite arrives. */
+/**
+ * An ask this player sent that somebody has taken up.
+ *
+ * Carries the room the *server* made at the moment of acceptance. Nothing
+ * exists before that: an invite is a row, so the inviter is free to browse
+ * while they wait rather than being pinned to a waiting screen holding a room
+ * open with their socket.
+ */
+export interface AcceptedInvite {
+  fromHandle: string;
+  fromName: string;
+  roomId: string;
+}
+
+/** `POST /api/me/presence` — the heartbeat, and how both halves arrive. */
 export interface PresenceResponse {
+  /** People asking this player for a game. */
   invites?: PendingInvite[];
+  /** Asks this player sent that have been answered, each with its room. */
+  accepted?: AcceptedInvite[];
 }
 
 /**
@@ -53,7 +68,7 @@ export interface InviteError {
 }
 
 /** `POST /api/invites/{handle}/accept` when it works. */
-export interface AcceptedInvite {
+export interface AcceptResponse {
   roomId: string;
 }
 

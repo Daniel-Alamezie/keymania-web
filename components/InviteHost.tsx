@@ -1,33 +1,33 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from '@/game/useAccount';
 import { useHeartbeat } from '@/game/presence';
 import { useBusy } from '@/game/busy';
+import { clearWaiting, useWaiting } from '@/game/waiting';
 import { offerRoom } from '@/game/joinIntent';
-import type { InviteError, PendingInvite } from '@/models/invites';
+import type { AcceptResponse, InviteError, PendingInvite } from '@/models/invites';
 import InviteToast from './InviteToast';
+import WaitingPill from './WaitingPill';
+import styles from './InviteToast.module.css';
 
 /**
- * The heartbeat and the invite toast, above every page.
+ * Both halves of an invite, above every page.
  *
- * Both used to live inside the arena and the profile dashboard, which meant
- * two things went wrong at once. An invite that arrived while somebody was
- * reading the leaderboard was invisible for its whole ninety seconds, and the
- * heartbeat stopped entirely on any page that was neither of those two — so a
- * player browsing the boards looked offline to their friends.
+ * The toast is somebody asking; the pill is this player's own ask, still out.
+ * Neither can live inside a page, and for the same reason: an invite arrives
+ * and is answered on nobody's schedule but the other person's, so anything
+ * that renders it has to outlive whatever screen the player happens to be on.
  *
- * Mounted once here, both problems are the same problem and it is solved: the
- * player is present wherever they are, and an invite reaches them wherever
- * they are.
- *
- * Renders nothing at all when signed out, which is most visitors. The hook
- * below does no work without an account.
+ * That is also why the heartbeat is mounted here. It used to run inside the
+ * arena and the profile dashboard, which meant a player reading the
+ * leaderboard looked offline to every friend they had.
  */
 export default function InviteHost() {
   const account = useAccount();
   const busy = useBusy();
+  const waiting = useWaiting();
   const router = useRouter();
 
   /**
@@ -36,8 +36,37 @@ export default function InviteHost() {
    * Guessing from the pathname would be wrong in both directions: `/` is the
    * menu as often as it is a duel, and a player who navigated away mid-match
    * has left the game rather than paused it. Only the arena knows.
+   *
+   * The third argument asks for a faster beat while this player's own invite
+   * is outstanding, so the handover when a friend accepts feels immediate
+   * rather than arriving up to fifteen seconds later.
    */
-  const { invites, dismiss } = useHeartbeat(account.signedIn, busy);
+  const { invites, accepted, dismiss, forget } = useHeartbeat(
+    account.signedIn,
+    busy,
+    Boolean(waiting),
+  );
+
+  /**
+   * Somebody said yes: go and play them.
+   *
+   * The room already exists — the server made it when they accepted — so this
+   * is only a matter of getting there. The arena takes the code directly if it
+   * is on screen, and otherwise it is parked and collected as the arena mounts.
+   *
+   * `forget` is what stops the answer arriving again. Its row outlives this
+   * moment by a few minutes so a dropped response cannot lose the room, which
+   * means without this the same room would be offered on every beat until the
+   * TTL caught up.
+   */
+  useEffect(() => {
+    const answer = accepted[0];
+    if (!answer) return;
+
+    clearWaiting(answer.fromHandle);
+    forget(answer.fromHandle);
+    if (!offerRoom(answer.roomId)) router.push('/');
+  }, [accepted, forget, router]);
 
   const accept = useCallback(async (invite: PendingInvite): Promise<InviteError | null> => {
     const res = await fetch(`/api/invites/${encodeURIComponent(invite.fromHandle)}/accept`, {
@@ -47,32 +76,50 @@ export default function InviteHost() {
     if (!res) return { error: 'Could not reach the game server.' };
     if (!res.ok) return (await res.json().catch(() => ({}))) as InviteError;
 
-    const { roomId } = (await res.json()) as { roomId: string };
+    const { roomId } = (await res.json()) as AcceptResponse;
     dismiss(invite.fromHandle);
 
     /**
-     * The arena joins, wherever it is.
-     *
-     * If it is already on screen it takes the code directly and the player is
-     * in the duel without a navigation. If they were on some other page it
-     * parks the code and this sends them to the arena, which picks it up as it
-     * mounts. Either way the invite has been consumed by now, so there is no
-     * path where a failure here leaves it recoverable — which is why the code
-     * is handed over before the navigation rather than after it.
+     * The invite is consumed by now and the room is made, so there is no path
+     * from here that leaves anything recoverable. The code is handed over
+     * before the navigation rather than after it, so a slow route change
+     * cannot lose it.
      */
     if (!offerRoom(roomId)) router.push('/');
     return null;
   }, [dismiss, router]);
 
   /**
+   * Withdraw an ask, so the player can go and start something else.
+   *
+   * One delete and it is gone — there is no room to tear down, no socket to
+   * close and nobody to tell. That cheapness is the whole argument for making
+   * an invite a row rather than an open room.
+   */
+  const cancel = useCallback(() => {
+    if (!waiting) return;
+    const { handle } = waiting;
+    clearWaiting(handle);
+    void fetch(`/api/me/friends/${encodeURIComponent(handle)}/invite`, {
+      method: 'DELETE',
+    }).catch(() => {});
+  }, [waiting]);
+
+  /**
    * Nothing during a duel.
    *
-   * Belt and braces: the server already stops sending invites to a busy
-   * player, so this is the second of two guards. It is the cheaper one to be
-   * sure of, and it is the one that still holds for an invite that arrived a
-   * moment before the match began.
+   * The server already stops sending invites to a busy player, so this is the
+   * second of two guards — and the one that still holds for something that
+   * arrived a moment before the match began. The pill goes too: a player who
+   * started a duel while an ask was out has answered the question themselves.
    */
   if (busy) return null;
+  if (invites.length === 0 && !waiting) return null;
 
-  return <InviteToast invites={invites} onAccept={accept} onDismiss={dismiss} />;
+  return (
+    <div className={styles.dock} aria-live="polite">
+      <InviteToast invites={invites} onAccept={accept} onDismiss={dismiss} />
+      {waiting && <WaitingPill waiting={waiting} onCancel={cancel} />}
+    </div>
+  );
 }

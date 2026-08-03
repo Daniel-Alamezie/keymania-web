@@ -1,0 +1,94 @@
+/*
+ * The waiting pill, sharing the invite toast's corner.
+ *
+ * Quieter than the toast on purpose: a toast is somebody asking you for
+ * something and needs to be seen, while this is a note about a thing you
+ * already did. Same corner, same geometry, less shouting — the edge is the
+ * ordinary panel edge rather than the toast's gold.
+ */
+.pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 30px 9px 12px;
+  position: relative;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+  animation: slide-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-in {
+  from { transform: translateX(calc(100% + 20px)); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/*
+ * A slow breath, not a spinner.
+ *
+ * A spinner promises completion; this is waiting on a person who may never
+ * answer, and the honest signal is a heartbeat rather than progress. The same
+ * green the friends list uses for somebody who is around, because that is what
+ * is being waited on.
+ */
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+  animation: breathe 1900ms ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(94, 224, 138, 0.35); }
+  50% { opacity: 0.45; box-shadow: 0 0 0 5px rgba(94, 224, 138, 0); }
+}
+
+/*
+ * With motion suppressed the dot holds steady rather than freezing mid-pulse
+ * at whatever opacity it happened to reach.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .pill { animation: none; }
+  .dot { animation: none; opacity: 1; }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.line {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  font-size: 10px;
+  color: var(--faint);
+  /* Tabular figures, or the seconds shift the line as digits change. */
+  font-variant-numeric: tabular-nums;
+}
+
+.close {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: none;
+  border: 0;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.close:hover { color: var(--ink); }

@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { rememberInvite } from '@/game/inviteIntent';
+import { sendInvite } from '@/game/sendInvite';
 import { useFriends } from '@/game/friends';
 import { useHandle } from '@/game/serverProfile';
 import { byPresence, SEEN_LABEL, type Friend } from '@/models/friends';
@@ -20,7 +19,6 @@ export default function FriendsPanel() {
   const { data, loading, error, busy, add, accept, remove, block } = useFriends(true);
   const myHandle = useHandle();
   const [draft, setDraft] = useState('');
-  const router = useRouter();
   const [notice, setNotice] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -150,10 +148,7 @@ export default function FriendsPanel() {
                   <button
                     type="button"
                     className={`btn btn-primary ${styles.invite}`}
-                    onClick={() => {
-                      rememberInvite(person.handle);
-                      router.push('/');
-                    }}
+                    onClick={() => { void sendInvite(person.handle, person.displayName); }}
                   >
                     Invite
                   </button>

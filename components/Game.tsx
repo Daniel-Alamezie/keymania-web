@@ -31,10 +31,8 @@ import Settings from './Settings';
 import SignInLink from './SignInLink';
 import CommunityLink from './CommunityLink';
 import { useAccount } from '@/game/useAccount';
-import { takeInvite } from '@/game/inviteIntent';
 import { setBusy } from '@/game/busy';
 import { takeRoom, useRoomOffers } from '@/game/joinIntent';
-import type { InviteError } from '@/models/invites';
 import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
@@ -265,17 +263,6 @@ export default function Game() {
     return () => setBusy(false);
   }, [screen]);
 
-  /**
-   * A friend this player has asked for a game, from the moment the room is
-   * requested until the invite has been sent.
-   *
-   * A ref rather than state because nothing renders from it directly and the
-   * socket handler needs to read it without being re-created: `roomCreated`
-   * is the only place the room code exists, and the invite cannot be sent
-   * before it arrives.
-   */
-  const inviting = useRef<string | null>(null);
-  const [invited, setInvited] = useState<string | null>(null);
   const [match, setMatch] = useState<Match | null>(null);
 
   /** Lobby-level messages. The duel subscribes separately for its own. */
@@ -323,35 +310,6 @@ export default function Game() {
         if (message.type === 'searchStopped') setQueuedAt(null);
         if (message.type === 'roomCreated') {
           setError(null);
-
-          /**
-           * The room exists, so now the friend can be told about it.
-           *
-           * Room-first, and the order is not arbitrary: the invite carries a
-           * code, so the room has to be real before anybody is handed one.
-           * Doing it the other way would mean minting an invite to a room that
-           * might fail to be created, and the friend would accept their way
-           * into nothing.
-           */
-          const asked = inviting.current;
-          if (asked) {
-            inviting.current = null;
-            void fetch(`/api/me/friends/${encodeURIComponent(asked)}/invite`, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ roomId: message.roomId }),
-            }).then(async (res) => {
-              if (res.ok) {
-                setInvited(asked);
-                return;
-              }
-              // The room is real and the player is in it, so this is not a
-              // dead end: they are left holding a code they can still share
-              // by hand, and told why the shortcut did not work.
-              const problem = (await res.json().catch(() => ({}))) as InviteError;
-              setError(problem.error ?? 'That invite could not be sent.');
-            }).catch(() => setError('That invite could not be sent.'));
-          }
 
           setWaiting({
             code: message.roomId,
@@ -669,44 +627,7 @@ export default function Game() {
     send({ action: 'createRoom', name, visibility, token, capacity });
   }, [send]);
 
-  /**
-   * Ask a friend for a game: open a private room, then hand them the code.
-   *
-   * The whole flow is two things that already work. Nothing here is a special
-   * kind of room or a special kind of duel — it is the ordinary private room
-   * the lobby has always been able to make, with the code delivered to one
-   * person instead of typed out to them.
-   */
-  const inviteFriend = useCallback(async (handle: string) => {
-    /**
-     * The token first, before anything renders.
-     *
-     * This is called straight out of an effect on arrival in the arena, and
-     * changing state synchronously in an effect body cascades a render before
-     * the first paint. Everything below sits after an await, which costs
-     * nothing here — the room could not be opened without the token anyway.
-     */
-    const token = await duelToken();
-    if (!token) {
-      setError('Your session expired. Sign in again to duel.');
-      return;
-    }
 
-    inviting.current = handle;
-    setInvited(null);
-    // The lobby is where a room with a code and a list of who is in it is
-    // already drawn. An invite produces exactly that, so it goes there rather
-    // than growing a second waiting screen that says the same things.
-    setScreen('lobby');
-    connect();
-    send({
-      action: 'createRoom',
-      name: account.displayName ?? '',
-      visibility: 'private',
-      token,
-      capacity: 2,
-    });
-  }, [connect, send, account.displayName]);
 
 
 
@@ -742,40 +663,26 @@ export default function Game() {
   useRoomOffers(joinInvited);
 
   /**
-   * The intent left behind by the friends list on the profile page.
+   * A room accepted while this player was on another page.
    *
-   * Read once and cleared as it is read, so a refresh of the arena does not
-   * open a second room for somebody who was invited a minute ago. Waits for
-   * the account, because the room needs a token and a display name and
-   * neither exists until Kinde has answered.
+   * Parked by the invite host and collected here, once, as the arena mounts.
+   * Cleared as it is read so a refresh cannot try to rejoin a duel that has
+   * since finished.
    */
   useEffect(() => {
     if (account.loading || !account.signedIn) return;
-
-    /**
-     * A room accepted from another page is collected before an invite is
-     * sent, and the order matters. Both cannot be true at once in practice,
-     * but if a stale intent ever survived, joining a duel somebody is already
-     * waiting in beats opening a second empty room beside it.
-     */
     const room = takeRoom();
-    const handle = room ? null : takeInvite();
-    if (!room && !handle) return;
+    if (!room) return;
 
     /**
      * Deferred by a tick rather than run in the effect body.
      *
-     * Both of these change state, and doing that synchronously during an
-     * effect cascades a render before the arena has painted once. A player
-     * arriving from the friends list should see the arena and then see it
-     * become a waiting room, not wait on a blank screen while a socket opens.
+     * Joining changes state, and doing that synchronously during an effect
+     * cascades a render before the arena has painted once.
      */
-    const id = setTimeout(() => {
-      if (room) joinInvited(room);
-      else if (handle) void inviteFriend(handle);
-    }, 0);
+    const id = setTimeout(() => joinInvited(room), 0);
     return () => clearTimeout(id);
-  }, [account.loading, account.signedIn, inviteFriend, joinInvited]);
+  }, [account.loading, account.signedIn, joinInvited]);
 
   /**
    * Back to the menu.
@@ -787,8 +694,6 @@ export default function Game() {
    * Leaving is the user's intent; the cleanup is bookkeeping.
    */
   const leave = useCallback(() => {
-    inviting.current = null;
-    setInvited(null);
     setMatch(null);
     setWaiting(null);
     setRooms([]);
@@ -949,7 +854,6 @@ export default function Game() {
           onRefresh={() => send({ action: 'listRooms' })}
           onBack={leave}
           accountName={account.displayName}
-          invited={invited}
         />
       </main>
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PendingInvite, PresenceResponse } from '@/models/invites';
+import type { AcceptedInvite, PendingInvite, PresenceResponse } from '@/models/invites';
 
 /**
  * Telling the server we are here, and hearing who wants a game.
@@ -24,6 +24,17 @@ import type { PendingInvite, PresenceResponse } from '@/models/invites';
 const BEAT_MS = 15_000;
 
 /**
+ * How often to check in while an invite of this player's is outstanding.
+ *
+ * The one moment the ordinary rate is too slow. An inviter who is free to go
+ * and browse only finds out their friend said yes on the next beat, and
+ * fifteen seconds of nothing happening after somebody accepts reads as a
+ * failure. This is a ninety-second window at most, for one player, and it
+ * costs a handful of extra beats to make the handover feel immediate.
+ */
+const EAGER_MS = 5_000;
+
+/**
  * Check in, for as long as this component is mounted.
  *
  * `busy` says whether the player is mid-game. Reported rather than inferred:
@@ -36,9 +47,11 @@ const BEAT_MS = 15_000;
  * Returns whatever invites are waiting, and a way to forget one locally. The
  * hook holds no opinion about what an invite means; the menu decides that.
  */
-export function useHeartbeat(signedIn: boolean, busy: boolean): {
+export function useHeartbeat(signedIn: boolean, busy: boolean, waiting = false): {
   invites: PendingInvite[];
+  accepted: AcceptedInvite[];
   dismiss: (fromHandle: string) => void;
+  forget: (fromHandle: string) => void;
 } {
   /**
    * The current `busy` in a ref, so changing modes does not restart the
@@ -50,6 +63,25 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
   useEffect(() => { busyRef.current = busy; }, [busy]);
 
   const [invites, setInvites] = useState<PendingInvite[]>([]);
+  const [accepted, setAccepted] = useState<AcceptedInvite[]>([]);
+
+  /**
+   * Rooms this browser has already walked into.
+   *
+   * The answer row lives for a few minutes so a dropped response cannot lose
+   * the room, which means the same room can arrive on more than one beat. This
+   * is what stops the second delivery trying to seat a player who is already
+   * seated — a join the server would refuse as `same-account`, which is
+   * correct and would read as a broken invite.
+   */
+  const joined = useRef<Set<string>>(new Set());
+
+  const forget = useCallback((fromHandle: string) => {
+    setAccepted((was) => was.filter((a) => a.fromHandle !== fromHandle));
+    void fetch(`/api/invites/${encodeURIComponent(fromHandle)}/answer`, {
+      method: 'DELETE',
+    }).catch(() => {});
+  }, []);
 
   /**
    * Invites this browser has already answered or waved away.
@@ -85,16 +117,22 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
         const data = (await res.json()) as PresenceResponse;
         if (!live) return;
 
-        const waiting = data.invites ?? [];
+        const asks = data.invites ?? [];
         /**
          * Anything the server has stopped sending is genuinely gone, so the
          * local memory of it can go too. Without this pruning, a friend who
          * was declined once could never invite again from this tab.
          */
         dismissed.current = new Set(
-          [...dismissed.current].filter((h) => waiting.some((i) => i.fromHandle === h)),
+          [...dismissed.current].filter((h) => asks.some((i) => i.fromHandle === h)),
         );
-        setInvites(waiting.filter((invite) => !dismissed.current.has(invite.fromHandle)));
+        setInvites(asks.filter((invite) => !dismissed.current.has(invite.fromHandle)));
+
+        // Anything already walked into is dropped here rather than by the
+        // caller, so no consumer has to remember that answers can repeat.
+        const answers = (data.accepted ?? []).filter((a) => !joined.current.has(a.roomId));
+        answers.forEach((a) => joined.current.add(a.roomId));
+        if (answers.length) setAccepted((was) => [...was, ...answers]);
       } catch {
         /*
          * Silent, deliberately. A missed heartbeat costs a friend seeing a
@@ -107,8 +145,9 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
 
     // Once immediately, so arriving on the menu shows up to friends now
     // rather than in fifteen seconds.
+    const rate = waiting ? EAGER_MS : BEAT_MS;
     void beat();
-    let id = setInterval(() => { void beat(); }, BEAT_MS);
+    let id = setInterval(() => { void beat(); }, rate);
 
     /**
      * A hidden tab is not a player who is around.
@@ -129,7 +168,7 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
       clearInterval(id);
       if (document.visibilityState === 'visible') {
         void beat();
-        id = setInterval(() => { void beat(); }, BEAT_MS);
+        id = setInterval(() => { void beat(); }, rate);
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -139,7 +178,7 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [signedIn]);
+  }, [signedIn, waiting]);
 
   /**
    * Signing out empties the list by derivation rather than by clearing state.
@@ -148,5 +187,10 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
    * wiping it from inside the effect is both a cascading render and a second
    * source of truth for the same fact. Derived, there is only one.
    */
-  return { invites: signedIn ? invites : [], dismiss };
+  return {
+    invites: signedIn ? invites : [],
+    accepted: signedIn ? accepted : [],
+    dismiss,
+    forget,
+  };
 }
