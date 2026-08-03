@@ -98,6 +98,58 @@
 
 .who:hover .name { color: var(--gold); }
 
+.line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+/*
+ * The presence dot.
+ *
+ * Reading order is deliberate: this comes before the name, because the
+ * question a friends list is actually asked is "can I play them", and that is
+ * answerable before anybody reads a word. Small enough to be a state and not
+ * an ornament.
+ */
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+/* Green means go, in the same sense the rest of the game uses it. */
+.row[data-presence='idle'] .dot {
+  background: var(--good);
+  /* A faint halo only on the one state worth noticing across a list. */
+  box-shadow: 0 0 0 3px rgba(94, 224, 138, 0.14);
+}
+
+/* Amber, not red: mid-game is a reason to wait, not a refusal. */
+.row[data-presence='busy'] .dot { background: var(--gold-deep); }
+
+.row[data-presence='offline'] .dot { background: var(--edge); }
+
+/* A row for somebody who is here earns a little more presence than the rest. */
+.row[data-presence='idle'] { background: var(--panel); }
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Their standing, quiet: it is context for the name, not a score to compare. */
+.stat {
+  font-size: 10px;
+  color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
 .name {
   font-size: 13px;
   /* A display name is free text and not unique, so it is allowed to be long and
@@ -113,10 +165,36 @@
   color: var(--faint);
 }
 
+/*
+ * Remove and Block, demoted.
+ *
+ * They were the loudest thing in every row — two destructive actions,
+ * full-size, on a list whose purpose is the people. They are now quiet until
+ * the row is hovered, which is the correct weight for something rarely wanted
+ * and never wanted by accident.
+ *
+ * Kept visible rather than hidden, at low opacity: a control that appears
+ * from nothing cannot be found by somebody who does not already know it is
+ * there, and on a touch screen there is no hover to reveal it with.
+ */
 .actions {
   display: flex;
   gap: var(--gap-xs);
   margin-left: auto;
+  opacity: 0.45;
+  transition: opacity 140ms ease;
+}
+
+.row:hover .actions,
+.row:focus-within .actions { opacity: 1; }
+
+/* No hover on a touch screen, so nothing may depend on one. */
+@media (hover: none) {
+  .actions { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions { transition: none; }
 }
 
 .empty {

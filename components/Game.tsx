@@ -31,6 +31,7 @@ import Settings from './Settings';
 import SignInLink from './SignInLink';
 import CommunityLink from './CommunityLink';
 import { useAccount } from '@/game/useAccount';
+import { useHeartbeat } from '@/game/presence';
 import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
@@ -229,6 +230,17 @@ export default function Game() {
   const [showSound, setShowSound] = useState(false);
   const account = useAccount();
   const rating = useRating();
+
+  /**
+   * Tell the server this player is here, and whether they can be interrupted.
+   *
+   * Anything that is not the menu counts as busy, lobbies and matchmaking
+   * included. Somebody three seconds from a duel starting is not a person to
+   * drop an invite on, and the alternative reading — busy only once the first
+   * word appears — would make the dot flicker to idle in every gap between
+   * games.
+   */
+  useHeartbeat(account.signedIn, screen !== 'menu');
   const [match, setMatch] = useState<Match | null>(null);
 
   /** Lobby-level messages. The duel subscribes separately for its own. */

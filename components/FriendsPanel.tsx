@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useFriends } from '@/game/friends';
 import { useHandle } from '@/game/serverProfile';
-import type { Friend } from '@/models/friends';
+import { byPresence, type Friend } from '@/models/friends';
 import styles from './FriendsPanel.module.css';
 
 /**
@@ -129,7 +129,7 @@ export default function FriendsPanel() {
                 )}
               </li>
             )}
-            {data.friends.map((person) => (
+            {byPresence(data.friends).map((person) => (
               <Row key={person.handle} person={person}>
                 <button
                   type="button"
@@ -220,15 +220,46 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+/** What a dot means, spelled out for a hover and for a screen reader. */
+const PRESENCE_LABEL: Record<NonNullable<Friend['presence']>, string> = {
+  idle: 'Online',
+  busy: 'In a game',
+  offline: 'Offline',
+};
+
 function Row({ person, children }: { person: Friend; children: React.ReactNode }) {
   return (
-    <li className={styles.row}>
+    <li className={styles.row} data-presence={person.presence}>
       {/* The name is what you read; the handle is what identifies them. Both are
           shown because two friends can share a display name and nothing else
           would tell them apart. */}
       <Link href={`/u/${person.handle}`} className={styles.who}>
-        <span className={styles.name}>{person.displayName}</span>
-        <span className={styles.handle}>@{person.handle}</span>
+        <span className={styles.line}>
+          {/*
+            * The dot leads, because "can I play them" is the question this
+            * list is actually asked, and it is answerable before the name is
+            * read. Absent presence draws nothing at all rather than a grey
+            * dot: asserting somebody is away when we have simply not been
+            * told is worse than saying nothing.
+            */}
+          {person.presence && (
+            <span
+              className={styles.dot}
+              title={PRESENCE_LABEL[person.presence]}
+              aria-label={PRESENCE_LABEL[person.presence]}
+            />
+          )}
+          <span className={styles.name}>{person.displayName}</span>
+        </span>
+        <span className={styles.meta}>
+          <span className={styles.handle}>@{person.handle}</span>
+          {/* Their standing, so a row says who you would be playing rather
+              than only what they are called. Hidden for anyone unrated: a
+              zero would read as terrible rather than as new. */}
+          {Boolean(person.rating) && (
+            <span className={styles.stat}>{person.rating}</span>
+          )}
+        </span>
       </Link>
       <span className={styles.actions}>{children}</span>
     </li>

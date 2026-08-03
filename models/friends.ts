@@ -23,6 +23,50 @@ export interface Friend {
   state: FriendState;
   /** When the relationship last changed. */
   since: number;
+  /**
+   * Whether they are around, and interruptible.
+   *
+   * Absent from a server that predates it, which reads as unknown rather
+   * than as offline — a dot asserting somebody is away when we simply have
+   * not been told is worse than no dot.
+   */
+  presence?: Presence;
+  /** Their standing, so a row says who you would actually be playing. */
+  rating?: number;
+  bestWpm?: number;
+}
+
+/**
+ * Around, mid-game, or gone.
+ *
+ * Three rather than two, because "online" alone cannot answer the question a
+ * friends list is really being asked — not "are they there" but "can I ask
+ * them for a game right now".
+ */
+export type Presence = 'idle' | 'busy' | 'offline';
+
+/**
+ * Whoever can actually play, first.
+ *
+ * A friends list ordered by when a friendship started answers a question
+ * nobody asks. Ordered by presence it answers the real one — who is around
+ * right now — which also means the people worth acting on never sink below a
+ * scroll as somebody's list grows.
+ *
+ * Ties keep their existing order, so a friend cannot jump around the list on
+ * every poll merely because two rows scored the same. `Array.prototype.sort`
+ * has been required to be stable since ES2019, so this is a guarantee and not
+ * a hope about the engine.
+ *
+ * An unknown presence sorts with the offline group. It is the reading that
+ * fails quietly: a row from an older server lands at the bottom instead of
+ * displacing somebody we know is there.
+ */
+const ORDER: Record<Presence, number> = { idle: 0, busy: 1, offline: 2 };
+
+export function byPresence(friends: readonly Friend[]): Friend[] {
+  const rank = (friend: Friend) => ORDER[friend.presence ?? 'offline'] ?? ORDER.offline;
+  return [...friends].sort((a, b) => rank(a) - rank(b));
 }
 
 /** `GET /api/me/friends`. */

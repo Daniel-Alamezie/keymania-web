@@ -11,6 +11,7 @@ import { useAccount } from '@/game/useAccount';
 import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
 import { formatPlayTime } from '@/models/profile';
 import { markCosmeticsSeen, useUnseenCosmetics } from '@/game/seenCosmetics';
+import { useHeartbeat } from '@/game/presence';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import CharacterPicker from './CharacterPicker';
@@ -58,6 +59,15 @@ export default function ProfileDashboard() {
    */
   const earnedIds = profile?.cosmetics?.earned;
   const unseen = useUnseenCosmetics(earnedIds);
+
+  /**
+   * The profile page counts as being around, and reachable.
+   *
+   * Without this, reading your own stats would show your friends an offline
+   * dot — and the friends list lives on this very page, so the one screen
+   * where invites are sent would be the one screen that made you look away.
+   */
+  useHeartbeat(account.signedIn, false);
 
   /**
    * Opening the panel is what counts as looking.
