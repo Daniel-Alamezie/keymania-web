@@ -61,6 +61,8 @@ export function previewMatch({ players, mySlot = 0 }: PreviewOptions): Multiplay
     onWord: () => {},
     onResign: () => {},
     onRematch: () => {},
+    // Nothing to leave and no queue to join: the preview is not a real room.
+    onFindGame: () => {},
     // No socket to beat against. The preview is a still frame of a room.
     onPulse: () => {},
     // The preview shows a plain roster; cosmetics are a signed-in concern.

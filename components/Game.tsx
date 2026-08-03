@@ -227,6 +227,8 @@ export default function Game() {
   );
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
+  /** Filled in below, once `leave` and `findGame` exist. See onFindGame. */
+  const findAnother = useRef<() => void>(() => {});
   const [error, setError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [showSound, setShowSound] = useState(false);
@@ -708,6 +710,19 @@ export default function Game() {
     }
   }, [disconnect]);
 
+  /**
+   * Keep the "find a new game" handler current.
+   *
+   * Assigned here rather than named inside the multiplayer memo, so that memo
+   * keeps a stable identity while this always holds the live `leave` and
+   * `findGame`. `leave` runs first and has to: it tears down the finished room
+   * and clears the match, and without it the search screen would be armed while
+   * the client still believed it was in a duel.
+   */
+  useEffect(() => {
+    findAnother.current = () => { leave(); void findGame(); };
+  }, [leave, findGame]);
+
   // Memoised so the duel does not tear down its subscription on every render.
   const multiplayer: MultiplayerConfig | undefined = useMemo(
     () =>
@@ -733,6 +748,26 @@ export default function Game() {
             // No room code needed: the server knows which room this socket is
             // in, and that room now outlives the match played in it.
             onRematch: () => send({ action: 'rematch' }),
+            /**
+             * Straight from the result screen back into the queue.
+             *
+             * `leave` first, and it has to be: it tears down the finished room
+             * and clears the match, and without it the search screen would be
+             * armed while the client still believed it was in a duel. The
+             * search itself is the same path the menu's Play button takes, so
+             * there is one queue rather than two ways into it.
+             */
+            /**
+             * Through a ref, so this memo keeps its identity.
+             *
+             * `leave` and `findGame` are both callbacks that can be rebuilt,
+             * and naming them here directly would either freeze the first pair
+             * this memo ever saw or force a new config object every time they
+             * changed — and the config's identity is what Duel's effects key
+             * off. The ref is read at click time, so it is always the current
+             * pair without the memo depending on them at all.
+             */
+            onFindGame: () => findAnother.current(),
           }
         : undefined,
     [match, subscribe, send],

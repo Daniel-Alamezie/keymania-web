@@ -103,12 +103,14 @@
  *
  * **The cost is look-ahead, and it is real.** At the old 58px roughly 36
  * characters of the sentence were visible on a 1440x900 window; here it is
- * about 21. Fast typists read ahead, so this is a genuine trade of context for
+ * about 22. Fast typists read ahead, so this is a genuine trade of context for
  * presence rather than a free win — measured, not guessed, and the number to
- * tune if it turns out the wrong way round is right here.
+ * tune if it turns out the wrong way round is right here. It has been tuned
+ * twice already: up to 108px and then back a step, which is what the range
+ * being one expression rather than four scattered values is for.
  */
 .screen[data-layout='plain'] {
-  --stream-size: clamp(30px, min(7vw, 16vh), 108px);
+  --stream-size: clamp(30px, min(6.5vw, 15vh), 98px);
   /*
    * The plates ride the same curve, at roughly a third of the line.
    *
@@ -125,7 +127,7 @@
    * from 1.1x apart to 1.4x, which is the same mismatch this change exists to
    * remove, only pointing the other way.
    */
-  --plate: clamp(84px, min(7.6vw, 13vh), 120px);
+  --plate: clamp(84px, min(7vw, 12vh), 110px);
 }
 
 /*

@@ -71,6 +71,16 @@ export interface MultiplayerConfig {
   /** Ask to play again with the same room. */
   onRematch: () => void;
   /**
+   * Leave this room and go straight back into matchmaking.
+   *
+   * The result screen used to offer "play again" and the menu, so anybody who
+   * wanted a *different* opponent — the common case when the last one has
+   * already left, or was simply not a close match — had to go back to the menu
+   * and press Play again. Two steps to do the thing they were most likely to
+   * want next.
+   */
+  onFindGame: () => void;
+  /**
    * Present only when this config is a duel picked back up mid-swing.
    *
    * The socket died and the seat was reclaimed; this is the board as the server
@@ -1548,6 +1558,21 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
                   }}
                 >
                   {asked ? 'Waiting…' : 'Play again'}
+                </button>
+              )}
+
+              {/*
+                * A different opponent, without a detour through the menu.
+                *
+                * Sits between the rematch and the way out because that is the
+                * order of how likely each is: play these people again, play
+                * somebody else, or stop. It is offered only against people —
+                * from a bot duel it would mean matchmaking, which is a
+                * different mode rather than another go at this one.
+                */}
+              {isMulti && multiplayer && (
+                <button className="btn" onClick={multiplayer.onFindGame}>
+                  Find a new game
                 </button>
               )}
 
