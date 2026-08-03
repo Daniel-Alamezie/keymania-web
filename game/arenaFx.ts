@@ -144,8 +144,8 @@ export interface ArenaFx {
 /** Today's arena, unchanged, as the thing to beat. */
 const CURRENT: ArenaFx = {
   id: 'current',
-  label: 'As it is now',
-  blurb: 'The control. Nothing changed.',
+  label: 'Classic',
+  blurb: 'The original arena: two fighters, a room, blades in flight.',
   layout: 'arena',
   blade: 'canvas',
   shake: 'screen',
@@ -274,6 +274,19 @@ const PLAIN: ArenaFx = {
    */
   wpmEveryMs: null,
 };
+
+/**
+ * The layouts offered in Settings, as opposed to the ones that exist.
+ *
+ * Three, not five. `trim` and `stage` were rungs on the way to `plain` — they
+ * differ from it by degrees that mattered while choosing and mean nothing to
+ * a player, and every supported layout is a shape every future duel feature
+ * has to not break. `?fx=` still reaches all five for comparison; this is the
+ * list a person is asked to choose from.
+ *
+ * Order is the recommendation: the default first, the nostalgic one second.
+ */
+export const SETTINGS_FX = ['plain', 'current', 'focus'] as const satisfies readonly FxId[];
 
 export const ARENA_FX: Record<FxId, ArenaFx> = {
   current: CURRENT,

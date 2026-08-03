@@ -124,7 +124,7 @@ export function useUiSounds() {
 export default function SoundToggle({ className, onSettings }: {
   className?: string;
   /**
-   * Opens the keyboard picker. Omitted where there is nowhere to put a dialog —
+   * Opens the settings sheet. Omitted where there is nowhere to put a dialog —
    * mid-duel, the last thing anybody needs is a modal over the arena.
    */
   onSettings?: () => void;
@@ -149,7 +149,7 @@ export default function SoundToggle({ className, onSettings }: {
           type="button"
           className={styles.toggle}
           onClick={onSettings}
-          aria-label="Sound settings"
+          aria-label="Settings"
           title="Choose a keyboard sound"
         >
           <PixelSprite name="settings" height={16} />

@@ -69,6 +69,17 @@ const MUTE_KEY = 'keymania.muted';
 /** Which keyboard the player types on. Their choice, remembered. */
 const SOUND_KEY = 'keymania.keysound';
 const MASTER_GAIN = 0.32;
+const VOLUME_KEY = 'keymania.volume';
+
+/**
+ * How loud, as a fraction of the master gain.
+ *
+ * A separate control from the mute, because they answer different questions:
+ * mute is "not now", volume is "this is my level". Folding them into one
+ * slider that reaches zero would lose the distinction — somebody who slides
+ * to silence and back expects their level returned, not remembered as muted.
+ */
+const DEFAULT_VOLUME = 1;
 /** Shortest gap between two hover blips, in seconds. */
 const HOVER_GAP = 0.07;
 
@@ -80,6 +91,7 @@ class GameAudio {
   private lastHoverAt = -1;
   private keySound: KeySoundId = DEFAULT_KEY_SOUND;
   private enabled = true;
+  private volume = DEFAULT_VOLUME;
 
   private ensure(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -88,7 +100,7 @@ class GameAudio {
       if (!Ctor) return null;
       this.ctx = new Ctor();
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.isEnabled() ? MASTER_GAIN : 0;
+      this.master.gain.value = this.level();
       this.master.connect(this.ctx.destination);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
@@ -116,16 +128,43 @@ class GameAudio {
       // Validated rather than trusted: a profile removed in a later release
       // would otherwise leave somebody with a keyboard that makes no sound.
       if (saved) this.keySound = keySoundById(saved).id;
+      /**
+       * Absent is not zero, and this is the whole reason the raw string is
+       * read first. `Number(null)` is 0, which passes every range check a
+       * volume needs — so the obvious spelling silently set every first-time
+       * player's volume to nothing, and the slider opened at 0 with no
+       * explanation. Same shape as the mistake `typeof x === 'number'` exists
+       * to prevent elsewhere in this codebase: zero is a real level somebody
+       * may have chosen, so it can never double as "unset".
+       */
+      const stored = localStorage.getItem(VOLUME_KEY);
+      if (stored !== null) {
+        const level = Number(stored);
+        // Validated rather than trusted: a hand-edited or corrupted value must
+        // not be able to make the game silent with no visible cause.
+        if (Number.isFinite(level) && level >= 0 && level <= 1) this.volume = level;
+      }
     } catch {
       /* private mode — the preference simply will not survive the visit */
     }
-    if (this.master) this.master.gain.value = this.enabled ? MASTER_GAIN : 0;
+    if (this.master) this.master.gain.value = this.level();
+  }
+
+  /**
+   * The gain actually applied: mute wins, then volume scales.
+   *
+   * One function rather than the same ternary at four call sites, which is
+   * how the mute and the volume would eventually disagree about who is in
+   * charge of silence.
+   */
+  private level() {
+    return this.isEnabled() ? MASTER_GAIN * this.volume : 0;
   }
 
   setEnabled(on: boolean) {
     this.hydrated = true;
     this.enabled = on;
-    if (this.master) this.master.gain.value = on ? MASTER_GAIN : 0;
+    if (this.master) this.master.gain.value = this.level();
     try {
       localStorage.setItem(MUTE_KEY, on ? 'on' : 'muted');
     } catch {
@@ -136,6 +175,31 @@ class GameAudio {
 
   toggle() {
     this.setEnabled(!this.isEnabled());
+  }
+
+  /**
+   * Set the level, 0 to 1, and remember it.
+   *
+   * Clamped rather than trusted, and deliberately does NOT unmute: a player
+   * dragging the slider while muted is setting the level they want to hear
+   * when they come back, and silently unmuting would be the game overruling a
+   * choice they made on purpose. The settings sheet says so beside the slider.
+   */
+  setVolume(next: number) {
+    this.hydrate();
+    this.volume = Math.min(1, Math.max(0, Number.isFinite(next) ? next : DEFAULT_VOLUME));
+    if (this.master) this.master.gain.value = this.level();
+    try {
+      localStorage.setItem(VOLUME_KEY, String(this.volume));
+    } catch {
+      /* nothing to persist to */
+    }
+    this.listeners.forEach((notify) => notify());
+  }
+
+  getVolume() {
+    this.hydrate();
+    return this.volume;
   }
 
   isEnabled() {
@@ -798,6 +862,18 @@ export function useSoundEnabled(): boolean {
  * snapshot is the default and a player who picked something else sees it
  * correct itself on the first client render rather than failing to hydrate.
  */
+/**
+ * The chosen level, for React. Same store as the mute and the keyboard, so a
+ * slider dragged in the settings sheet moves every other reader with it.
+ */
+export function useVolume(): number {
+  return useSyncExternalStore(
+    audio.subscribe,
+    () => audio.getVolume(),
+    () => DEFAULT_VOLUME,
+  );
+}
+
 export function useKeySound(): KeySoundId {
   return useSyncExternalStore(
     audio.subscribe,

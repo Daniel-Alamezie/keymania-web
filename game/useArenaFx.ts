@@ -68,14 +68,50 @@ const readFlash = (): FlashMode | null => {
   return FLASHES.includes(asked as FlashMode) ? (asked as FlashMode) : null;
 };
 
-const readId = (): FxId => asFx(param());
+/**
+ * The saved preference, for players who chose a layout in Settings.
+ *
+ * The URL still wins where it is present, and that ordering is the point: the
+ * query string is a tester's override and has to beat a stored preference, or
+ * `?fx=stage` would silently show somebody their own saved choice instead.
+ * Absent from both, the default stands — which is what a new player gets, and
+ * why the default must never be changed by this file.
+ */
+const PREF_KEY = 'keymania.arena';
+
+const readSaved = (): FxId | null => {
+  try {
+    const saved = localStorage.getItem(PREF_KEY);
+    // Validated, not trusted: a preset retired in a later release must leave
+    // the player on the default rather than on a layout that no longer exists.
+    return saved && saved === asFx(saved) ? asFx(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
+const readId = (): FxId => (param() !== null ? asFx(param()) : readSaved() ?? DEFAULT_FX);
 const readTesting = () => param() !== null;
 
-/** Rewrites the query string in place, then tells every reader to look again. */
+/**
+ * Remember a chosen layout, and keep the URL honest while testing.
+ *
+ * Writes the preference always and the query string only when one is already
+ * there — so a tester's address bar keeps matching what they see and stays
+ * pasteable, while an ordinary player's URL is never decorated by opening
+ * Settings.
+ */
 function write(id: FxId) {
-  const url = new URL(window.location.href);
-  url.searchParams.set('fx', id);
-  window.history.replaceState(null, '', url);
+  try {
+    localStorage.setItem(PREF_KEY, id);
+  } catch {
+    /* private mode — the choice lasts the visit */
+  }
+  if (param() !== null) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('fx', id);
+    window.history.replaceState(null, '', url);
+  }
   announce();
 }
 

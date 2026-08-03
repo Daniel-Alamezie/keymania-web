@@ -27,7 +27,7 @@ import Survival from './Survival';
 import Weekly from './Weekly';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
-import SoundSettings from './SoundSettings';
+import Settings from './Settings';
 import SignInLink from './SignInLink';
 import { useAccount } from '@/game/useAccount';
 import { useRating } from '@/game/serverProfile';
@@ -734,7 +734,7 @@ export default function Game() {
       <main className={styles.screen}>
         <Backdrop />
         <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
-        {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
+        {showSound && <Settings onClose={() => setShowSound(false)} />}
         <AccountBar />
         <Searching
           rating={queuedAt}
@@ -757,7 +757,7 @@ export default function Game() {
       <main className={styles.screen}>
         <Backdrop />
         <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
-        {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
+        {showSound && <Settings onClose={() => setShowSound(false)} />}
         <AccountBar />
         <Lobby
           status={status}
@@ -1052,7 +1052,7 @@ export default function Game() {
 
       {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
       {showFeedback && <FeedbackBox onClose={() => setShowFeedback(false)} />}
-      {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
+      {showSound && <Settings onClose={() => setShowSound(false)} />}
     </main>
   );
 }

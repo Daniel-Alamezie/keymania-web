@@ -12,11 +12,20 @@ import {
  * better or worse than a thing nobody is actually running.
  */
 describe('the control preset', () => {
+  /**
+   * Its copy is now product copy, not experiment copy.
+   *
+   * The preset was renamed to Classic when it stopped being a hidden control
+   * and became a layout players choose in Settings — "As it is now" describes
+   * a comparison nobody outside this repo was ever party to. Every *behaviour*
+   * below is still pinned exactly as it was: what this preset draws is the
+   * thing being preserved, and the label is the part that was always free.
+   */
   it('is the arena as it shipped, so the comparison means something', () => {
     expect(ARENA_FX.current).toEqual({
       id: 'current',
-      label: 'As it is now',
-      blurb: 'The control. Nothing changed.',
+      label: 'Classic',
+      blurb: 'The original arena: two fighters, a room, blades in flight.',
       // The arena with fighters in it, and a pixel blade on the canvas. Pinned
       // because a layout knob that drifted here would silently redesign the
       // baseline every treatment is judged against.
