@@ -65,18 +65,50 @@ const WordFlight = forwardRef<WordFlightHandle, { className?: string }>(
         const dx = to.left + to.width / 2 - (start.left + start.width / 2);
         const dy = to.top + to.height / 2 - (start.top + start.height / 2);
 
+        /**
+         * How high the arc lifts, as a share of the word's own height.
+         *
+         * It was a flat 42px, which was right while the sentence was a fixed
+         * size. The line scales with the window now and has grown by half
+         * again, so a fixed rise had quietly become a nudge — on a large
+         * screen the word barely cleared its own baseline before setting off,
+         * which is the difference between a throw and a slide.
+         */
+        const rise = start.height * 0.62;
+
         const animation = clone.animate(
           [
+            /**
+             * Starts at exactly the size of the word it replaces.
+             *
+             * The clone sits directly over the real token, so anything other
+             * than 1 here is a visible jump at the instant of launch — the one
+             * frame where the swap must not be noticeable.
+             */
             { transform: 'translate(0, 0) scale(1)', opacity: 1 },
             {
               // Rises before it crosses, so the path bends away from the line of
               // text rather than sliding along it.
-              transform: `translate(${dx * 0.55}px, ${dy * 0.4 - 42}px) scale(${heavy ? 1.16 : 1.04})`,
+              //
+              // Grows on the way up. The peak is where the throw is legible,
+              // and a heavier blade earns more of it -- that difference is the
+              // only thing separating a big hit from an ordinary one at a
+              // glance, since both take the same path in the same time.
+              transform: `translate(${dx * 0.55}px, ${dy * 0.4 - rise}px) scale(${heavy ? 1.42 : 1.24})`,
               opacity: 1,
               offset: 0.55,
             },
             {
-              transform: `translate(${dx}px, ${dy}px) scale(${heavy ? 0.5 : 0.62})`,
+              /**
+               * And shrinks into the plate it lands on.
+               *
+               * The shrink is perspective rather than decoration: the word is
+               * travelling away from the reader toward the far corner, and
+               * arriving at full size would read as it being pasted onto the
+               * plate rather than thrown at it. Eased up alongside the peak so
+               * the whole arc grew rather than only its middle.
+               */
+              transform: `translate(${dx}px, ${dy}px) scale(${heavy ? 0.58 : 0.7})`,
               opacity: 0,
             },
           ],

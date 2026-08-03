@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { audio } from '@/game/audio';
 import { burst } from '@/game/burst';
-import { step } from '@/game/glide';
+import { atRest, step, type Glide } from '@/game/glide';
 import { POWER_META } from '@/game/powers';
 import type { PowerKind } from '@/models/powers';
 import styles from './SentenceView.module.css';
@@ -114,7 +114,7 @@ export default function SentenceView({
   /** Flat index of the last word finished, so its flare can be aimed at it. */
   const lastWord = useRef<number | null>(null);
   /** Where the strip is now, and where it is heading. */
-  const position = useRef(0);
+  const glide = useRef<Glide>(atRest(0));
   const target = useRef(0);
   // null rather than the first sentence, so the very first measurement counts as
   // a roll and the strip starts already in place instead of sliding in from the
@@ -172,7 +172,15 @@ export default function SentenceView({
      */
     if (sentence !== lastSentence.current) {
       lastSentence.current = sentence;
-      position.current = target.current;
+      /**
+       * Velocity is dropped along with the position, not carried.
+       *
+       * Everything shifts by one sentence width in a single frame, so any
+       * speed the spring had was aimed at a target that no longer exists.
+       * Keeping it would fling the new sentence sideways at the exact moment
+       * the player starts reading it.
+       */
+      glide.current = atRest(target.current);
       strip.style.transform = `translate3d(${Math.round(target.current)}px, 0, 0)`;
     }
   }, [cursor, sentence, previous, upcoming]);
@@ -186,6 +194,10 @@ export default function SentenceView({
    * any other. Easing toward a target every frame decouples the two: the text
    * drifts at its own rate however erratically you type, which gives the screen
    * one calm thing to look at while everything else shakes.
+   *
+   * The easing itself is a critically damped spring, which carries velocity
+   * between frames *and* across retargets — see game/glide.ts for why that is
+   * what separates continuous drift from a run of small pops.
    */
   useEffect(() => {
     let frame = 0;
@@ -193,9 +205,11 @@ export default function SentenceView({
 
     const tick = (now: number) => {
       const strip = stripRef.current;
-      if (strip && position.current !== target.current) {
-        position.current = step(position.current, target.current, now - last);
-        strip.style.transform = `translate3d(${position.current.toFixed(2)}px, 0, 0)`;
+      // Velocity as well as distance: a spring that has arrived may still be
+      // moving, and stopping the loop on position alone would freeze it there.
+      if (strip && (glide.current.position !== target.current || glide.current.velocity !== 0)) {
+        glide.current = step(glide.current, target.current, now - last);
+        strip.style.transform = `translate3d(${glide.current.position.toFixed(2)}px, 0, 0)`;
       }
       last = now;
       frame = requestAnimationFrame(tick);
