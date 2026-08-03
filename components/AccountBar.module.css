@@ -77,3 +77,13 @@
   text-underline-offset: 3px;
 }
 .signOut:hover { color: var(--bad); }
+
+/*
+ * Folded into the menu key on a phone.
+ *
+ * The name, the avatar and Sign out are all still reachable -- they moved
+ * behind one tap rather than being taken away. See MenuKey.
+ */
+@media (max-width: 560px) {
+  .bar { display: none; }
+}

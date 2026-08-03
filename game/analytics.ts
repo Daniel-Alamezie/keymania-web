@@ -116,6 +116,16 @@ export type SignInSource =
   /** The small link in the corner, pressed by somebody who went looking. */
   | 'account_bar'
   /**
+   * The same corner on a phone, where the bar folds into one key.
+   *
+   * Its own value rather than sharing `account_bar`, because the two are
+   * different offers: the desktop bar shows Sign in beside a full row of
+   * controls, and this one is the only thing in the corner at all. If the
+   * phone layout converts worse, that is worth being able to see rather than
+   * having it averaged into the desktop figure.
+   */
+  | 'menu_key'
+  /**
    * The feedback box, opened by somebody signed out.
    *
    * Worth its own value rather than folding into the others: this is a player

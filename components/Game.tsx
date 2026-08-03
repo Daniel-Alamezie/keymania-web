@@ -30,6 +30,7 @@ import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
 import SignInLink from './SignInLink';
 import CommunityLink from './CommunityLink';
+import MenuKey from './MenuKey';
 import { useAccount } from '@/game/useAccount';
 import { setBusy } from '@/game/busy';
 import { takeRoom, useRoomOffers } from '@/game/joinIntent';
@@ -820,6 +821,7 @@ export default function Game() {
         <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
         {showSound && <Settings onClose={() => setShowSound(false)} />}
         <AccountBar />
+        <MenuKey onSettings={() => setShowSound(true)} />
         <Searching
           rating={queuedAt}
           onCancel={stopSearching}
@@ -843,6 +845,7 @@ export default function Game() {
         <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
         {showSound && <Settings onClose={() => setShowSound(false)} />}
         <AccountBar />
+        <MenuKey onSettings={() => setShowSound(true)} />
         <Lobby
           status={status}
           configured={configured}
@@ -864,6 +867,7 @@ export default function Game() {
       <Backdrop />
       <SoundToggle className={styles.sound} onSettings={() => setShowSound(true)} />
       <AccountBar />
+      <MenuKey onSettings={() => setShowSound(true)} />
       {/* Three columns on a wide screen, stacking down to one on narrow. The
           arena is a big room; leaving the menu alone in the middle of it wasted
           the space and made the game feel emptier than it is. */}

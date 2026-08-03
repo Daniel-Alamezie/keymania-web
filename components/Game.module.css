@@ -2,7 +2,21 @@
   position: relative;
   display: grid;
   place-items: center;
-  height: 100vh;
+  /*
+   * `min-height`, never `height`.
+   *
+   * As a fixed `height: 100vh` with centred content, anything taller than the
+   * viewport overflowed equally in both directions and was simply lost — the
+   * top scrolled out of reach and the bottom was cut off. On a phone that is
+   * not a rare case: signing in adds the rating chip, which was enough to push
+   * the subreddit card off the end of the menu. Players reported it as "the
+   * reddit link does not show when logged in", and they were describing this.
+   *
+   * Only the menu, lobby and searching screens use this class. Nothing here
+   * is ever on screen mid-duel, so allowing the page to grow past the fold
+   * cannot introduce a scrollbar into a game that needs a fixed viewport.
+   */
+  min-height: 100vh;
   padding: 20px;
 }
 
@@ -376,4 +390,16 @@
   line-height: 1;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The top-corner controls belong to the desktop layout.
+ *
+ * On a phone they were four separate things across the top of a 375px screen
+ * -- mute, settings, the identity chip and Sign out -- and the last of them ran
+ * off the edge entirely. They are replaced below this width by a single key,
+ * which is the game's own shape and holds all four without crowding the title.
+ */
+@media (max-width: 560px) {
+  .sound { display: none; }
 }
