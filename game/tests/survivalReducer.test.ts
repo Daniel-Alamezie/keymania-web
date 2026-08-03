@@ -336,3 +336,66 @@ describe('running off the end of the script', () => {
     expect(after.scriptIndex).toBe(stranded.scriptIndex);
   });
 });
+
+/**
+ * Healing a desynced run.
+ *
+ * Reported twice by the same player, at 68 and then 69 words: "no more words
+ * left to type and I couldn't complete the run". The logs showed the truth —
+ * not an empty script but a wall of refusals, because a survival mismatch
+ * changes no state and ends nothing, so a run that fell out of step could
+ * neither continue nor finish.
+ *
+ * The rule these pin: the referee's script AND position are both adopted.
+ * Taking the index alone would leave a client that missed an appended
+ * sentence reading different words at the same number — still refused, still
+ * stuck, and now with a fix that looks like it should have worked.
+ */
+describe('resyncing a survival run', () => {
+  const running = () => {
+    let s = survivalReducer(initialSurvival(), {
+      type: 'begin',
+      script: ['alpha beta gamma', 'delta epsilon'],
+    });
+    while (s.phase === 'countdown') s = survivalReducer(s, { type: 'countdown' });
+    return s;
+  };
+
+  const served = ['one two three', 'four five six', 'seven eight'];
+
+  it('adopts the script the referee is actually holding', () => {
+    const healed = survivalReducer(running(), { type: 'resync', script: served, wordIndex: 3 });
+    expect(healed.script).toEqual(served);
+    // Word 3 is 'four': the second sentence, at its start.
+    expect(healed.sentence).toBe('four five six ');
+    expect(healed.cursor).toBe(0);
+  });
+
+  it('takes the referee\'s count, since the local one is now known wrong', () => {
+    const healed = survivalReducer(running(), { type: 'resync', script: served, wordIndex: 5 });
+    expect(healed.words).toBe(5);
+  });
+
+  it('recomputes the word offset for the sentence it lands on', () => {
+    const healed = survivalReducer(running(), { type: 'resync', script: served, wordIndex: 7 });
+    // 'seven' is word 6; two sentences of three came before it.
+    expect(healed.wordOffset).toBe(6);
+  });
+
+  /** A heal is a cursor correction. It must never read as damage. */
+  it('leaves the forge exactly as it was', () => {
+    const before = { ...running(), heat: 4210, cooling: 2 };
+    const healed = survivalReducer(before, { type: 'resync', script: served, wordIndex: 2 });
+    expect(healed.heat).toBe(4210);
+    expect(healed.cooling).toBe(2);
+    expect(healed.phase).toBe('running');
+  });
+
+  /** A message arriving after the run died must not raise it. */
+  it('does nothing to a run that has already ended', () => {
+    const dead = survivalReducer(running(), { type: 'end', reason: 'typo', now: 1_000 });
+    const healed = survivalReducer(dead, { type: 'resync', script: served, wordIndex: 4 });
+    expect(healed.phase).toBe('over');
+    expect(healed.words).toBe(dead.words);
+  });
+});

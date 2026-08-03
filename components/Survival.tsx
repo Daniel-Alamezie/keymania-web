@@ -291,6 +291,18 @@ export default function Survival({
 
   /** The referee's word on every word, and on when the run ended. */
   useEffect(() => subscribe((message) => {
+    /**
+     * The referee saying we are out of step: take its script and its place.
+     *
+     * Before this, a mismatch was a bare refusal that changed nothing — so a
+     * desynced run could neither continue nor end, and the player was left
+     * typing words that would not work. Reported twice, at 68 and 69 words.
+     */
+    if (message.type === 'survivalSync') {
+      dispatch({ type: 'resync', script: message.script, wordIndex: message.wordIndex });
+      return;
+    }
+
     if (message.type !== 'survivalWord') return;
 
     dispatch({

@@ -1,4 +1,5 @@
 import { CAPACITY_MS } from './heat';
+import { seekTo } from './resync';
 import { OPENING_SENTENCE } from './sentences';
 
 /**
@@ -69,7 +70,9 @@ export type SurvivalAction =
   | { type: 'typed'; char: string; now: number }
   /** The server's word on the last word, including where the forge stands. */
   | { type: 'confirm'; heat: number; cooling: number; words: number; appended?: string }
-  | { type: 'end'; reason: SurvivalEnd; now: number };
+  | { type: 'end'; reason: SurvivalEnd; now: number }
+  /** The referee's own script and position, after a desync. */
+  | { type: 'resync'; script: string[]; wordIndex: number };
 
 export function initialSurvival(): SurvivalState {
   return {
@@ -271,6 +274,40 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
         upcoming: state.upcoming.trim() === ''
           ? withSpace(grown[state.scriptIndex + 1] ?? '')
           : state.upcoming,
+      };
+    }
+
+    case 'resync': {
+      /**
+       * Take the referee's script and stand where it says.
+       *
+       * Both halves matter. The index alone would leave a client that had
+       * missed an appended sentence reading different words from the server
+       * at the same position — still refused, still stuck. Replacing the
+       * script makes the two identical before the seek decides where in it
+       * to stand.
+       *
+       * The count is adopted too, because it is the number the record and the
+       * board will use; the local one was optimistic and is now known wrong.
+       * Nothing else about the run is touched: the forge keeps its heat, and a
+       * cursor correction must never read as damage.
+       */
+      if (state.phase === 'over') return state;
+      const seek = seekTo(action.script, action.wordIndex);
+      return {
+        ...state,
+        script: action.script,
+        scriptIndex: seek.scriptIndex,
+        sentence: seek.sentence,
+        upcoming: seek.upcoming,
+        cursor: seek.cursor,
+        words: action.wordIndex,
+        // Words before the sentence now on screen, recomputed rather than
+        // carried: it is what SentenceView measures its highlighting from,
+        // and a stale one after a seek points at the wrong words.
+        wordOffset: action.script
+          .slice(0, seek.scriptIndex)
+          .reduce((sum, sentence) => sum + sentence.split(' ').length, 0),
       };
     }
 

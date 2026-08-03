@@ -110,6 +110,20 @@ export type ServerMessage =
   }
   /** A room filling up, before it is full enough to start. */
   | {
+    /**
+     * The survival referee's position and script, sent when a word is refused
+     * as a mismatch.
+     *
+     * Carries the script as well as the index, unlike the duel's wordSync: a
+     * survival script grows as a run goes on, so the two sides can diverge on
+     * the words themselves and seeking to word 69 of the wrong script would
+     * heal nothing.
+     */
+    type: 'survivalSync';
+    wordIndex: number;
+    script: string[];
+  }
+  | {
     /** One word of a weekly sprint, acknowledged. */
     type: 'weeklyWord';
     ended: boolean;
