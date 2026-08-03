@@ -87,7 +87,27 @@
  * scoped per file and this stylesheet cannot see `.viewport` inside
  * SentenceView.module.css. Custom properties cross that boundary by inheriting.
  */
-.screen[data-layout='plain'] { --stream-size: clamp(28px, 4.6vw, 58px); }
+/*
+ * Sized to the room it is standing in.
+ *
+ * The old ceiling was 58px, which every desktop window hit and then stopped at
+ * — so a 1300px laptop and a 2500px monitor drew the same line in the middle of
+ * wildly different amounts of empty space. A player put it plainly: the layout
+ * was barely using the screen.
+ *
+ * `min(vw, vh)` rather than `vw` alone is the part that matters. Width was the
+ * only input before, so a short wide window grew the text until it crowded the
+ * plates and the forge, and a tall window gained nothing at all. Taking
+ * whichever axis is tighter means the line fills a large screen and still fits a
+ * laptop with a browser bar and a dock eating the height.
+ *
+ * **The cost is look-ahead, and it is real.** At 58px roughly 35 characters of
+ * the sentence were visible; at this size it is about 18. Fast typists read
+ * ahead, so this is a genuine trade of context for presence rather than a free
+ * win — measured, not guessed, and the number to tune if it turns out the wrong
+ * way round is right here.
+ */
+.screen[data-layout='plain'] { --stream-size: clamp(30px, min(6.2vw, 14vh), 92px); }
 
 /*
  * The frame stops pretending to be a room.
