@@ -25,34 +25,84 @@
 }
 
 /*
- * A slow breath, not a spinner.
+ * The waiting indicator: a keycap being struck.
  *
- * A spinner promises completion; this is waiting on a person who may never
- * answer, and the honest signal is a heartbeat rather than progress. The same
- * green the friends list uses for somebody who is around, because that is what
- * is being waited on.
+ * Built from the game's own keycap language rather than invented — the same
+ * construction as the SPACE key on the menu, where a thicker bottom border is
+ * the cap's skirt and is what makes a small rectangle read as something with
+ * height. Shrinking that border while dropping the cap by the same amount is a
+ * real key travelling, not a rectangle being squashed.
+ *
+ * A tap and then a rest, rather than a continuous cycle. Most of the loop is
+ * spent at rest, so it reads as somebody idly at their keyboard rather than as
+ * a machine working through something. That is the honest signal: this is
+ * waiting on a person, and a person may never answer.
  */
-.dot {
+.key {
   flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--good);
-  animation: breathe 1900ms ease-in-out infinite;
+  width: 11px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 2px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel-2);
+  /*
+   * The skirt is a shadow, not a border, and that is what makes this press
+   * rather than slide.
+   *
+   * As a thick bottom border it belonged to the same box as the cap, so moving
+   * the cap moved the whole key downward -- measured, and it read as the key
+   * sliding down the pill. Cast below instead, the cap can travel 2px while
+   * the skirt loses 2px, which leaves the bottom of the key exactly where it
+   * was. The base stays put and the cap comes down onto it, which is what a
+   * key actually does.
+   */
+  box-shadow: 0 3px 0 var(--edge);
+  /* Nudged up by the skirt's height so the key still sits optically centred
+     against the two lines of text beside it. */
+  margin-bottom: 3px;
+  animation: tap 1600ms steps(1, end) infinite;
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(94, 224, 138, 0.35); }
-  50% { opacity: 0.45; box-shadow: 0 0 0 5px rgba(94, 224, 138, 0); }
+@keyframes tap {
+  /*
+   * Stepped rather than eased, because the rest of this game is pixel art and
+   * a smoothly interpolated key would be the one soft thing on screen. A real
+   * keystroke is not eased either.
+   */
+  0%, 6% {
+    transform: translateY(0);
+    box-shadow: 0 3px 0 var(--edge);
+    background: var(--panel-2);
+  }
+  /* Struck: the cap drops onto its skirt and lights up. */
+  7%, 16% {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--edge);
+    background: var(--player);
+  }
+  /* Released, and then still for the rest of the loop. */
+  17%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 3px 0 var(--edge);
+    background: var(--panel-2);
+  }
 }
 
 /*
- * With motion suppressed the dot holds steady rather than freezing mid-pulse
- * at whatever opacity it happened to reach.
+ * With motion suppressed the key sits struck rather than at rest.
+ *
+ * A resting cap is indistinguishable from a decorative square; a pressed one
+ * still carries the meaning -- something is happening -- without moving.
  */
 @media (prefers-reduced-motion: reduce) {
   .pill { animation: none; }
-  .dot { animation: none; opacity: 1; }
+  .key {
+    animation: none;
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--edge);
+    background: var(--player);
+  }
 }
 
 .text {

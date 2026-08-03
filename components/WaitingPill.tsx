@@ -44,13 +44,21 @@ export default function WaitingPill({ waiting, onCancel }: {
   return (
     <aside className={styles.pill}>
       {/*
-        * A slow pulse rather than a spinner. A spinner says "working" and
-        * implies something will finish on its own; this is waiting on another
-        * person, who may simply not answer. The dot is the same green the
-        * friends list uses for somebody who is around, which is exactly what
-        * is being waited on.
+        * A keycap, tapping.
+        *
+        * The first cut was a pulsing dot, which is the indicator every product
+        * on earth reaches for and says nothing about this one. A key being
+        * struck is the whole subject of KeyMania, and it is already the game's
+        * own vocabulary: this is built from the same shape as the SPACE key on
+        * the menu — a cap with a thick bottom edge for its skirt, which is
+        * what makes a rectangle read as something physical.
+        *
+        * It taps rather than spins, and that distinction is the point. A
+        * spinner promises completion; this is waiting on a person who may
+        * simply never answer. A key at rest between taps says somebody is
+        * there without promising anything.
         */}
-      <span className={styles.dot} aria-hidden="true" />
+      <span className={styles.key} aria-hidden="true" />
 
       <span className={styles.text}>
         <span className={styles.line}>Waiting for {waiting.name}</span>
