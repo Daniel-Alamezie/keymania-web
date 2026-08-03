@@ -1,0 +1,129 @@
+/*
+ * Invites, docked at the top right of whatever the player is doing.
+ *
+ * Fixed rather than in the page flow, because it now floats above every route
+ * and nothing on those pages should shift to make room for it. Top right by
+ * convention: it is the corner people already scan for notifications, and it
+ * is the one that collides with nothing this game puts on screen.
+ */
+.dock {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  /* The dock spans nothing it does not need to. Without this it would be an
+     invisible full-width strip swallowing clicks along the top of the page. */
+  pointer-events: none;
+  max-width: min(340px, calc(100vw - 28px));
+}
+
+.toast {
+  position: relative;
+  pointer-events: auto;
+  padding: 12px 34px 12px 14px;
+  background: var(--panel);
+  border: 2px solid var(--gold-deep);
+  /* Enough lift to read as floating above the page rather than pasted onto
+     it, which matters when it lands over the arena's own panels. */
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  animation: slide-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * In from the right, once.
+ *
+ * One pass and then still. A notification that keeps moving while somebody
+ * reads it is nagging rather than announcing, and this one already has a
+ * countdown doing the job of conveying urgency.
+ */
+@keyframes slide-in {
+  from { transform: translateX(calc(100% + 20px)); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* The slide is decoration; the toast is legible and complete without it. */
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+.close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: none;
+  border: 0;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  /* A generous hit area around a small glyph: this is the control most likely
+     to be reached for in a hurry, including on a phone. */
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.close:hover { color: var(--ink); }
+
+.who {
+  margin: 0;
+  font-size: 13px;
+}
+
+.name {
+  color: var(--gold);
+  font-weight: inherit;
+}
+
+.sub {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 3px 0 0;
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.stat {
+  color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabular figures, or the seconds jitter the line as the digits change. */
+.clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.failed {
+  margin: 7px 0 0;
+  font-size: 10px;
+  color: var(--bad);
+}
+
+.actions {
+  display: flex;
+  gap: var(--gap-xs);
+  margin-top: 10px;
+}
+
+/*
+ * On a phone it spans the width rather than hugging a corner.
+ *
+ * A 340px card pinned to the right of a 375px screen is a card with a 35px
+ * margin on one side and none on the other, which reads as broken rather than
+ * as docked.
+ */
+@media (max-width: 480px) {
+  .dock {
+    left: 10px;
+    right: 10px;
+    top: 10px;
+    max-width: none;
+  }
+
+  .actions button { flex: 1; }
+}

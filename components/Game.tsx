@@ -31,10 +31,10 @@ import Settings from './Settings';
 import SignInLink from './SignInLink';
 import CommunityLink from './CommunityLink';
 import { useAccount } from '@/game/useAccount';
-import { useHeartbeat } from '@/game/presence';
 import { takeInvite } from '@/game/inviteIntent';
-import InviteCards from './InviteCards';
-import type { InviteError, PendingInvite } from '@/models/invites';
+import { setBusy } from '@/game/busy';
+import { takeRoom, useRoomOffers } from '@/game/joinIntent';
+import type { InviteError } from '@/models/invites';
 import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
@@ -243,7 +243,27 @@ export default function Game() {
    * word appears — would make the dot flicker to idle in every gap between
    * games.
    */
-  const { invites, dismiss } = useHeartbeat(account.signedIn, screen !== 'menu');
+  /**
+   * Tell the rest of the app whether this player can be interrupted.
+   *
+   * The heartbeat itself now lives in the layout, so an invite reaches
+   * somebody reading the leaderboard and a player browsing the boards still
+   * looks online to their friends. What it cannot know from up there is
+   * whether a duel is in progress, because `/` is the menu as often as it is a
+   * match. This is the arena reporting the one fact only it has.
+   *
+   * Anything that is not the menu counts, lobbies and matchmaking included:
+   * somebody three seconds from a duel starting is not a person to drop an
+   * invite on, and the narrower reading would flicker them free in every gap
+   * between games.
+   */
+  useEffect(() => {
+    setBusy(screen !== 'menu');
+    // Leaving the arena entirely -- a navigation to the profile, a closed tab
+    // -- is not being in a game, and failing to say so would leave the player
+    // permanently uninvitable.
+    return () => setBusy(false);
+  }, [screen]);
 
   /**
    * A friend this player has asked for a game, from the moment the room is
@@ -688,30 +708,7 @@ export default function Game() {
     });
   }, [connect, send, account.displayName]);
 
-  /**
-   * The intent left behind by the friends list on the profile page.
-   *
-   * Read once and cleared as it is read, so a refresh of the arena does not
-   * open a second room for somebody who was invited a minute ago. Waits for
-   * the account, because the room needs a token and a display name and
-   * neither exists until Kinde has answered.
-   */
-  useEffect(() => {
-    if (account.loading || !account.signedIn) return;
-    const handle = takeInvite();
-    if (!handle) return;
 
-    /**
-     * Deferred by a tick rather than run in the effect body.
-     *
-     * Opening a room changes state, and doing that synchronously during an
-     * effect cascades a render before the arena has painted once. A player
-     * arriving from the friends list should see the arena and then see it
-     * become a waiting room, not wait on a blank screen while a socket opens.
-     */
-    const id = setTimeout(() => { void inviteFriend(handle); }, 0);
-    return () => clearTimeout(id);
-  }, [account.loading, account.signedIn, inviteFriend]);
 
   const enterRoom = useCallback(async (roomId: string, name: string) => {
     const token = await duelToken();
@@ -723,28 +720,62 @@ export default function Game() {
   }, [send]);
 
   /**
-   * Take up an invite: consume it, then join the room it names.
+   * A room handed over by an accepted invite.
    *
-   * The consume is a separate call rather than folded into the join because
-   * it is the step that has to be raced safely — two tabs, two clicks — and
-   * the server settles that with a conditional delete. Whoever wins comes
-   * back holding a room code; the join after it is the ordinary path.
+   * The toast lives above every page now, so Accept can be pressed on the
+   * leaderboard or a profile as easily as on the menu — but only the arena
+   * holds a socket, so only the arena can join. This is that handover
+   * arriving, from either direction: directly if the arena was already on
+   * screen, or parked in storage and collected below if it was not.
+   *
+   * The invite has already been consumed by the time this runs. There is no
+   * path back from here, which is why joining must not be allowed to fail
+   * quietly.
    */
-  const acceptInvite = useCallback(async (invite: PendingInvite): Promise<InviteError | null> => {
-    const res = await fetch(`/api/invites/${encodeURIComponent(invite.fromHandle)}/accept`, {
-      method: 'POST',
-    }).catch(() => null);
-
-    if (!res) return { error: 'Could not reach the game server.' };
-    if (!res.ok) return (await res.json().catch(() => ({}))) as InviteError;
-
-    const { roomId } = (await res.json()) as { roomId: string };
-    dismiss(invite.fromHandle);
+  const joinInvited = useCallback((roomId: string) => {
     setError(null);
+    setScreen('menu');
     connect();
-    await enterRoom(roomId, account.displayName ?? '');
-    return null;
-  }, [connect, dismiss, enterRoom, account.displayName]);
+    void enterRoom(roomId, account.displayName ?? '');
+  }, [connect, enterRoom, account.displayName]);
+
+  useRoomOffers(joinInvited);
+
+  /**
+   * The intent left behind by the friends list on the profile page.
+   *
+   * Read once and cleared as it is read, so a refresh of the arena does not
+   * open a second room for somebody who was invited a minute ago. Waits for
+   * the account, because the room needs a token and a display name and
+   * neither exists until Kinde has answered.
+   */
+  useEffect(() => {
+    if (account.loading || !account.signedIn) return;
+
+    /**
+     * A room accepted from another page is collected before an invite is
+     * sent, and the order matters. Both cannot be true at once in practice,
+     * but if a stale intent ever survived, joining a duel somebody is already
+     * waiting in beats opening a second empty room beside it.
+     */
+    const room = takeRoom();
+    const handle = room ? null : takeInvite();
+    if (!room && !handle) return;
+
+    /**
+     * Deferred by a tick rather than run in the effect body.
+     *
+     * Both of these change state, and doing that synchronously during an
+     * effect cascades a render before the arena has painted once. A player
+     * arriving from the friends list should see the arena and then see it
+     * become a waiting room, not wait on a blank screen while a socket opens.
+     */
+    const id = setTimeout(() => {
+      if (room) joinInvited(room);
+      else if (handle) void inviteFriend(handle);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [account.loading, account.signedIn, inviteFriend, joinInvited]);
 
   /**
    * Back to the menu.
@@ -938,15 +969,6 @@ export default function Game() {
         <h1 className={`${styles.title} pixel-font`}>KEYMANIA</h1>
         <p className={styles.tagline}>type fast · strike hard</p>
 
-        {/*
-          * A friend asking, above everything the player might otherwise start.
-          *
-          * Placed here rather than lower down because an invite has a clock on
-          * it: anything the player has to scroll to find can expire while they
-          * are looking at the buttons above it. Nothing is stolen from them —
-          * it is a card, not a dialog, and it can be ignored.
-          */}
-        <InviteCards invites={invites} onAccept={acceptInvite} onDismiss={dismiss} />
 
         <p className={styles.blurb}>
           Type each word, then hit <kbd className="kbd">SPACE</kbd> to forge a blade and hurl it at

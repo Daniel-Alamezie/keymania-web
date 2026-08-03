@@ -3,6 +3,7 @@ import { Press_Start_2P, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import Analytics from '@/components/Analytics';
 import TrackPath from '@/components/TrackPath';
+import InviteHost from '@/components/InviteHost';
 
 const pixel = Press_Start_2P({
   weight: '400',
@@ -77,6 +78,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             Inert unless a PostHog key is configured — see game/analytics.ts. */}
         <Analytics />
         <TrackPath />
+        {/* The heartbeat and the invite toast, above every route. See
+            InviteHost for why they cannot live inside a page. */}
+        <InviteHost />
         {children}
       </body>
     </html>

@@ -16,6 +16,26 @@ import type { Friend, FriendsResponse } from '@/models/friends';
  * decides to send one, and the only way to find out is to ask again.
  */
 
+/**
+ * How often the list re-asks while somebody is looking at it.
+ *
+ * It used to ask once and never again, which was defensible when a row said
+ * only who somebody was — a name does not change while you read it. Presence
+ * broke that: the list now carries a fact that changes on its own, and players
+ * reported having to reload the page to see a friend come online. They were
+ * right, and it was a bug rather than a decision.
+ *
+ * Slower than the heartbeat on purpose. Fifteen seconds is the rate at which
+ * presence is *reported*, and matching it here would double the traffic to
+ * halve a delay nobody can perceive: a dot that is up to half a minute behind
+ * still answers "is it worth asking them" correctly.
+ *
+ * This is also a genuinely more expensive request than the heartbeat — one
+ * read per friend — which is affordable only because it stops the moment
+ * nobody is looking. See below.
+ */
+const POLL_MS = 30_000;
+
 const EMPTY: FriendsResponse = { friends: [], incoming: [], outgoing: [], blocked: 0 };
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -92,8 +112,35 @@ export function useFriends(enabled: boolean): FriendsState {
     // Guarded inside the async body rather than by a flag set here, so a second
     // render with the same `enabled` cannot leave the first fetch orphaned.
     let current = true;
-    void load().then((result) => { if (current) apply(result); });
-    return () => { current = false; };
+    const ask = () => { void load().then((result) => { if (current) apply(result); }); };
+
+    ask();
+    let timer = setInterval(ask, POLL_MS);
+
+    /**
+     * Nothing happens while the tab is in the background.
+     *
+     * A friends list is only worth refreshing for somebody who can see it, and
+     * without this a tab left open behind twelve others would fan out a read
+     * per friend every thirty seconds, all night, to update a list nobody is
+     * looking at. Coming back asks immediately rather than waiting out the
+     * remainder of an interval, so returning to the tab shows the truth rather
+     * than whatever was true when it was hidden.
+     */
+    const onVisibility = () => {
+      clearInterval(timer);
+      if (document.visibilityState === 'visible') {
+        ask();
+        timer = setInterval(ask, POLL_MS);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      current = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [enabled, apply]);
 
   const refresh = useCallback(async () => {

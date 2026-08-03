@@ -108,10 +108,36 @@ export function useHeartbeat(signedIn: boolean, busy: boolean): {
     // Once immediately, so arriving on the menu shows up to friends now
     // rather than in fifteen seconds.
     void beat();
-    const id = setInterval(() => { void beat(); }, BEAT_MS);
+    let id = setInterval(() => { void beat(); }, BEAT_MS);
+
+    /**
+     * A hidden tab is not a player who is around.
+     *
+     * Two things wrong with beating through it, and the smaller one is the
+     * money: a tab left open overnight would check in nineteen hundred times
+     * to tell nobody anything, and each of those is a write against a player
+     * row that grows with their history.
+     *
+     * The larger one is that it would be a lie. Somebody with KeyMania buried
+     * behind a dozen tabs is not available for a duel, and showing them green
+     * sends their friends into a ninety-second wait for an answer that is
+     * never coming. Going quiet lets presence lapse on its own, which is the
+     * honest reading, and coming back beats immediately so returning to the
+     * tab puts them online at once rather than up to fifteen seconds later.
+     */
+    const onVisibility = () => {
+      clearInterval(id);
+      if (document.visibilityState === 'visible') {
+        void beat();
+        id = setInterval(() => { void beat(); }, BEAT_MS);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     return () => {
       live = false;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [signedIn]);
 

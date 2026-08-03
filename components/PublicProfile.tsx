@@ -6,6 +6,7 @@ import { Flame } from './RankFlame';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { pathLabel, previousPath } from '@/game/lastPath';
+import { rememberInvite } from '@/game/inviteIntent';
 import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
@@ -121,7 +122,20 @@ export default function PublicProfile({ handle }: { handle: string }) {
 
   // Derived from the list rather than tracked separately, so it stays right
   // after any change without this component knowing the rules.
-  const already = friends.data.friends.some((f) => f.handle === profile.handle);
+  const friendship = friends.data.friends.find((f) => f.handle === profile.handle);
+  const already = Boolean(friendship);
+  /**
+   * Their presence, taken from the friends list rather than from this page's
+   * own fetch.
+   *
+   * The public profile deliberately says nothing about when somebody was last
+   * at a keyboard — that is the same reason it carries no duel history. But
+   * the friends list, which this page already loads to decide whether an "Add
+   * friend" button belongs here, does know, and only for people you are
+   * actually connected to. Reading it from there keeps the disclosure exactly
+   * where it was: between friends, and nowhere else.
+   */
+  const presence = friendship?.presence;
   const pending = friends.data.outgoing.some((f) => f.handle === profile.handle);
   const incoming = friends.data.incoming.some((f) => f.handle === profile.handle);
 
@@ -210,7 +224,37 @@ export default function PublicProfile({ handle }: { handle: string }) {
       )}
 
       <div className={styles.actions}>
-        {already && <span className={styles.settled}>You are friends.</span>}
+        {/*
+          * Invite, on the path players actually take.
+          *
+          * Reported after the first release: you find somebody on the
+          * leaderboard, open them, see that you are friends, and then have to
+          * go back to your own profile to ask them for a game. The panel is
+          * not where the intention forms — this page is.
+          *
+          * Offered only for a friend who is free right now, and a friend
+          * mid-duel is told so rather than shown a dead button. Nothing at all
+          * for one who is offline: there is no ask to make, and a permanently
+          * disabled control would just be a question the page cannot answer.
+          */}
+        {already && presence === 'idle' && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              rememberInvite(profile.handle);
+              router.push('/');
+            }}
+          >
+            Invite to a duel
+          </button>
+        )}
+        {already && presence === 'busy' && (
+          <span className={styles.settled}>They are in a game.</span>
+        )}
+        {already && presence !== 'idle' && presence !== 'busy' && (
+          <span className={styles.settled}>You are friends.</span>
+        )}
         {incoming && (
           <button
             type="button"
