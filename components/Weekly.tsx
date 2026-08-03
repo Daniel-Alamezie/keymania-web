@@ -3,9 +3,7 @@
 import {
   useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore,
 } from 'react';
-import {
-  currentWeeklyWord, initialWeekly, weeklyReducer, type WeeklyState,
-} from '@/game/weeklyReducer';
+import { initialWeekly, weeklyReducer, type WeeklyState } from '@/game/weeklyReducer';
 import { WEEKLY_MS } from '@/game/weeklyClock';
 import { useConfirmKey } from '@/game/useConfirmKey';
 import { audio } from '@/game/audio';
@@ -184,8 +182,10 @@ export default function Weekly({
   /** The clock on screen, ticking at display rate only. */
   const [msLeft, setMsLeft] = useState(WEEKLY_MS);
   useEffect(() => {
-    if (state.phase !== 'running') return;
-    if (!state.startedAt) { setMsLeft(WEEKLY_MS); return; }
+    // No reset branch: the component is keyed per run in Game, so a fresh
+    // mount starts the state at the full window on its own — and setting
+    // state synchronously in an effect is the cascading render lint forbids.
+    if (state.phase !== 'running' || !state.startedAt) return;
     const id = setInterval(() => {
       setMsLeft(Math.max(0, state.startedAt + WEEKLY_MS - Date.now()));
     }, 100);
