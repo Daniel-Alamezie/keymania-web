@@ -101,13 +101,13 @@
  * whichever axis is tighter means the line fills a large screen and still fits a
  * laptop with a browser bar and a dock eating the height.
  *
- * **The cost is look-ahead, and it is real.** At 58px roughly 35 characters of
- * the sentence were visible; at this size it is about 18. Fast typists read
- * ahead, so this is a genuine trade of context for presence rather than a free
- * win — measured, not guessed, and the number to tune if it turns out the wrong
- * way round is right here.
+ * **The cost is look-ahead, and it is real.** At the old 58px roughly 36
+ * characters of the sentence were visible on a 1440x900 window; here it is
+ * about 21. Fast typists read ahead, so this is a genuine trade of context for
+ * presence rather than a free win — measured, not guessed, and the number to
+ * tune if it turns out the wrong way round is right here.
  */
-.screen[data-layout='plain'] { --stream-size: clamp(30px, min(6.2vw, 14vh), 92px); }
+.screen[data-layout='plain'] { --stream-size: clamp(30px, min(7vw, 16vh), 108px); }
 
 /*
  * The frame stops pretending to be a room.
