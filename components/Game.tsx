@@ -29,6 +29,7 @@ import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
 import SignInLink from './SignInLink';
+import CommunityLink from './CommunityLink';
 import { useAccount } from '@/game/useAccount';
 import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
@@ -1035,17 +1036,27 @@ export default function Game() {
           </Link>
 
           {/*
-            * The only route a player has to reach us.
+            * The straight line to us, for the moment something has gone wrong.
             *
-            * There is no subreddit and no issue tracker anybody outside the
-            * repository can find, so every report this game has acted on so far
-            * arrived as a Reddit comment on an unrelated thread. On the menu
-            * rather than buried in a profile page, because the moment somebody
-            * wants it is the moment something has just gone wrong.
+            * On the menu rather than buried in a profile page, because that
+            * moment is not one anybody goes looking through settings during.
+            * It predates the subreddit, which is why it is still here: a
+            * report typed in the game reaches an inbox in seconds, and asking
+            * somebody mid-frustration to leave, find a community and write a
+            * post is asking most of them not to bother.
             */}
           <button className={styles.guideLink} onClick={() => setShowFeedback(true)}>
             Found a bug, or want something changed?
           </button>
+
+          {/*
+            * And the slower door: where the other players are.
+            *
+            * Last in the row on purpose. Everything above it is something to
+            * do here; this is somewhere else to be, and it should not stand
+            * between a player and the game.
+            */}
+          <CommunityLink />
         </div>
         <LeaderboardPanel />
       </div>

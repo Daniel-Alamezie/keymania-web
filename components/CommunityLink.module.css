@@ -1,0 +1,59 @@
+/*
+ * The subreddit invitation.
+ *
+ * A bordered row rather than a text link, so it reads as a place to go rather
+ * than as another setting. It borrows the panel's own colours and keeps the
+ * Snoo as the only saturated thing in it — the orange is what makes the
+ * destination obvious at a glance, and it is doing enough work on its own
+ * without the frame joining in.
+ */
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 12px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+  color: var(--muted);
+  text-decoration: none;
+  text-align: left;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+/* Reddit's own orange on hover: the one place in the game it belongs, and it
+   says "this leaves the page" more plainly than any wording would. */
+.link:hover {
+  border-color: #ff4500;
+  background: var(--panel);
+}
+
+.mark { flex: none; }
+
+.words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--font-pixel), var(--font-body), monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.link:hover .name { color: #ff4500; }
+
+.blurb {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link { transition: none; }
+}

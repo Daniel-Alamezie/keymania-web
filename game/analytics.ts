@@ -42,6 +42,8 @@ export type GameEvent =
   | { name: 'rematch_taken'; mode: 'bot' | 'human' }
   /** They needed the instructions, and how far they read. */
   | { name: 'guide_opened' }
+  /** The subreddit link on the menu, so we can see whether it is found. */
+  | { name: 'community_opened' }
   /** They cared enough about the game to make it theirs. */
   | { name: 'character_saved'; character: string }
   /**
