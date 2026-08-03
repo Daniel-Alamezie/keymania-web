@@ -107,7 +107,26 @@
  * presence rather than a free win — measured, not guessed, and the number to
  * tune if it turns out the wrong way round is right here.
  */
-.screen[data-layout='plain'] { --stream-size: clamp(30px, min(7vw, 16vh), 108px); }
+.screen[data-layout='plain'] {
+  --stream-size: clamp(30px, min(7vw, 16vh), 108px);
+  /*
+   * The plates ride the same curve, at roughly a third of the line.
+   *
+   * Declared here beside the size it is proportional to, rather than in
+   * HealthBar.module.css where it is used, so the two cannot quietly drift out
+   * of step. The whole point is that a plate looks like it belongs to the
+   * sentence next to it at every window size — which is exactly what stopped
+   * being true when the line started scaling and the plate did not.
+   *
+   * The floor is today's fixed 84px, so this can only ever grow the plate on a
+   * desktop, never shrink one. The ceiling is set where it is so the plate
+   * stops growing at the same window size the line does -- left higher, the
+   * plate kept expanding after the sentence had capped and the two drifted
+   * from 1.1x apart to 1.4x, which is the same mismatch this change exists to
+   * remove, only pointing the other way.
+   */
+  --plate: clamp(84px, min(7.6vw, 13vh), 120px);
+}
 
 /*
  * The frame stops pretending to be a room.
@@ -245,7 +264,25 @@
   gap: 24px;
 }
 
-.screen[data-layout='plain'] .hud > * { flex: 0 1 340px; }
+/*
+ * Out to the edges of the glass.
+ *
+ * The screen is capped at min(1560px, 94vw) for the reading column's sake, and
+ * that cap was holding the plates a long way in from the corners on a wide
+ * monitor — with a bigger plate they read as floating rather than anchored.
+ * This is the standard full-bleed escape: negative inline margins of exactly
+ * the distance from the content edge to the viewport edge.
+ *
+ * Only the HUD breaks out. The sentence keeps the cap, because a reading line
+ * that runs the full width of a 2500px monitor is a line nobody can track.
+ */
+.screen[data-layout='plain'] .hud {
+  margin-inline: calc(50% - 50vw);
+  padding-inline: clamp(12px, 1.6vw, 34px);
+}
+
+/* Wide enough for the bigger plate, and still allowed to give width back. */
+.screen[data-layout='plain'] .hud > * { flex: 0 1 clamp(340px, 30vw, 520px); }
 
 /*
  * Three opponents stack where one used to stand.

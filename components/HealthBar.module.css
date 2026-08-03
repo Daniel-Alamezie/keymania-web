@@ -35,6 +35,33 @@
 .plate[data-big] .track { height: 16px; }
 
 /*
+ * And in the stripped-down layout, sized to the room like the words are.
+ *
+ * The four figures above are fixed pixels, which was right when the sentence
+ * was fixed too. It is not any more: the line now scales with the window and
+ * grew by half again, which left an 84px portrait and a 20px number looking
+ * like a caption stuck to the corner of something much larger.
+ *
+ * `--plate` rides the same curve as `--stream-size` — see Duel.module.css,
+ * where both are declared together so they cannot drift apart. Every dimension
+ * below is a ratio of it, taken from the fixed values above, so the plate keeps
+ * exactly the proportions it already had and only changes size.
+ *
+ * Deliberately placed before the narrow-screen block further down. Those rules
+ * have the same specificity and win on source order, which is what keeps a
+ * phone on its own hand-tuned sizes rather than a scaled-down desktop plate.
+ */
+[data-layout='plain'] .plate[data-big] .portrait {
+  width: var(--plate);
+  /* 88/84 — the portrait is very slightly taller than it is wide. */
+  height: calc(var(--plate) * 1.048);
+}
+[data-layout='plain'] .plate[data-big] .name { font-size: calc(var(--plate) * 0.155); }
+[data-layout='plain'] .plate[data-big] .value { font-size: calc(var(--plate) * 0.238); }
+[data-layout='plain'] .plate[data-big] .track { height: calc(var(--plate) * 0.19); }
+[data-layout='plain'] .plate[data-big] .caption { font-size: calc(var(--plate) * 0.13); }
+
+/*
  * The plate you are currently throwing at.
  *
  * Marked here rather than only by the parent's opacity, because a lit border is
