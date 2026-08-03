@@ -27,6 +27,19 @@ import styles from './PublicProfile.module.css';
 
 type Status = 'loading' | 'ready' | 'missing' | 'signedOut' | 'error';
 
+/**
+ * The cabinet's shelves, in a fixed order.
+ *
+ * Badges first because they are the pictures, colours after, titles last as
+ * the wordiest. Fixed rather than ordered by what somebody owns, so two
+ * profiles side by side always shelve alike.
+ */
+const SHELVES = [
+  { kind: 'badge', name: 'Badges' },
+  { kind: 'nameColour', name: 'Name colours' },
+  { kind: 'title', name: 'Titles' },
+] as const;
+
 export default function PublicProfile({ handle }: { handle: string }) {
   useUiSounds();
   const router = useRouter();
@@ -189,37 +202,66 @@ export default function PublicProfile({ handle }: { handle: string }) {
       </dl>
 
       {/*
-        * Everything they have unlocked, not just what they wear.
+        * Everything they have unlocked, shown as a cabinet with shelves.
         *
-        * In the order it was earned, because a collection is a history. Every
-        * entry names itself on hover — the founder badge with its number,
-        * everything else with its label — since unlike the owner's picker
-        * there is no caption under each tile to say what a mark means.
+        * One shelf per kind, in a fixed order, because "badge or colour?" is
+        * the first question a mixed strip forces a reader to answer for every
+        * single chip. The shelf answers it once, for the whole row — the same
+        * grouping the owner's picker already uses, so the two surfaces read
+        * as one system.
+        *
+        * Every tile is captioned rather than named only on hover, because a
+        * phone has no hover and a cabinet whose labels need a mouse is only
+        * legible to half its visitors. Within a shelf the order is still the
+        * order it was earned — a collection is a history.
         */}
       {(profile.collection?.length ?? 0) > 0 && (
         <section className={styles.collection} aria-label="Unlocked cosmetics">
           <h2 className={`${styles.collectionHeading} pixel-font`}>Collection</h2>
-          <ul className={styles.collectionList}>
-            {profile.collection!.map((item) => (
-              <li
-                key={`${item.kind}-${item.label}`}
-                className={styles.collectionItem}
-                data-kind={item.kind}
-                data-tip={badgeTooltip({ badgeNumber: item.number, badgeLabel: item.label })}
-              >
-                {item.kind === 'badge' && item.value && (
-                  <img src={badgeSrc(item.value)} alt={item.label} width={28} height={28} />
-                )}
-                {item.kind === 'badge' && item.number !== undefined && (
-                  <span className={styles.badgeNo}>{item.number}</span>
-                )}
-                {item.kind === 'title' && <span>{item.label}</span>}
-                {item.kind === 'nameColour' && (
-                  <span style={{ color: item.value }}>{item.label}</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          {SHELVES.map(({ kind, name }) => {
+            const items = profile.collection!.filter((item) => item.kind === kind);
+            if (items.length === 0) return null;
+            return (
+              <div key={kind} className={styles.shelf}>
+                <h3 className={styles.shelfName}>{name}</h3>
+                <ul className={styles.shelfList}>
+                  {items.map((item) => (
+                    <li
+                      key={`${item.kind}-${item.label}`}
+                      className={styles.shelfItem}
+                      data-kind={item.kind}
+                      // The caption already says what it is; the tip only adds
+                      // what the caption cannot, which is the founder number.
+                      data-tip={item.number !== undefined
+                        ? badgeTooltip({ badgeNumber: item.number, badgeLabel: item.label })
+                        : undefined}
+                    >
+                      {item.kind === 'badge' && item.value && (
+                        <span className={styles.tileArt}>
+                          <img src={badgeSrc(item.value)} alt="" width={28} height={28} />
+                          {item.number !== undefined && (
+                            <span className={styles.tileNo}>{item.number}</span>
+                          )}
+                        </span>
+                      )}
+                      {/*
+                        * The colour shown as the thing itself: your name, in
+                        * it. "Abc" is the picker's own spelling of that, and
+                        * repeating it here is what makes the swatch legible —
+                        * a bare coloured word looks like a link.
+                        */}
+                      {item.kind === 'nameColour' && (
+                        <span className={`${styles.tileSwatch} pixel-font`} style={{ color: item.value }}>
+                          Abc
+                        </span>
+                      )}
+                      <span className={styles.tileName}>{item.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </section>
       )}
 
