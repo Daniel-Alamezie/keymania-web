@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Press_Start_2P, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import Analytics from '@/components/Analytics';
+import TrackPath from '@/components/TrackPath';
 
 const pixel = Press_Start_2P({
   weight: '400',
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* Renders nothing; it exists to start analytics and follow the route.
             Inert unless a PostHog key is configured — see game/analytics.ts. */}
         <Analytics />
+        <TrackPath />
         {children}
       </body>
     </html>

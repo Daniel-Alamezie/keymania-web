@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { pathLabel, previousPath } from '@/game/lastPath';
 import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
@@ -244,11 +245,47 @@ export default function PublicProfile({ handle }: { handle: string }) {
   );
 }
 
+/**
+ * Back to wherever they actually came from.
+ *
+ * This used to be a fixed link to the menu, which was wrong in the commonest
+ * case there is: opening a friend from the friends list on the profile page
+ * and then trying to get back to it. The player was put on the home screen,
+ * several clicks from the list they had been reading.
+ *
+ * A remembered previous path rather than `router.back()`, because this page is
+ * also reached by a link somebody shared — and for that visitor `back()` means
+ * leaving the site altogether. When there is no in-app history to return to,
+ * the control keeps its old behaviour and says so.
+ *
+ * The destination is named rather than called "Back". A label that says where
+ * it goes can be trusted at a glance; one that says "back" has to be tested by
+ * pressing it.
+ */
 function Shell({ children }: { children: React.ReactNode }) {
+  const here = usePathname();
+
+  /**
+   * Read as an external store rather than into state from an effect.
+   *
+   * `sessionStorage` is exactly that — a thing outside React that the server
+   * render cannot see — and this is the hook built for it. The server snapshot
+   * is null, so the first paint says "Menu" and the client corrects it on
+   * hydration without a cascading render. Nothing subscribes, because the
+   * value is written on the way *out* of a page and cannot change while this
+   * one is open.
+   */
+  const from = useSyncExternalStore(
+    () => () => {},
+    () => previousPath(here),
+    () => null,
+  );
+
+  const target = from ?? '/';
   return (
     <main className={styles.page}>
       <div className={`panel ${styles.card}`}>
-        <Link href="/" className={styles.back}>← Menu</Link>
+        <Link href={target} className={styles.back}>← {pathLabel(target)}</Link>
         {children}
       </div>
     </main>

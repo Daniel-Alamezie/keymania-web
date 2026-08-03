@@ -78,10 +78,17 @@
   padding: 9px 11px;
   background: var(--panel-2);
   border: 2px solid transparent;
-  /* Only wraps when it genuinely has to. In the narrow rail this component used
-     to live in, every row wrapped its buttons onto a second line and the list
-     read as a stack of blocks rather than a list of people. */
-  flex-wrap: wrap;
+  /*
+   * No wrapping, and now it does not need any.
+   *
+   * It used to wrap because two full-size destructive buttons could not fit
+   * beside a name in a panel this narrow, so every row broke onto a second
+   * line and the list read as a stack of blocks rather than as a list of
+   * people. Allowing the wrap treated the symptom. Putting Remove and Block
+   * behind one small menu button removed the cause, and left room for the
+   * action anybody actually opens this list to take.
+   */
+  position: relative;
 }
 
 .row:hover { border-color: var(--edge-soft); }
@@ -179,8 +186,10 @@
  */
 .actions {
   display: flex;
+  align-items: center;
   gap: var(--gap-xs);
   margin-left: auto;
+  flex: none;
   opacity: 0.45;
   transition: opacity 140ms ease;
 }
@@ -264,4 +273,102 @@
   color: var(--faint);
   font-size: 10px;
   margin: var(--gap-md) 0 0;
+}
+
+/*
+ * The row menu.
+ *
+ * Anchored to the row rather than to the page, so it cannot be left behind by
+ * a scroll, and opening downward for the same reason the badge tooltip does:
+ * the last row of a long list is the one most likely to be near an edge, and
+ * a menu that opens upward from it lands on top of the friend above.
+ */
+.menuWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.menuButton {
+  background: none;
+  border: 2px solid transparent;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 1px;
+  line-height: 1;
+  padding: 6px 7px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.menuButton:hover,
+.menuButton[aria-expanded='true'] {
+  color: var(--ink);
+  border-color: var(--edge-soft);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 132px;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25);
+}
+
+.menuItem {
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menuItem:hover:not(:disabled) { background: var(--panel-2); }
+.menuItem:disabled { color: var(--faint); cursor: default; }
+
+/* Block is the one that cannot be walked back from without them asking again. */
+.menuDanger:hover:not(:disabled) { color: var(--bad); }
+
+/*
+ * How long ago, kept quiet.
+ *
+ * It sits with the handle rather than beside the name because it is context
+ * for a dot that has already answered the real question. Given equal weight
+ * it would read as the point of the row, which is the people.
+ */
+.seen {
+  font-size: 10px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Invite: the only thing on a row that is worth reaching for.
+ *
+ * Small, but the one filled control in the list, which is why the destructive
+ * pair had to move behind a menu first. Two full-weight buttons and a primary
+ * one is not a row, it is a toolbar.
+ */
+.invite {
+  font-size: 10px;
+  padding: 5px 10px;
+}
+
+/* Not a button. There is nothing to press, and dressing it as one disabled
+   would invite the click anyway. */
+.playing {
+  font-size: 10px;
+  color: var(--gold-deep);
+  white-space: nowrap;
 }

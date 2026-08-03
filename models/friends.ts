@@ -31,6 +31,18 @@ export interface Friend {
    * not been told is worse than no dot.
    */
   presence?: Presence;
+  /**
+   * Roughly how long ago they were here, if they are not here now.
+   *
+   * A bucket, never a timestamp. The server derives it and the raw `seenAt`
+   * never crosses the wire: a dot says "not right now", which is a fact about
+   * a game, whereas an exact last-seen is a fact about a person's evening and
+   * a list of them is something you can watch somebody with.
+   *
+   * Absent both for a friend who is online and for one we have never heard
+   * from, which the row must not conflate -- see SEEN_LABEL.
+   */
+  seen?: Seen;
   /** Their standing, so a row says who you would actually be playing. */
   rating?: number;
   bestWpm?: number;
@@ -44,6 +56,23 @@ export interface Friend {
  * them for a game right now".
  */
 export type Presence = 'idle' | 'busy' | 'offline';
+
+/** How long ago, coarsely. Mirrors `Seen` in the API's lib/presence.ts. */
+export type Seen = 'hour' | 'day' | 'week' | 'ago';
+
+/**
+ * What a bucket says out loud.
+ *
+ * Elapsed time, phrased as elapsed time. "Seen today" is friendlier and is a
+ * lie at one in the morning, and these are friends in every timezone, so
+ * there is no calendar any of this could be honest about.
+ */
+export const SEEN_LABEL: Record<Seen, string> = {
+  hour: 'Seen within the hour',
+  day: 'Seen in the last day',
+  week: 'Seen this week',
+  ago: 'Seen a while ago',
+};
 
 /**
  * Whoever can actually play, first.

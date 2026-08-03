@@ -25,6 +25,14 @@ interface LobbyProps {
    * Challengers who had simply never opened the dashboard.
    */
   accountName?: string;
+  /**
+   * The friend this room was opened for, if it was opened for one.
+   *
+   * A handle rather than a display name: it is what the player clicked and
+   * what identifies the person, and the room has nothing else to go on until
+   * they arrive.
+   */
+  invited?: string | null;
 }
 
 const NAME_KEY = 'keymania.name';
@@ -38,7 +46,7 @@ const FOUR_PLAYER_READY = true;
 
 export default function Lobby({
   status, configured, rooms, waiting, error,
-  onCreate, onJoin, onRefresh, onBack, accountName,
+  onCreate, onJoin, onRefresh, onBack, accountName, invited,
 }: LobbyProps) {
   // Read the remembered name once, during initialisation rather than from an
   // effect: this component only ever mounts after the player opens the lobby,
@@ -83,7 +91,7 @@ export default function Lobby({
     return (
       <div className={`panel ${styles.lobby}`}>
         <h2 className={`${styles.heading} pixel-font`}>
-          {room > 2 ? 'Free-for-all' : 'Waiting for a challenger'}
+          {invited ? `Waiting for @${invited}` : room > 2 ? 'Free-for-all' : 'Waiting for a challenger'}
         </h2>
 
         {/*
@@ -111,6 +119,20 @@ export default function Lobby({
             </li>
           ))}
         </ul>
+
+        {/*
+          * Said plainly, because the wait is otherwise indistinguishable from
+          * nothing happening. An invite is delivered on the friend's next
+          * heartbeat, so up to fifteen seconds can pass before it even reaches
+          * their screen — long enough that somebody watching a static room
+          * would reasonably conclude it had failed.
+          */}
+        {invited && (
+          <p className={styles.note}>
+            They have ninety seconds to answer. The code below still works if you
+            would rather send it another way.
+          </p>
+        )}
 
         <p className={styles.note}>
           {hosting

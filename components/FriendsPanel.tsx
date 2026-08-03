@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { rememberInvite } from '@/game/inviteIntent';
 import { useFriends } from '@/game/friends';
 import { useHandle } from '@/game/serverProfile';
-import { byPresence, type Friend } from '@/models/friends';
+import { byPresence, SEEN_LABEL, type Friend } from '@/models/friends';
 import styles from './FriendsPanel.module.css';
 
 /**
@@ -18,6 +20,7 @@ export default function FriendsPanel() {
   const { data, loading, error, busy, add, accept, remove, block } = useFriends(true);
   const myHandle = useHandle();
   const [draft, setDraft] = useState('');
+  const router = useRouter();
   const [notice, setNotice] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -131,23 +134,46 @@ export default function FriendsPanel() {
             )}
             {byPresence(data.friends).map((person) => (
               <Row key={person.handle} person={person}>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={busy}
-                  onClick={() => remove(person.handle)}
-                >
-                  Remove
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={busy}
-                  onClick={() => block(person.handle)}
-                  title="They will not be told, and cannot add you again."
-                >
-                  Block
-                </button>
+                {/*
+                  * The one action anybody opens this list to take.
+                  *
+                  * Offered only for a friend who is on the menu right now.
+                  * Someone mid-duel gets a disabled button that says so rather
+                  * than no button at all: "they are playing" is information,
+                  * and a control that vanishes teaches nobody why.
+                  *
+                  * Offline friends get nothing, because there is nothing to
+                  * say to them and a permanently dead button on most of the
+                  * list would make the whole panel look broken.
+                  */}
+                {person.presence === 'idle' && (
+                  <button
+                    type="button"
+                    className={`btn btn-primary ${styles.invite}`}
+                    onClick={() => {
+                      rememberInvite(person.handle);
+                      router.push('/');
+                    }}
+                  >
+                    Invite
+                  </button>
+                )}
+                {person.presence === 'busy' && (
+                  <span className={styles.playing} title={`${person.displayName} is in a game.`}>
+                    Playing
+                  </span>
+                )}
+                {/*
+                  * Remove and Block live behind a menu now.
+                  *
+                  * Side by side they were two full-weight destructive buttons on
+                  * every row of a list whose subject is the people, and on a
+                  * narrow panel they did not fit: the pair wrapped onto a second
+                  * line, so each friend read as a block rather than a row. Both
+                  * problems have the same fix, and it is the fix that leaves
+                  * room for the one action anybody actually came here for.
+                  */}
+                <RowMenu person={person} busy={busy} onRemove={remove} onBlock={block} />
               </Row>
             ))}
           </Group>
@@ -220,6 +246,81 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+/**
+ * Remove and Block, out of the way but findable.
+ *
+ * Two destructive actions do not deserve permanent full-weight buttons on
+ * every row: they are rarely wanted, never wanted by accident, and side by
+ * side they took more of a narrow panel than the person's name did. Behind a
+ * menu they cost one extra click, which is the correct price for something
+ * you cannot undo.
+ *
+ * Closes on Escape and on focus leaving the menu entirely, which is what
+ * keyboard users expect and what a click elsewhere on the page produces
+ * anyway. Deliberately not a document-level click listener: this can be
+ * dismissed without one, and a listener would have to be reasoned about
+ * against every other thing on the profile page that opens.
+ */
+function RowMenu({ person, busy, onRemove, onBlock }: {
+  person: Friend;
+  busy: boolean;
+  onRemove: (handle: string) => void;
+  onBlock: (handle: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span
+      className={styles.menuWrap}
+      onBlur={(event) => {
+        // Focus moving *within* the menu is not leaving it. Without this the
+        // menu would close on the way to the button being reached for.
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        className={styles.menuButton}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`More for ${person.displayName}`}
+        onClick={() => setOpen((was) => !was)}
+      >
+        {/* Three dots as characters rather than an ellipsis: the pixel font
+            renders one as a smudge at this size. */}
+        <span aria-hidden="true">•••</span>
+      </button>
+
+      {open && (
+        <span className={styles.menu} role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            disabled={busy}
+            onClick={() => { setOpen(false); onRemove(person.handle); }}
+          >
+            Remove friend
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${styles.menuItem} ${styles.menuDanger}`}
+            disabled={busy}
+            onClick={() => { setOpen(false); onBlock(person.handle); }}
+            title="They will not be told, and cannot add you again."
+          >
+            Block
+          </button>
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** What a dot means, spelled out for a hover and for a screen reader. */
 const PRESENCE_LABEL: Record<NonNullable<Friend['presence']>, string> = {
   idle: 'Online',
@@ -258,6 +359,16 @@ function Row({ person, children }: { person: Friend; children: React.ReactNode }
               zero would read as terrible rather than as new. */}
           {Boolean(person.rating) && (
             <span className={styles.stat}>{person.rating}</span>
+          )}
+          {/*
+            * How long ago, coarsely, and only when it tells you something.
+            *
+            * The server sends nothing for a friend who is here now, whose dot
+            * already says so, and nothing for one it has never heard from --
+            * which is not the same as long gone and must not be drawn as it.
+            */}
+          {person.seen && (
+            <span className={styles.seen}>{SEEN_LABEL[person.seen]}</span>
           )}
         </span>
       </Link>
