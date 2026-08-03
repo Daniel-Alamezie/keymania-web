@@ -407,6 +407,19 @@
  * turned every one of those into a green pill, because CSS modules scope names
  * per file rather than per component and the later rule simply won.
  */
+/*
+ * News, not a tally.
+ *
+ * Gold because the green pill beside it is a count of things done and sits
+ * there for good; this one appears when something arrives and leaves once it
+ * has been read. Two green pills would read as one idea and be ignored
+ * together.
+ */
+.tabBadgeNew {
+  background: var(--gold);
+  color: var(--bg-deep);
+}
+
 .tabBadge {
   display: inline-grid;
   place-items: center;

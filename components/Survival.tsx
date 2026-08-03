@@ -16,6 +16,7 @@ import SentenceView from './SentenceView';
 import HeatBar from './HeatBar';
 import ArenaScene from './ArenaScene';
 import SoundToggle from './SoundToggle';
+import RunPause from './RunPause';
 import styles from './Survival.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
 
@@ -79,6 +80,13 @@ export default function Survival({
   const capture = useRef<HTMLInputElement>(null);
   const screenRef = useRef<HTMLElement>(null);
   const [keyboardUp, setKeyboardUp] = useState(false);
+  /**
+   * Whether the way-out dialog is up. Mirrored into a ref because `typeChar`
+   * is memoised and would otherwise read a stale value.
+   */
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
   /**
    * The duel has had this since keyboards first covered its words; survival
    * never did, so on a phone its sentence stayed pinned against the top while
@@ -156,6 +164,8 @@ export default function Survival({
     const key = raw.toLowerCase();
     const snapshot = stateRef.current;
     if (snapshot.phase !== 'running') return;
+    // The forge carries on cooling, but the keyboard belongs to the dialog.
+    if (pausedRef.current) return;
 
     const expected = snapshot.sentence[snapshot.cursor];
     const correct = key === expected;
@@ -239,7 +249,9 @@ export default function Survival({
     if (state.phase !== 'running') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'Escape') { e.preventDefault(); onExit(); return; }
+      // Asks rather than leaves. A run ended by a stray Escape is a run
+      // somebody was in the middle of, and this mode has only one life.
+      if (e.key === 'Escape') { e.preventDefault(); setPaused((was) => !was); return; }
 
       /**
        * Ignored while the capture input has focus.
@@ -366,7 +378,13 @@ export default function Survival({
     >
       <div className={styles.controls}>
         <SoundToggle className={styles.iconBtn} />
-        <button className={styles.iconBtn} onClick={onExit} aria-label="Leave the run">✕</button>
+        <button
+          className={styles.iconBtn}
+          onClick={() => setPaused(true)}
+          aria-label="Leave the run"
+        >
+          ✕
+        </button>
       </div>
 
       <ArenaScene bare className={styles.arena}>
@@ -427,6 +445,20 @@ export default function Survival({
         >
           Tap to type
         </button>
+      )}
+
+      {paused && !over && (
+        <RunPause
+          /* The blunt truth: the forge is on the server's clock and reading a
+             dialog costs the same as staring at the screen. Saying so is the
+             only honest version — a run lost to a message claiming to pause
+             would be worse than the Escape this replaces. */
+          warning="The forge is still cooling. Reading this will cost you the run."
+          onResume={() => setPaused(false)}
+          onRestart={() => { setPaused(false); onAgain(); }}
+          onExit={() => { setPaused(false); onExit(); }}
+          restarting={starting}
+        />
       )}
 
       {state.phase === 'countdown' && (

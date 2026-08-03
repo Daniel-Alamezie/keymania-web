@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import SignInLink from './SignInLink';
 import {
@@ -10,6 +10,7 @@ import {
 import { useAccount } from '@/game/useAccount';
 import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
 import { formatPlayTime } from '@/models/profile';
+import { markCosmeticsSeen, useUnseenCosmetics } from '@/game/seenCosmetics';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import CharacterPicker from './CharacterPicker';
@@ -41,6 +42,37 @@ export default function ProfileDashboard() {
     profile, loading, error, anonymous, saveName, saveHandle, saveCharacter,
   } = useServerProfile();
   const account = useAccount();
+
+  /**
+   * Cosmetics this browser has not shown its player yet.
+   *
+   * The whole reason for the badge: an unlock lands on the record silently —
+   * a challenge completing on a results screen, a Monday award job, a founder
+   * kit growing a colour — and until now the only way to discover it was to
+   * open Appearance on a hunch.
+   *
+   * **Above the early returns, with the other hooks.** It first went in beside
+   * the figures it is rendered next to, which is where it reads best and is
+   * three returns too late: this component bails out for loading, for signed
+   * out and for error, so a hook there runs on some renders and not others.
+   */
+  const earnedIds = profile?.cosmetics?.earned;
+  const unseen = useUnseenCosmetics(earnedIds);
+
+  /**
+   * Opening the panel is what counts as looking.
+   *
+   * Marked on arrival rather than on leaving, so an unlock that lands while
+   * somebody is already reading the grid is covered too — the alternative
+   * leaves a badge for a thing that is on screen.
+   */
+  const seenKey = earnedIds?.join(',') ?? '';
+  useEffect(() => {
+    if (tab === 'look' && earnedIds?.length) markCosmeticsSeen(earnedIds);
+    // Keyed on the joined ids rather than the array, whose identity changes
+    // with every store snapshot and would re-run this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, seenKey]);
 
   /**
    * `!profile`, not just `loading`.
@@ -152,6 +184,23 @@ export default function ProfileDashboard() {
                 {label}
                 {id === 'challenges' && earned > 0 && (
                   <span className={styles.tabBadge}>{earned}</span>
+                )}
+                {/*
+                  * Unlocks nobody has looked at yet.
+                  *
+                  * Gold rather than the challenges badge's green, because the
+                  * two say different things: that one is a tally of what you
+                  * have done and sits there permanently, this one is news and
+                  * goes away once read. A second green pill would read as
+                  * more of the same and be ignored with it.
+                  */}
+                {id === 'look' && unseen > 0 && (
+                  <span
+                    className={`${styles.tabBadge} ${styles.tabBadgeNew}`}
+                    aria-label={`${unseen} new`}
+                  >
+                    {unseen}
+                  </span>
                 )}
               </button>
             ))}

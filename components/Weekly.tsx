@@ -13,6 +13,7 @@ import type { MessageHandler } from '@/game/useDuelSocket';
 import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
 import SoundToggle from './SoundToggle';
+import RunPause from './RunPause';
 import styles from './Survival.module.css';
 import weekly from './Weekly.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
@@ -62,6 +63,16 @@ export default function Weekly({
   useEffect(() => { stateRef.current = state; }, [state]);
 
   const [scored, setScored] = useState<Scored | null>(null);
+  /**
+   * Whether the way-out dialog is up.
+   *
+   * A ref beside the state because `typeChar` is a memoised callback and
+   * would otherwise close over a stale value — the same reason the reducer
+   * state is mirrored into `stateRef` two lines below.
+   */
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   const capture = useRef<HTMLInputElement>(null);
   const screenRef = useRef<HTMLElement>(null);
@@ -102,6 +113,8 @@ export default function Weekly({
     const key = raw.toLowerCase();
     const snapshot = stateRef.current;
     if (snapshot.phase !== 'running') return;
+    // The run carries on underneath, but the keyboard belongs to the dialog.
+    if (pausedRef.current) return;
 
     const expected = snapshot.sentence[snapshot.cursor];
 
@@ -148,7 +161,9 @@ export default function Weekly({
     if (state.phase !== 'running') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'Escape') { e.preventDefault(); onExit(); return; }
+      // Escape opens the way out rather than taking it, and closes it again.
+      // Leaving on a single keypress cost people runs, which is what this is.
+      if (e.key === 'Escape') { e.preventDefault(); setPaused((was) => !was); return; }
       if (document.activeElement === capture.current) return;
       const key = e.key === 'Spacebar' ? ' ' : e.key;
       if (key.length !== 1) return;
@@ -225,7 +240,13 @@ export default function Weekly({
     >
       <div className={styles.controls}>
         <SoundToggle className={styles.iconBtn} />
-        <button className={styles.iconBtn} onClick={onExit} aria-label="Leave the sprint">✕</button>
+        <button
+          className={styles.iconBtn}
+          onClick={() => setPaused(true)}
+          aria-label="Leave the sprint"
+        >
+          ✕
+        </button>
       </div>
 
       <ArenaScene bare className={styles.arena}>
@@ -283,6 +304,19 @@ export default function Weekly({
         >
           Tap to type
         </button>
+      )}
+
+      {paused && !over && (
+        <RunPause
+          warning="The thirty seconds are still running. This does not stop the clock."
+          onResume={() => setPaused(false)}
+          /* Both ways out finish the attempt first: it frees the room and
+             scores what was genuinely typed inside the window, so leaving
+             costs the run rather than the work. */
+          onRestart={() => { setPaused(false); onFinish(); onAgain(); }}
+          onExit={() => { setPaused(false); onFinish(); onExit(); }}
+          restarting={starting}
+        />
       )}
 
       {state.phase === 'countdown' && (
