@@ -904,6 +904,20 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
         }, PROJECTILE_FLIGHT_MS));
       }
 
+      if (message.type === 'wordSync') {
+        /**
+         * The referee says we are out of step: seek to where it stands.
+         *
+         * Reuses the rejoin's resync action wholesale - same arithmetic,
+         * same coordinate walk - with no healths, which the reducer reads
+         * as "keep what you have". The alternative was what actually
+         * happened to a 200-wpm player: one reordered word, then every
+         * word refused for the rest of the duel.
+         */
+        dispatch({ type: 'resync', wordIndex: message.expected, healths: [], now: Date.now() });
+        return;
+      }
+
       if (message.type === 'gameOver') {
         /**
          * Each result screen starts with a clean slate.
