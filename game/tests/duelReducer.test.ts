@@ -505,3 +505,48 @@ describe('characters in a human duel', () => {
     expect(state.fighters[1].character).toBe(DEFAULT_CHARACTER);
   });
 });
+
+/**
+ * The mid-duel heal: a wordSync from the referee becomes a resync.
+ *
+ * Born from a 200-wpm player's duel where one reordered word left the client
+ * permanently ahead of the script and every later word was refused - eleven
+ * seconds of typing into silence. The rule these pin: seeking to the
+ * server's position must cost position only. Health is not the referee's
+ * subject in that message, and a heal that touched it would turn a cursor
+ * correction into a phantom wound.
+ */
+describe('healing a desync mid-duel', () => {
+  const arm = () => duelReducer(initialState('rival'), {
+    type: 'startMulti',
+    script: ['alpha beta gamma', 'delta epsilon'],
+    roster: ['Me', 'Them'],
+    mySlot: 0,
+    powers: {},
+    characters: undefined,
+  });
+
+  const playing = () => {
+    let s = arm();
+    // Run the countdown out so the duel is live.
+    while (s.phase === 'countdown') s = duelReducer(s, { type: 'countdown' });
+    return s;
+  };
+
+  it('seeks to the flat index the server named', () => {
+    const healed = duelReducer(playing(), {
+      type: 'resync', wordIndex: 3, healths: [], now: 1_000,
+    });
+    // Word 3 is 'delta': second sentence, cursor at its start.
+    expect(healed.sentence).toBe('delta epsilon ');
+    expect(healed.cursor).toBe(0);
+    expect(healed.phase).toBe('playing');
+  });
+
+  it('keeps every fighter\'s health when the heal carries none', () => {
+    let s = playing();
+    s = { ...s, fighters: s.fighters.map((f, i) => ({ ...f, health: 61 + i })) };
+    const healed = duelReducer(s, { type: 'resync', wordIndex: 1, healths: [], now: 1_000 });
+    expect(healed.fighters.map((f) => f.health)).toEqual([61, 62]);
+  });
+});

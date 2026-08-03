@@ -109,6 +109,20 @@ export type ServerMessage =
     appended?: string;
   }
   /** A room filling up, before it is full enough to start. */
+  | {
+    /**
+     * The referee's position, sent when a word is refused as a mismatch.
+     *
+     * The cure for the reorder desync: at high speed two words can be in
+     * flight at once and the later one can be judged first, leaving the
+     * client permanently one word ahead. Rather than a bare refusal, the
+     * server says where it stands and the client seeks there - a reorder
+     * costs one word instead of the rest of the duel.
+     */
+    type: 'wordSync';
+    /** The flat index of the word the server expects next. */
+    expected: number;
+  }
   | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
   | {
     type: 'matchStart';
