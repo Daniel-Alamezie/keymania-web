@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useBoard } from '@/game/useBoard';
-import { BOARDS, BOARD_META, DEFAULT_BOARD, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
+import { BOARD_META, DEFAULT_BOARD, PANEL_BOARDS, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
 import { untilRollover } from '@/game/weeklyClock';
 import BoardRows from './BoardRows';
 import BoardGuide from './BoardGuide';
@@ -42,7 +42,7 @@ export default function LeaderboardPanel() {
           screen rather than growing a second box above itself. Same pattern as
           the record panel opposite. */}
       <div className={styles.tabs} role="tablist" aria-label="Leaderboard">
-        {BOARDS.map((kind) => (
+        {PANEL_BOARDS.map((kind) => (
           <button
             key={kind}
             role="tab"

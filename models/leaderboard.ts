@@ -39,6 +39,17 @@ import type { PublicCosmetics } from './cosmetics';
 export const BOARDS = ['standings', 'weekly', 'speed', 'streak'] as const;
 export type BoardKind = (typeof BOARDS)[number];
 
+/**
+ * What the menu panel offers, which is deliberately less than what exists.
+ *
+ * Fastest lives only on the full board page. It is the career museum - a
+ * max() that one clean run tops forever - and the panel is the glance on the
+ * way to a duel: the three tabs that earn a place there are the ones that
+ * move (standings), reset (weekly) and belong to a mode (survival). Anyone
+ * who wants the museum taps through to the full board, where all four wait.
+ */
+export const PANEL_BOARDS = ['standings', 'weekly', 'streak'] as const satisfies readonly BoardKind[];
+
 export const DEFAULT_BOARD: BoardKind = 'standings';
 
 /**
