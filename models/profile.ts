@@ -10,6 +10,8 @@
  * `GET /profile` on keymania-api. See lib/upstream.ts for why it is proxied.
  */
 
+import type { CountryCode } from './countries';
+
 import type { Cosmetic, EarnedCosmetic, PublicCosmetics } from './cosmetics';
 import type { CharacterId } from './character';
 import type { DuelStats } from './duel';
@@ -130,6 +132,25 @@ export interface ServerProfile {
   playMs?: number;
   /** Newest first, as the API stores it. */
   history: DuelResult[];
+  /**
+   * Where your rating puts you globally. Absent until a refereed duel has moved
+   * it — unranked is not the same as last, and the dashboard must not say so on
+   * somebody's first day.
+   */
+  rank?: GlobalRank;
+  /** The country you chose to show, and your place in it. Absent until you pick. */
+  country?: CountryCode;
+  countryRank?: GlobalRank;
+  /**
+   * Your furthest survival run, and this week's sprint.
+   *
+   * Both here so the friends leaderboard can place you among your friends on
+   * every board without a second round trip, and without the client assembling
+   * "you" out of four different sources and getting one of them subtly wrong.
+   * `weekly` is absent if you have not run this week's challenge.
+   */
+  bestStreak?: number;
+  weekly?: { words: number; wpm: number; score: number };
 }
 
 /**
@@ -236,6 +257,41 @@ export interface PublicProfile {
    * which is the fact this card is careful not to give away.
    */
   playMs?: number;
+  /**
+   * Where they sit in the standings, counted by the server.
+   *
+   * Absent for somebody who has never finished a refereed duel, which is not
+   * the same as last place and must not render as a number. `capped` means the
+   * server stopped counting rather than that the figure is exact — see
+   * RANK_CEILING in the API's lib/players.ts.
+   */
+  rank?: GlobalRank;
+  /**
+   * The country they chose to show, and where they sit within it.
+   *
+   * Both absent for a player who has not picked one, and that is not the same
+   * as unranked: they have not lost a country board, they are not on one. The
+   * card draws neither the chip nor the cell.
+   */
+  country?: CountryCode;
+  countryRank?: GlobalRank;
+  /**
+   * Recent speeds, oldest first, for the profile sparkline.
+   *
+   * Deliberately a bare number[] with no timestamps. This card withholds duel
+   * history because it says when somebody plays and who with; a list of speeds
+   * with no clock attached says neither, which is the only reason it can be
+   * published at all. Do not add dates to this — the whole design rests on
+   * their absence.
+   */
+  recentWpm?: number[];
+}
+
+/** A position in the standings, and whether the server counted all the way. */
+export interface GlobalRank {
+  position: number;
+  /** True when more players are above them than the server will count. */
+  capped: boolean;
 }
 
 /** `POST /api/me/duels` — a bot practice result, stored unranked. */

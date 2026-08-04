@@ -11,6 +11,23 @@ import styles from './SidePanel.module.css';
 /**
  * The rows of a board.
  *
+ * **`entry.country` arrives and is deliberately not drawn.** It was, briefly,
+ * and the row could not afford it: the rail gives a name 115 pixels and the
+ * chip took 20 of them back, so the longest names started truncating again on
+ * the exact surface three separate fixes had just been made to protect.
+ *
+ * The width was the trigger; the reason it stays out is that everything else on
+ * this row was *earned* — a position, a badge, a speed, a rating. Country is
+ * the only element that is context rather than achievement, and on a board
+ * whose whole job is ranking, it is the first thing that should go when the row
+ * runs out of room. It lives on the profile card, where identity belongs and
+ * where there is space to read it.
+ *
+ * The field is still sent. It costs nothing (the base row is already read for
+ * the handle), it feeds the country board's own existence, and keeping it means
+ * this is a rendering decision that can be revisited rather than a data one
+ * that would need another deploy.
+ *
  * Shared by the menu panel and the full-board page, which is the whole reason it
  * exists as its own file: a second copy would have meant two places deciding
  * what a crown means and which row is yours, and the rules below were each

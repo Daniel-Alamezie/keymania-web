@@ -3,9 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useBoard } from '@/game/useBoard';
+import { useFriendBoard } from '@/game/useFriendBoard';
+import { useServerProfile } from '@/game/serverProfile';
+import { countryName } from '@/models/countries';
 import { BOARD_META, DEFAULT_BOARD, PANEL_BOARDS, PANEL_ROWS, type BoardKind } from '@/models/leaderboard';
 import { untilRollover } from '@/game/weeklyClock';
 import BoardRows from './BoardRows';
+import BoardScope, { useScope } from './BoardScope';
 import BoardGuide from './BoardGuide';
 import styles from './SidePanel.module.css';
 
@@ -29,7 +33,29 @@ import styles from './SidePanel.module.css';
 export default function LeaderboardPanel() {
   const [board, setBoard] = useState<BoardKind>(DEFAULT_BOARD);
   const [showGuide, setShowGuide] = useState(false);
-  const { entries, status } = useBoard(board);
+  const scope = useScope();
+  const friendly = scope === 'friends';
+
+  /**
+   * The country the viewer chose, which is the only one this toggle can show.
+   *
+   * A country board is not a place you browse to — it is *your* country's
+   * board, exactly as the friends board is your friends. Somebody who has set
+   * none is offered no Country segment at all, so `mine` being absent here and
+   * the segment being hidden are the same fact.
+   */
+  const mine = useServerProfile().profile?.country;
+  // Standings only. See FullBoard, where the same limit is explained.
+  const inCountry = scope === 'country' && board === 'standings' ? mine : undefined;
+  const countryUnavailable = scope === 'country' && board !== 'standings';
+
+  // Both hooks always run; only the selected one fetches. See FullBoard, where
+  // the same pairing is explained at length.
+  const global = useBoard(board, undefined, inCountry);
+  const friends = useFriendBoard(board, friendly);
+
+  const entries = friendly ? friends.entries : global.entries;
+  const status = friendly ? friends.status : global.status;
   const meta = BOARD_META[board];
 
   const shown = entries?.slice(0, PANEL_ROWS);
@@ -41,6 +67,8 @@ export default function LeaderboardPanel() {
       {/* The heading is the tab strip, so the panel keeps its place on the arena
           screen rather than growing a second box above itself. Same pattern as
           the record panel opposite. */}
+      <BoardScope hasCountry={Boolean(mine)} />
+
       <div className={styles.tabs} role="tablist" aria-label="Leaderboard">
         {PANEL_BOARDS.map((kind) => (
           <button
@@ -68,7 +96,22 @@ export default function LeaderboardPanel() {
         <p className={styles.empty}>{meta.empty}</p>
       )}
 
-      {status === 'ready' && shown && shown.length > 0 && (
+      {/* Prompts, not errors. See FullBoard. */}
+      {status === 'anonymous' && (
+        <p className={styles.empty}>Sign in to compare with your friends.</p>
+      )}
+      {status === 'noFriends' && (
+        <p className={styles.empty}>
+          No friends yet, so there is nobody to rank against.
+          <Link href="/profile" className={styles.scopeEmpty}>Add a friend</Link>
+        </p>
+      )}
+
+      {countryUnavailable && (
+        <p className={styles.empty}>Country rankings are on Standings for now.</p>
+      )}
+
+      {status === 'ready' && !countryUnavailable && shown && shown.length > 0 && (
         <BoardRows entries={shown} board={board} compact />
       )}
 

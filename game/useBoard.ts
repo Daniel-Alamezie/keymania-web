@@ -66,9 +66,22 @@ interface Cached {
  * would be presenting stale numbers as current — a slightly slower first load is
  * the better trade. Within a session it is cached hard.
  */
-const cache = new Map<BoardKind, Cached>();
-const failed = new Set<BoardKind>();
-const inflight = new Map<BoardKind, Promise<void>>();
+/**
+ * What a cached board is a cache *of*.
+ *
+ * Board name alone was enough until the standings could be narrowed to one
+ * country. Two different lists now answer to `standings`, and keying on the
+ * board would have had them overwrite each other — switching to Country would
+ * show the global rows until its fetch landed, and switching back would show
+ * the country's. Both would look like a slow board rather than a wrong one.
+ */
+type BoardKey = string;
+const keyFor = (board: BoardKind, country?: string): BoardKey =>
+  (country ? `${board}:${country}` : board);
+
+const cache = new Map<BoardKey, Cached>();
+const failed = new Set<BoardKey>();
+const inflight = new Map<BoardKey, Promise<void>>();
 const listeners = new Set<() => void>();
 
 /**
@@ -98,8 +111,13 @@ function subscribe(notify: () => void) {
  * both be asking for the same thing, and two components wanting the same rows is
  * not a reason to ask twice.
  */
-export function ensureBoard(board: BoardKind, limit = PANEL_LIMIT): Promise<void> {
-  const held = cache.get(board);
+export function ensureBoard(
+  board: BoardKind,
+  limit = PANEL_LIMIT,
+  country?: string,
+): Promise<void> {
+  const key = keyFor(board, country);
+  const held = cache.get(key);
   /**
    * Held only if it is both recent enough and long enough.
    *
@@ -118,20 +136,20 @@ export function ensureBoard(board: BoardKind, limit = PANEL_LIMIT): Promise<void
    * Nothing is lost by the simpler rule. `hasMore` needs cached rows to be true,
    * so the control that asks for more never appears on a board that failed.
    */
-  if (fresh || failed.has(board)) return Promise.resolve();
+  if (fresh || failed.has(key)) return Promise.resolve();
 
-  const already = inflight.get(board);
+  const already = inflight.get(key);
   if (already) return already;
 
   const request = (async () => {
     try {
-      const response = await fetch(`/api/board?${boardQuery(board, limit)}`, {
+      const response = await fetch(`/api/board?${boardQuery(board, limit, country)}`, {
         cache: 'no-store',
       });
       if (!response.ok) {
         // Only a failure worth showing if there is nothing already on screen.
         // Replacing a readable board with an error helps nobody.
-        if (!cache.has(board)) failed.add(board);
+        if (!cache.has(key)) failed.add(key);
         return;
       }
 
@@ -152,22 +170,32 @@ export function ensureBoard(board: BoardKind, limit = PANEL_LIMIT): Promise<void
        * truth, and the caller is not left inventing an explanation.
        */
       const answered = BOARDS.includes(body.board) ? body.board : board;
-      cache.set(answered, { entries: body.entries ?? [], at: Date.now(), limit });
-      failed.delete(answered);
+      /**
+       * The country is echoed for the same reason, and read for the same one.
+       *
+       * Upstream honours `?country=` on the standings only and refuses a code
+       * it does not recognise, so a request can come back scoped differently
+       * from how it was sent. Filing under what was *asked* would put global
+       * rows under a country key and caption them with a country name — the
+       * same class of fault the paragraph above records, one field over.
+       */
+      const answeredKey = keyFor(answered, body.country);
+      cache.set(answeredKey, { entries: body.entries ?? [], at: Date.now(), limit });
+      failed.delete(answeredKey);
       changed();
     } catch {
       // Offline. Keep whatever is cached rather than replacing something useful
       // with an error nobody can act on.
-      if (!cache.has(board)) {
-        failed.add(board);
+      if (!cache.has(key)) {
+        failed.add(key);
         changed();
       }
     } finally {
-      inflight.delete(board);
+      inflight.delete(key);
     }
   })();
 
-  inflight.set(board, request);
+  inflight.set(key, request);
   return request;
 }
 
@@ -198,7 +226,7 @@ export function invalidateBoards(): void {
  * stored — it is a pure function of what has been fetched, so making it one
  * removes both an extra render and any chance of it disagreeing with the cache.
  */
-export function useBoard(board: BoardKind, limit = PANEL_LIMIT): {
+export function useBoard(board: BoardKind, limit = PANEL_LIMIT, country?: string): {
   entries: BoardEntry[] | undefined;
   status: BoardStatus;
   /** Whether asking for more would plausibly return any, so a control can hide. */
@@ -216,13 +244,13 @@ export function useBoard(board: BoardKind, limit = PANEL_LIMIT): {
    * does, and a board that is not cached has nothing to show until the request
    * lands anyway.
    */
-  useEffect(() => { void ensureBoard(board, limit); }, [board, limit]);
+  useEffect(() => { void ensureBoard(board, limit, country); }, [board, limit, country]);
 
-  const held = cache.get(board);
+  const held = cache.get(keyFor(board, country));
   const entries = held?.entries;
   return {
     entries,
-    status: entries ? 'ready' : failed.has(board) ? 'unavailable' : 'loading',
+    status: entries ? 'ready' : failed.has(keyFor(board, country)) ? 'unavailable' : 'loading',
     /**
      * A full page is the only evidence there might be another.
      *

@@ -164,10 +164,158 @@
   color: var(--gold-deep);
 }
 
+/*
+ * The handle line, now carrying the country chip.
+ *
+ * A row rather than inline text so the chip sits on the handle's baseline
+ * instead of nudging the line height — an inline-flex child in a plain
+ * paragraph pushes the whole line down by its own padding.
+ */
+.handleRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .handle {
   color: var(--faint);
   font-size: 12px;
   margin: 0;
+}
+
+/*
+ * The standing band: two rankings, a trend, and nothing else.
+ *
+ * Modelled on the shape a profile card works best in — one figure that says
+ * where you are in the world, one that says where you are among the people you
+ * actually know, and a line showing which way you are moving. The rest of this
+ * page is a grid of a player's own numbers; this is the only part that compares
+ * them to anybody.
+ *
+ * It sits above that grid rather than inside it deliberately. A rank in a
+ * twelve-cell grid of equal boxes is just another statistic; the whole reason it
+ * leads is that it is the one figure a visitor came to see.
+ */
+.standing {
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+  padding: 15px 15px 11px;
+  margin: 0 0 var(--gap-sm);
+}
+
+/*
+ * Two rankings as peers.
+ *
+ * Equal columns, equal type, no visual hierarchy between them — that equality
+ * is the design. Global tells you almost nothing on its own: #1,081 of an
+ * unknown total is a number nobody has a scale for. The rank among people you
+ * know is the one that means something, and making it visibly secondary would
+ * undo the reason it is here.
+ */
+.rankings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--gap-sm);
+}
+
+.rankLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+  margin-bottom: 6px;
+}
+
+.rankValue {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 26px;
+  color: var(--gold);
+  margin: 0;
+  /* Figures of the same width, so a rank that ticks over from #99 to #100 does
+     not shove the label beside it sideways. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* "of 12", "unranked" — the qualifier the big number would be misread without. */
+.rankOf {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/*
+ * No rank yet, said in words rather than as a number.
+ *
+ * Grey and small, because "unranked" is a state rather than a score and
+ * rendering it at 26px gold would give being new the same visual weight as
+ * being first.
+ */
+.rankNone {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/*
+ * The trend, spanning the full width of the band.
+ *
+ * Edge to edge on purpose: it has no axes, so the width is the only thing
+ * giving the shape enough room to be a shape. Boxed in beside a stat it would
+ * be texture.
+ */
+.spark {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin-top: 12px;
+}
+
+/* The chart says nothing numeric, so the caption carries the numbers. */
+.sparkCaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--gap-sm);
+  margin-top: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.sparkNow {
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * The line draws itself once on arrival.
+   *
+   * A single pass, not a loop: this is a card somebody opened to read, and a
+   * chart that keeps redrawing turns a static page into something with a
+   * heartbeat competing for attention with the names next to it.
+   */
+  .spark polyline {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: sparkDraw 900ms ease-out forwards;
+  }
+
+  .spark line { animation: sparkTip 300ms ease-out 800ms backwards; }
+}
+
+@keyframes sparkDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes sparkTip {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .stats {

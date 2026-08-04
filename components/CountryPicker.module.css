@@ -1,0 +1,100 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.currentName {
+  font-size: 13px;
+  color: var(--text);
+  /* Takes the slack so Remove sits at the right rather than jammed against a
+     short country name and floating away from a long one. */
+  flex: 1 1 auto;
+}
+
+.clear {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  /* 44px of tap target from 11px of text: the row is thin and this is the one
+     destructive control on it, so it must not be the hardest thing to hit. */
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.clear:hover:not(:disabled) { color: var(--bad); }
+.clear:disabled { opacity: 0.5; cursor: default; }
+
+.none {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/*
+ * The guess, boxed so it reads as an offer rather than as a statement of fact.
+ *
+ * A bare line of text saying "We think you are in Germany" above a dropdown
+ * looks like a label for the dropdown. Boxed with its own button, it reads as
+ * what it is: one thing you can accept, and a list if you would rather not.
+ */
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 11px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+}
+
+.suggestionText {
+  flex: 1 1 180px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.select {
+  /* The one native control in the game, and deliberately so: 249 options is
+     exactly what a native select is good at, and a hand-built listbox would be
+     a scrolling, searchable, keyboard-navigable widget rebuilt worse. The
+     platform one is also the only version that works properly on a phone. */
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 9px 10px;
+  min-height: 44px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+}
+
+.select:focus-visible { border-color: var(--gold); outline: none; }
+.select:disabled { opacity: 0.6; }
+
+.saved { font-size: 12px; color: var(--good, var(--gold)); margin: 0; }
+.error { font-size: 12px; color: var(--bad); margin: 0; }

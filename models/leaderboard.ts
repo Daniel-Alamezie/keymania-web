@@ -1,3 +1,4 @@
+import type { CountryCode } from './countries';
 import type { PublicCosmetics } from './cosmetics';
 /**
  * The global standings — `GET /api/board`, proxying `GET /leaderboard`.
@@ -100,11 +101,21 @@ export const MAX_LIMIT = 100;
  * and the thing between them was never written down. So it is written down here,
  * and both call it.
  */
-export function boardQuery(board: BoardKind, limit: number): string {
+export function boardQuery(board: BoardKind, limit: number, country?: string): string {
   const rows = Number.isFinite(limit) && limit >= 1
     ? Math.min(Math.floor(limit), MAX_LIMIT)
     : PANEL_LIMIT;
-  return `board=${board}&limit=${rows}`;
+  /**
+   * `country` narrows the standings to one country, and is not a board name.
+   *
+   * A parameter for the same reason the client puts Global/Country/Friends on
+   * a control separate from the board tabs: the board says what is measured and
+   * this says who. Upstream honours it on the standings only and echoes back
+   * what it actually used, so a client cannot end up captioning the global
+   * board with a country name.
+   */
+  const scoped = country ? `&country=${encodeURIComponent(country)}` : '';
+  return `board=${board}&limit=${rows}${scoped}`;
 }
 
 /**
@@ -211,6 +222,14 @@ export interface BoardEntry {
   /** Words landed in the weekly sprint. Only on the weekly board. */
   words?: number;
   /**
+   * The country this player chose to show.
+   *
+   * Absent for most rows and permanently absent for anyone who never picks one,
+   * so the column is drawn per-board on the same all-or-nothing rule the badge
+   * column uses — a chip on some rows and not others is a ragged left edge.
+   */
+  country?: CountryCode;
+  /**
    * Best accuracy across refereed duels. Colour on the board, never part of
    * the ordering — the server sees completed words, never keystrokes, so it
    * cannot verify this.
@@ -236,5 +255,14 @@ export interface BoardEntry {
 export interface LeaderboardResponse {
   /** Which board answered. Echoed by the API, so a fallback is visible. */
   board: BoardKind;
+  /**
+   * Which country the rows are scoped to, if any.
+   *
+   * Echoed for the same reason `board` is, and it carries more weight: absent
+   * means the request named no country *or* named one the API refused, and a
+   * client captioning the global board with a country name would be lying
+   * about what the reader is looking at.
+   */
+  country?: string;
   entries: BoardEntry[];
 }

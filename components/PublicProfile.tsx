@@ -9,9 +9,14 @@ import { pathLabel, previousPath } from '@/game/lastPath';
 import { sendInvite } from '@/game/sendInvite';
 import SignInLink from './SignInLink';
 import { useFriends } from '@/game/friends';
+import { contenders, friendStanding } from '@/game/friendRank';
+import Sparkline from './Sparkline';
+import CountryChip from './CountryChip';
+import chip from './CountryChip.module.css';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import { formatPlayTime, type PublicProfile as Profile } from '@/models/profile';
 import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
+import { countryName } from '@/models/countries';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
 
@@ -149,6 +154,35 @@ export default function PublicProfile({ handle }: { handle: string }) {
    * where it was: between friends, and nowhere else.
    */
   const presence = friendship?.presence;
+
+  /**
+   * Their place among the viewer's friends.
+   *
+   * `contenders` builds the pool from the friends list this page already
+   * fetched — so this costs no request — and marks the subject as `you` so the
+   * ranking treats them as the one being placed. That flag names "the person
+   * this figure is about", which here is the profile's owner rather than the
+   * reader.
+   *
+   * `undefined` for a stranger, for somebody unranked, and while the friends
+   * list is still loading. All three mean the same thing to the card: there is
+   * no honest number to put here, so the cell is not drawn.
+   */
+  const standing = friendship && profile
+    ? friendStanding(
+      contenders(
+        friends.data.friends.filter((f) => f.handle !== profile.handle),
+        {
+          handle: profile.handle,
+          displayName: profile.displayName,
+          rating: profile.rating,
+          bestWpm: profile.bestRankedWpm,
+          you: true,
+        },
+      ),
+      'standings',
+    )
+    : undefined;
   const pending = friends.data.outgoing.some((f) => f.handle === profile.handle);
   const incoming = friends.data.incoming.some((f) => f.handle === profile.handle);
 
@@ -173,13 +207,109 @@ export default function PublicProfile({ handle }: { handle: string }) {
           )}
           {profile.displayName}
         </h1>
-        <p className={styles.handle}>@{profile.handle}</p>
+        <p className={`${styles.handle} ${styles.handleRow}`}>
+          {/* Beside the handle rather than the display name: both are identity
+              rather than achievement, and the badge above is already carrying
+              the eye at the name's line. */}
+          <CountryChip code={profile.country} className={chip.large} />
+          <span>@{profile.handle}</span>
+        </p>
         {/* Here rather than on a board row, which has no width to spare for
             one. This is the surface titles were made for. */}
         {profile.cosmetics?.title && (
           <p className={`${styles.title} pixel-font`}>{profile.cosmetics.title}</p>
         )}
       </header>
+
+      {/*
+        * Where they stand, and it is the only part of this page that compares
+        * them to anybody. Everything below is a player's own numbers.
+        */}
+      <section className={styles.standing} aria-label="Standing">
+        <div className={styles.rankings}>
+          <div>
+            <p className={styles.rankLabel}>Global ranking</p>
+            {profile.rank ? (
+              <p className={`${styles.rankValue} pixel-font`}>
+                {/*
+                  * "1000+" when the server stopped counting rather than a
+                  * number it did not finish working out. See RANK_CEILING in
+                  * the API: a truncated count shown as an exact rank would be
+                  * wrong in the flattering direction, with nothing saying so.
+                  */}
+                #{profile.rank.position.toLocaleString()}{profile.rank.capped && '+'}
+              </p>
+            ) : (
+              /* Not last. Unranked — they have never finished a refereed duel,
+                 and a number here would invent a defeat nobody handed them. */
+              <p className={styles.rankNone}>Unranked</p>
+            )}
+          </div>
+
+          {/*
+            * Their place among YOUR friends, never among theirs.
+            *
+            * This is the one thing on this page that is easy to get backwards
+            * and expensive if you do. Ranking somebody within their own friend
+            * list would publish how many friends they have and imply who is in
+            * that circle — the same class of fact this card withholds duel
+            * history to avoid. The pool is always the viewer's, so the figure
+            * says "where this player sits among the people I know", which is
+            * both private and the more useful of the two readings.
+            *
+            * Shown only when they are actually in that pool. For a stranger
+            * there is no such position, and the global figure takes the width.
+            */}
+          {/*
+            * Their country's standings, between global and friends.
+            *
+            * The order is deliberate: widest pool, then narrower, then the one
+            * that is personal to the reader. Absent entirely for somebody who
+            * has not chosen a country — an empty cell reading "unranked" would
+            * imply they lost a board they were never on.
+            */}
+          {profile.countryRank && profile.country && (
+            <div>
+              <p className={styles.rankLabel}>In {countryName(profile.country)}</p>
+              <p className={`${styles.rankValue} pixel-font`}>
+                #{profile.countryRank.position.toLocaleString()}
+                {profile.countryRank.capped && '+'}
+              </p>
+            </div>
+          )}
+
+          {standing && (
+            <div>
+              <p className={styles.rankLabel}>Among your friends</p>
+              <p className={`${styles.rankValue} pixel-font`}>
+                #{standing.position}
+                <span className={styles.rankOf}>of {standing.of}</span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/*
+          * Recent form.
+          *
+          * Speeds in order with no dates, which is what makes it publishable at
+          * all — see recentWpm in the API. Absent under two duels, because a
+          * line needs two ends and one duel is not a trend.
+          */}
+        {(profile.recentWpm?.length ?? 0) > 1 && (
+          <>
+            <Sparkline
+              className={styles.spark}
+              points={profile.recentWpm!}
+              label={`Recent speed across ${profile.recentWpm!.length} ranked duels`}
+            />
+            <p className={styles.sparkCaption}>
+              <span>Recent speed</span>
+              <span className={styles.sparkNow}>{profile.recentWpm!.at(-1)} wpm</span>
+            </p>
+          </>
+        )}
+      </section>
 
       <dl className={styles.stats}>
         {/* Leads, because it is the only figure here that compares this player

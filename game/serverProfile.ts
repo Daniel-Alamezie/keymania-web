@@ -33,6 +33,8 @@ export interface ProfileState {
   saveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
   saveHandle: (handle: string) => Promise<{ ok: boolean; error?: string }>;
   saveCharacter: (character: CharacterId) => Promise<{ ok: boolean; error?: string }>;
+  /** The country beside your name. `null` removes it. */
+  saveCountry: (country: string | null) => Promise<{ ok: boolean; error?: string }>;
   /**
    * Equip a badge, title or name colour. `null` takes one off; an omitted
    * field is left alone, which is what lets the panel send one change at a
@@ -282,6 +284,13 @@ async function savePatch(
     handle?: string;
     character?: CharacterId;
     cosmetics?: { title?: string | null; badge?: string | null; nameColour?: string | null };
+    /**
+     * Three distinct states, and the route upstream reads them the same way:
+     * a code sets it, `null` clears it, and omitting the key leaves it alone.
+     * `undefined` must never be sent as an explicit null or every unrelated
+     * save would quietly remove somebody's country.
+     */
+    country?: string | null;
   },
   fallback: string,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -338,13 +347,24 @@ const saveHandle = (handle: string) =>
 const saveCharacter = (character: CharacterId) =>
   savePatch({ character }, 'Could not save that character.');
 
+/**
+ * The country shown beside your name, or `null` to stop showing one.
+ *
+ * `null` rather than an omitted field, and the difference is the whole reason
+ * this takes a nullable: omitting means "leave it alone" on this route, so
+ * there would otherwise be no way to say "remove it". Somebody who set a
+ * country must be able to unset it.
+ */
+const saveCountry = (country: string | null) =>
+  savePatch({ country }, 'Could not save that country.');
+
 const saveCosmetics = (
   wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
 ) => savePatch({ cosmetics: wanted }, 'Could not save that.');
 
 export function useServerProfile(): ProfileState {
   const state = useSyncExternalStore(subscribeToStore, readSnapshot, () => EMPTY);
-  return { ...state, saveName, saveHandle, saveCharacter, saveCosmetics };
+  return { ...state, saveName, saveHandle, saveCharacter, saveCosmetics, saveCountry };
 }
 
 /**

@@ -57,9 +57,18 @@ type Loaded =
   | { ok: true; data: FriendsResponse }
   | { ok: false; error: string | null };
 
-async function load(): Promise<Loaded> {
+/**
+ * @param weekly Ask for each friend's weekly sprint too.
+ *
+ * Off by default because it is the expensive half: weekly results live in their
+ * own rows upstream, so filling them in is one extra read per friend, up to
+ * sixty on a full list. The friends panel never needs them; only the weekly
+ * friends board does, and only while somebody is looking at it.
+ */
+async function load(weekly = false): Promise<Loaded> {
   try {
-    const response = await fetch('/api/me/friends', { cache: 'no-store' });
+    const path = weekly ? '/api/me/friends?include=weekly' : '/api/me/friends';
+    const response = await fetch(path, { cache: 'no-store' });
     // Signed out is not an error worth showing — it is just an empty list.
     if (response.status === 401) return { ok: true, data: EMPTY };
     if (!response.ok) {
@@ -84,7 +93,18 @@ export interface FriendsState {
   block: (handle: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
-export function useFriends(enabled: boolean): FriendsState {
+export function useFriends(
+  enabled: boolean,
+  /**
+   * Ask for each friend's weekly sprint as well.
+   *
+   * Only the weekly friends board wants this, and only while it is on screen —
+   * it is one extra upstream read per friend. Part of the effect's dependency
+   * list, so turning it on refetches immediately rather than waiting out a
+   * thirty-second poll with the column blank.
+   */
+  weekly = false,
+): FriendsState {
   const [data, setData] = useState<FriendsResponse>(EMPTY);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +132,7 @@ export function useFriends(enabled: boolean): FriendsState {
     // Guarded inside the async body rather than by a flag set here, so a second
     // render with the same `enabled` cannot leave the first fetch orphaned.
     let current = true;
-    const ask = () => { void load().then((result) => { if (current) apply(result); }); };
+    const ask = () => { void load(weekly).then((result) => { if (current) apply(result); }); };
 
     ask();
     let timer = setInterval(ask, POLL_MS);
@@ -141,12 +161,12 @@ export function useFriends(enabled: boolean): FriendsState {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [enabled, apply]);
+  }, [enabled, weekly, apply]);
 
   const refresh = useCallback(async () => {
     if (!enabled) return;
-    apply(await load());
-  }, [enabled, apply]);
+    apply(await load(weekly));
+  }, [enabled, weekly, apply]);
 
   /**
    * Every write re-reads the list rather than patching it locally.

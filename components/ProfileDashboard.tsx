@@ -20,6 +20,7 @@ import FriendsPanel from './FriendsPanel';
 import { useUiSounds } from './SoundToggle';
 import WpmChart, { type ChartPoint } from './WpmChart';
 import styles from './ProfileDashboard.module.css';
+import CountryPicker from './CountryPicker';
 
 /**
  * The player's dashboard: who they are on the board, how fast they are now, and
@@ -39,7 +40,7 @@ export default function ProfileDashboard() {
   // silent screen in the app.
   useUiSounds();
   const {
-    profile, loading, error, anonymous, saveName, saveHandle, saveCharacter,
+    profile, loading, error, anonymous, saveName, saveHandle, saveCharacter, saveCountry,
   } = useServerProfile();
   const account = useAccount();
 
@@ -320,6 +321,22 @@ export default function ProfileDashboard() {
               />
 
               <HandleEditor current={profile.handle ?? ''} onSave={saveHandle} />
+
+              {/*
+                * Country sits with the name and the handle rather than with the
+                * cosmetics, because it is identity rather than an award. Nothing
+                * about it was earned, and shelving it in the trophy cabinet
+                * would say otherwise.
+                */}
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>Country</h2>
+                <p className={styles.muted}>
+                  Shown beside your name on the boards, and it puts you on your
+                  country&apos;s leaderboard. Optional, and you can remove it at
+                  any time.
+                </p>
+                <CountryPicker current={profile.country} onSave={saveCountry} />
+              </section>
 
             </aside>
           </div>

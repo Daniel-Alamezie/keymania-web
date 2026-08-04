@@ -80,6 +80,41 @@ export const badgeSrc = (file: string) => `/badges/${file}`;
 export const FOUNDER_BADGE = 'badge.founder';
 
 /**
+ * Turn a set of chosen catalogue ids into what every rendering surface expects.
+ *
+ * The boards, the duel plates and the public card all take *values* — a
+ * filename, a label, a CSS colour — because the server resolves ids before
+ * sending them. Anywhere the client holds ids instead has to do the same
+ * resolution, and this is that, once.
+ *
+ * There were two callers before this existed and there is now a third, which is
+ * exactly when a private copy becomes a liability: the appearance preview
+ * resolving a pending selection, and the friends leaderboard resolving the
+ * viewer's own row. Two implementations of "what does this id look like" is two
+ * places for the founder number rule below to be forgotten.
+ */
+export function resolveWorn(
+  catalogue: Cosmetic[],
+  chosen: { title?: string | null; badge?: string | null; nameColour?: string | null },
+  founderNumber?: number,
+): PublicCosmetics {
+  const byId = (id: string | null | undefined) =>
+    (id ? catalogue.find((c) => c.id === id) : undefined);
+
+  return {
+    title: byId(chosen.title)?.label,
+    badge: byId(chosen.badge)?.value,
+    badgeLabel: byId(chosen.badge)?.label,
+    nameColour: byId(chosen.nameColour)?.value,
+    /**
+     * Only beside the founder badge. A number on its own is a fact about
+     * somebody nobody asked for, and beside any other badge it means nothing.
+     */
+    badgeNumber: chosen.badge === FOUNDER_BADGE ? founderNumber : undefined,
+  };
+}
+
+/**
  * The three groups, in the order the panel shows them.
  *
  * Badges first because they are the most visible thing a player can change and

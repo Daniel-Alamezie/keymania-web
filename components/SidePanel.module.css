@@ -382,6 +382,65 @@
  * The heading became a pair of buttons, so the record keeps its place and the
  * challenges sit exactly where somebody already looks after a duel.
  */
+/*
+ * Global or friends, above the board tabs.
+ *
+ * A segmented control rather than a fifth tab, and the distinction is the whole
+ * reason it reads cleanly: the tabs choose *what is measured* and this chooses
+ * *who is measured*. Those are independent, so a "Friends" tab beside
+ * Standings and Weekly would have forced a choice between them — you could see
+ * your friends, or you could see the weekly board, never your friends on the
+ * weekly board.
+ *
+ * Above rather than below, because it is the wider question. Reading down the
+ * panel you pick the population, then the measure, then the rows.
+ */
+.scope {
+  display: flex;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 2px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge-soft);
+}
+
+.scopeOption {
+  flex: 1 1 0;
+  /* Zero basis and equal grow: two words of different lengths must not give
+     the segments different widths, or the control looks like it is weighted
+     towards whichever happens to be selected. */
+  min-width: 0;
+  padding: 5px 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.scopeOption:hover { color: var(--gold); }
+
+.scopeOption[data-active] {
+  background: var(--edge-soft);
+  color: var(--gold);
+}
+
+/*
+ * The empty friends board, which is a prompt rather than an error.
+ *
+ * Somebody who has just found this toggle and has no friends yet has hit the
+ * one state where the feature cannot do anything — so the message is the way
+ * out of it, not an apology for it.
+ */
+.scopeEmpty {
+  display: block;
+  margin-top: 6px;
+  color: var(--gold);
+}
+
 .tabs {
   display: flex;
   justify-content: space-between;

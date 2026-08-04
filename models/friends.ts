@@ -6,6 +6,9 @@
  * which is the standing hazard of this split: see models/README.md.
  */
 
+import type { PublicCosmetics } from './cosmetics';
+import type { CountryCode } from './countries';
+
 /**
  * How you relate to someone, from your own side.
  *
@@ -46,6 +49,27 @@ export interface Friend {
   /** Their standing, so a row says who you would actually be playing. */
   rating?: number;
   bestWpm?: number;
+  /** Furthest survival run, so the friends board can rank on streak too. */
+  bestStreak?: number;
+  /**
+   * What they are wearing, resolved by the server exactly as a board row is.
+   *
+   * Here so the friends leaderboard renders identically to the global one. The
+   * friends *panel* does not draw badges and never has; this exists for the
+   * board, which shares its row component with the global board and reads this
+   * field or draws nothing.
+   */
+  cosmetics?: PublicCosmetics;
+  /** The country they chose to show, so a friends row matches a global one. */
+  country?: CountryCode;
+  /**
+   * This week's sprint, and absent for two different reasons the friends board
+   * has to keep apart: the caller did not ask for it (no `include=weekly`), or
+   * they asked and this friend has not run the challenge. The first means "we
+   * do not know", the second means "they have no score" — showing a dash for
+   * both is fine, but ranking somebody last because we never asked is not.
+   */
+  weekly?: { words: number; wpm: number; score: number };
 }
 
 /**

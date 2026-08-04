@@ -1,0 +1,50 @@
+/*
+ * Two letters in a box, sized to sit on a name's line without disturbing it.
+ *
+ * Quiet on purpose. This is context rather than achievement — it says where
+ * somebody is from, not what they did — so it must read as less important than
+ * the badge beside it and than the name it qualifies. A gold chip next to a
+ * founder's mark would be two things competing to be looked at first.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Fixed, not padded to fit. Every code is exactly two characters, so a fixed
+     box keeps the names after it aligned down a column — the same reason the
+     badge cell is a fixed width rather than a minimum. */
+  width: 26px;
+  height: 15px;
+  flex: none;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--edge-soft);
+  /* Nothing rounded elsewhere in this game. A pill here would be the one soft
+     shape on a screen of hard pixel edges. */
+  border: 1px solid transparent;
+  /* Optically centred: the pixel font sits high in its box, so equal padding
+     leaves the letters looking like they are falling out of the top. */
+  padding-top: 1px;
+  cursor: default;
+}
+
+/* On the profile card there is room to be legible rather than merely present. */
+.large {
+  width: 34px;
+  height: 20px;
+  font-size: 10px;
+}
+
+/*
+ * The rail and the phone, where the row is already fighting for width.
+ *
+ * Narrower rather than hidden. The country is one of the few things on a row
+ * that a stranger's name alone does not tell you, and it survives shrinking in
+ * a way the secondary figures do not — those get dropped entirely at this size.
+ */
+.compact {
+  width: 20px;
+  height: 13px;
+  font-size: 7px;
+}

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { badgeSrc, COSMETIC_GROUPS, FOUNDER_BADGE, type Cosmetic, type PublicCosmetics } from '@/models/cosmetics';
+import {
+  badgeSrc, COSMETIC_GROUPS, FOUNDER_BADGE, resolveWorn, type Cosmetic, type PublicCosmetics,
+} from '@/models/cosmetics';
 import { useServerProfile } from '@/game/serverProfile';
 import CosmeticsPreview from './CosmeticsPreview';
 import styles from './CosmeticsPicker.module.css';
@@ -61,7 +63,6 @@ export default function CosmeticsPicker() {
   const dirty = SLOTS.some((slot) => chosen[slot] !== stored[slot]);
 
   const owns = (id: string) => worn.earned.includes(id);
-  const byId = (id: string | null) => (id ? worn.catalogue.find((c) => c.id === id) : undefined);
 
   /**
    * The pending selection as the rest of the game would receive it.
@@ -71,13 +72,7 @@ export default function CosmeticsPicker() {
    * rather than ids, exactly as they do from a real board response, so they
    * cannot tell the difference between this and the genuine article.
    */
-  const preview: PublicCosmetics = {
-    title: byId(chosen.title)?.label,
-    badge: byId(chosen.badge)?.value,
-    badgeLabel: byId(chosen.badge)?.label,
-    nameColour: byId(chosen.nameColour)?.value,
-    badgeNumber: chosen.badge === FOUNDER_BADGE ? worn.founderNumber : undefined,
-  };
+  const preview: PublicCosmetics = resolveWorn(worn.catalogue, chosen, worn.founderNumber);
 
   function choose(item: Cosmetic) {
     if (!owns(item.id) || saving) return;
