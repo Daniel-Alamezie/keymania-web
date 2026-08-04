@@ -271,7 +271,14 @@
 .list[data-compact] .rank { gap: 5px; padding: 6px 6px; }
 .list[data-compact] .rankPos { width: 18px; }
 .list[data-compact] .rankBadge { width: 18px; }
-.list[data-compact] .rankSub { display: none; }
+/*
+ * Speed stays in the rail, without its unit.
+ *
+ * `flex: none` rather than the shrinkable default the full board uses: this is
+ * now two or three characters and has nothing left to give, so letting it
+ * shrink would only ever produce an ellipsis on a three-digit number.
+ */
+.list[data-compact] .rankSub { flex: none; font-size: 10px; }
 .list[data-compact] .rankName { min-width: 0; }
 
 /*

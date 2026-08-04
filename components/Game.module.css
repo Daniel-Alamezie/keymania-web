@@ -40,7 +40,21 @@
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(230px, 300px) minmax(340px, 520px) minmax(230px, 300px);
+  /*
+   * The flanks were capped at 300 while the grid reserved 1400, so 200 pixels
+   * of the row's own budget sat unused on every wide screen. 360 spends them:
+   * 360 + 520 + 360 plus two 20px gaps is 1280, still inside the cap.
+   *
+   * It is the standings column that wanted them. At 300 the name cell is 112px
+   * and a sixteen-character name needs 154, so the longest names truncated on
+   * the panel players actually look at. At 360 it is 172 and every name a
+   * player can have fits with room over. Measured, not estimated: the cell
+   * tracks the rail exactly, at rail minus 188.
+   *
+   * The record panel opposite gets the same width because a grid column is
+   * symmetrical, which costs nothing and is why this was not a one-sided fix.
+   */
+  grid-template-columns: minmax(230px, 360px) minmax(340px, 520px) minmax(230px, 360px);
   align-items: start;
   justify-content: center;
   gap: 20px;
