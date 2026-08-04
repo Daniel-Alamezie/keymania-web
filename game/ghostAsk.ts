@@ -13,15 +13,26 @@
  * A range rather than a fixed number, because a wait that ends on exactly the
  * same second every search is the first thing anybody notices.
  *
- * The upper end came down from 49 seconds. Nearly fifty seconds of staring at a
- * spinner is a bounce for most people, and it was the common case rather than
- * the tail: with a flat spread over thirty seconds, most searches ended nearer
- * the top than the bottom. The floor stays at twenty, because the queue has to
- * get a real chance at a real opponent first — that is the whole reason the
- * server enforces its own minimum and will not honour an earlier request.
+ * Down again, from 20-39 seconds, and this time the queue's own numbers made
+ * the case. Across two days of production it paired **one** search with a real
+ * person against four hundred and thirty that ended in a simulated opponent —
+ * so holding every player for the better part of a minute was preserving a
+ * possibility that fires roughly once in four hundred, and charging everybody
+ * a spinner for it.
+ *
+ * The floor stays above the server's own minimum of fifteen seconds on
+ * purpose. That minimum is what stops a modified client skipping the queue
+ * entirely, and a client whose patience ran out *below* it would have every
+ * first request refused and would wait for the retry instead — slower than
+ * simply asking later. Ten seconds of margin covers a slow socket without
+ * getting anywhere near it.
+ *
+ * This is a number to revisit, not a settled one: the day real players are
+ * dense enough that pairings actually happen, waiting longer starts being
+ * worth something again.
  */
-export const MIN_WAIT_S = 20;
-export const WAIT_SPREAD_S = 20;
+export const MIN_WAIT_S = 16;
+export const WAIT_SPREAD_S = 9;
 
 /** Pick this search's limit. Called once per search. */
 export function waitLimit(random: () => number = Math.random): number {

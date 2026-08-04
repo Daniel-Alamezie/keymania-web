@@ -69,7 +69,7 @@ export default function LeaderboardPanel() {
       )}
 
       {status === 'ready' && shown && shown.length > 0 && (
-        <BoardRows entries={shown} board={board} />
+        <BoardRows entries={shown} board={board} compact />
       )}
 
       {/* Only once there is something past the cap, so it never promises a page

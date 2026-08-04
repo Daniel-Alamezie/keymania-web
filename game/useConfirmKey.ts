@@ -62,7 +62,7 @@ export function confirmTarget(view: {
  * The game is already played entirely with one hand on the spacebar, so asking a
  * player to leave the keyboard, find a button and come back is a worse ending
  * to every duel than it needs to be. This makes the primary action of a panel —
- * Fight Rookie, Rematch, Play again, Go again — reachable without moving.
+ * Fight Rookie, Rematch, Go again — reachable without moving.
  *
  * Deliberately a global listener rather than autofocusing the button. Focus is
  * lost the moment anybody clicks anywhere, and a shortcut that stops working

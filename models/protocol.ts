@@ -349,7 +349,15 @@ export type ClientMessage =
    * on how early it can be asked, so this says "I have waited long enough"
    * rather than "give me an opponent".
    */
-  | { action: 'playGhost' }
+  /**
+   * Give up waiting for a person.
+   *
+   * Carries the room and a token so it survives a reconnect: a fresh socket is
+   * linked to nothing, and the room being waited in is seated under the id
+   * that died. Without these the server could not tell who was asking, refused
+   * every retry, and the search never resolved. See src/playGhost.ts.
+   */
+  | { action: 'playGhost'; roomId?: string; token?: string }
   /**
    * One word of a survival run.
    *

@@ -12,34 +12,55 @@ import {
  * complaint — just somebody who left.
  */
 
+/**
+ * The server's own floor, restated here because it lives in the other repo and
+ * cannot be imported.
+ *
+ * `MIN_QUEUE_MS` in keymania-api's lib/ghostRoom.ts. It is what stops a
+ * modified client skipping the queue, and the client's patience has to stay
+ * above it: a request landing underneath is refused, so a client that asked
+ * too early would wait for its own retry instead — slower than simply asking
+ * later. If that constant ever moves, this test is where it should bite.
+ */
+const SERVER_FLOOR_S = 15;
+
 describe('how long anybody waits', () => {
   /**
-   * The change that prompted all of this. Fifty seconds of spinner was a bounce
-   * for most people, and it was the common case rather than the tail: spread
-   * flat across thirty seconds, most searches ended nearer the top than the
-   * bottom.
+   * Down from fifty seconds, then from forty, and production made the case
+   * both times: across two days the queue paired one search with a real person
+   * and four hundred and thirty with a simulated one. Holding everybody for
+   * most of a minute was charging every player a spinner for a possibility
+   * that fires about once in four hundred.
    */
-  it('is never longer than about forty seconds', () => {
-    expect(MIN_WAIT_S + WAIT_SPREAD_S - 1).toBe(39);
+  it('is over inside half a minute', () => {
+    expect(MIN_WAIT_S + WAIT_SPREAD_S - 1).toBeLessThanOrEqual(25);
   });
 
   /**
-   * And never shorter than twenty, because the server keeps its own floor and
-   * will refuse anything earlier. A client that dropped below it would spend
-   * every search asking for something it cannot have.
+   * **The invariant that matters more than the numbers.** Whatever the wait is
+   * tuned to, every possible value of it has to clear the server's floor — or
+   * the first ask of every search is refused and the feature quietly runs on
+   * its retry path instead.
    */
-  it('always gives the real queue its chance first', () => {
-    expect(waitLimit(() => 0)).toBe(20);
-    expect(waitLimit(() => 0.999)).toBe(39);
+  it('never asks earlier than the server will answer', () => {
+    const earliest = waitLimit(() => 0);
+    const latest = waitLimit(() => 0.999);
+    expect(earliest).toBeGreaterThan(SERVER_FLOOR_S);
+    expect(latest).toBeGreaterThanOrEqual(earliest);
+    // And a margin, not a hair: a slow socket delays the room's creation, so
+    // the server's clock starts after the client's.
+    expect(earliest - SERVER_FLOOR_S).toBeGreaterThanOrEqual(1);
   });
 
   /**
    * Varied, or the wait ends on the same second every search and becomes the
-   * most obvious tell the feature has.
+   * most obvious tell the feature has. Asserted against the spread rather than
+   * a fixed count, so narrowing the range cannot silently make this vacuous.
    */
   it('is not the same every time', () => {
-    const seen = new Set(Array.from({ length: 400 }, () => waitLimit()));
-    expect(seen.size).toBeGreaterThan(10);
+    const seen = new Set(Array.from({ length: 600 }, () => waitLimit()));
+    expect(seen.size).toBe(WAIT_SPREAD_S);
+    expect(WAIT_SPREAD_S).toBeGreaterThanOrEqual(5);
   });
 });
 

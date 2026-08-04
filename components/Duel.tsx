@@ -76,7 +76,7 @@ export interface MultiplayerConfig {
    * The result screen used to offer "play again" and the menu, so anybody who
    * wanted a *different* opponent — the common case when the last one has
    * already left, or was simply not a close match — had to go back to the menu
-   * and press Play again. Two steps to do the thing they were most likely to
+   * and press Play. Two steps to do the thing they were most likely to
    * want next.
    */
   onFindGame: () => void;
@@ -1547,6 +1547,13 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
                 * Against people, "again" is a request rather than a decision —
                 * so the button reports that it has been sent and then waits,
                 * rather than pretending anything has happened yet.
+                *
+                * "Rematch", not "Play again", and the word is doing real work
+                * now that a third button exists. "Play again" and "Find a new
+                * game" both parse as *another game*; only one of them says who
+                * with. Rematch means these people, again. It is also what the
+                * bot duel has always called the same act, so the word means
+                * one thing everywhere rather than two.
                 */}
               {isMulti && multiplayer && (
                 <button
@@ -1557,7 +1564,7 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
                     multiplayer.onRematch();
                   }}
                 >
-                  {asked ? 'Waiting…' : 'Play again'}
+                  {asked ? 'Waiting…' : 'Rematch'}
                 </button>
               )}
 

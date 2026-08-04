@@ -16,7 +16,7 @@ import styles from './SidePanel.module.css';
  * what a crown means and which row is yours, and the rules below were each
  * arrived at by getting them wrong first.
  */
-export default function BoardRows({ entries, board, asStranger }: {
+export default function BoardRows({ entries, board, asStranger, compact }: {
   entries: BoardEntry[];
   board: BoardKind;
   /**
@@ -35,6 +35,21 @@ export default function BoardRows({ entries, board, asStranger }: {
    * preview is meant to catch.
    */
   asStranger?: boolean;
+  /**
+   * The narrow rail beside the menu, rather than the full-board page.
+   *
+   * The same row in 250px and in 640px cannot carry the same things. Measured
+   * in the rail: the fixed furniture and the two figures took 211 of 250
+   * pixels and left the name nineteen — so every name on the board was an
+   * initial and an ellipsis, which is the one thing a leaderboard exists to
+   * show. Compact drops the secondary figure and slims the badge slot, and
+   * the name gets the width back.
+   *
+   * A prop rather than a media query, because both surfaces can be on screen
+   * at the same viewport width and only their own container knows which is
+   * which.
+   */
+  compact?: boolean;
 }) {
   /**
    * An earned name colour, or nothing.
@@ -51,8 +66,23 @@ export default function BoardRows({ entries, board, asStranger }: {
   const myHandle = useHandle();
   const meta = BOARD_META[board];
 
+  /**
+   * Whether this board has a badge column at all.
+   *
+   * The slot used to render only on rows whose owner wore something, which
+   * meant a board where some players had badges and some did not drew its
+   * names at two different x positions — the same ragged left edge the empty
+   * podium slot made, one column further in. Reserving it always would put a
+   * permanent gutter on boards where nobody wears anything.
+   *
+   * So it is decided per board, from the rows actually being drawn: present
+   * for everyone the moment one player wears something, absent entirely when
+   * none do. Both readings stay clean, and the column can never be half there.
+   */
+  const anyBadge = entries.some((entry) => Boolean(entry.cosmetics?.badge));
+
   return (
-    <ul className={styles.list}>
+    <ul className={styles.list} data-compact={compact || undefined}>
       {entries.map((entry) => {
         const podium = entry.position <= 3 ? (entry.position as Podium) : null;
         /**
@@ -104,30 +134,51 @@ export default function BoardRows({ entries, board, asStranger }: {
               : Boolean(myName) && entry.name === myName)) || undefined}
             data-top={entry.position === 1 || undefined}
           >
-            <span className={`${styles.rankPos} pixel-font`}>{entry.position}</span>
-
             {/*
-              * A crown for the podium, a band flame for everybody else.
+              * Rank and podium share one cell: a mark for the top three, the
+              * number for everybody else.
               *
-              * The slot used to be empty below third, which read as "you have
-              * nothing" rather than "you are not top three", and left most of the
-              * board looking unranked when every player on it has a rating and
-              * therefore a band.
+              * They used to be two cells, and on every board except standings
+              * the second one was empty from fourth place down — a dead column
+              * running the length of the list that broke the left edge into a
+              * ragged stripe. Standings never showed it because a band flame
+              * filled the slot for every row, which is exactly why the fault
+              * survived: the one board anybody looks at most was the one board
+              * it could not appear on.
               *
-              * Standings only. The flame means a rating band, and putting one on
-              * a board that is not ordered by rating invites the reading that it
-              * ranks something about speed.
+              * Merged, the cell is always full and always says the same kind of
+              * thing — where you came — so the column scans top to bottom on
+              * every board. A crown needs no "1" beside it.
               *
-              * Both sizes are exact quarter-scale: the crown sprite is 68 tall
-              * and the flame 76, so 17 and 19 land on whole source pixels. A
-              * fraction between them maps some source rows to two screen pixels
-              * and their neighbours to one, which at this size shows as a wobble.
+              * The height is an exact quarter-scale: the sprite is 68 tall, so
+              * 17 lands on whole source pixels. A fraction maps some source
+              * rows to two screen pixels and their neighbours to one, which at
+              * this size shows as a wobble.
               */}
-            <span className={styles.rankFlame}>
+            <span className={styles.rankPos} data-podium={podium || undefined}>
               {podium
                 ? <RankFlame rank={podium} height={17} />
-                : board === 'standings' && <Flame kind={ratingFlame(rating)} height={19} />}
+                : <span className="pixel-font">{entry.position}</span>}
             </span>
+
+            {/*
+              * The rating band, standings only.
+              *
+              * Every row on that board has a rating and therefore a band, so
+              * this column is never empty there. It is absent entirely
+              * elsewhere rather than reserved-and-blank: a flame means a band,
+              * and putting one on a board ordered by speed or words invites the
+              * reading that it ranks something it does not.
+              *
+              * Now that the podium mark has its own cell, the top three keep
+              * their band here too — which they used to lose, since the crown
+              * took the flame's place.
+              */}
+            {board === 'standings' && (
+              <span className={styles.rankFlame}>
+                <Flame kind={ratingFlame(rating)} height={19} />
+              </span>
+            )}
 
             {/* Only a link once a player has a handle. Accounts that reached the
                 board before handles existed have nothing to link to, and render
@@ -151,17 +202,30 @@ export default function BoardRows({ entries, board, asStranger }: {
               * push the name into an ellipsis on a phone — so titles live on
               * the profile and the duel plate, where there is room to read one.
               */}
-            {entry.cosmetics?.badge && (
+            {anyBadge && (
               /* Hover says what the number means. The digits alone are two
                  quiet pixels of provenance; the words are for whoever cares
-                 enough to ask. */
-              <span className={styles.rankBadge} data-tip={badgeTooltip(entry.cosmetics)}>
-                <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={18} height={18} />
-                {/* The founder's position, and only ever theirs. Tiny, because
-                    it is provenance rather than a score — the column already
-                    has a number that means something else entirely. */}
-                {entry.cosmetics.badgeNumber !== undefined && (
-                  <span className={styles.rankBadgeNo}>{entry.cosmetics.badgeNumber}</span>
+                 enough to ask. Nothing to say on an empty slot, which is a
+                 spacer rather than a control. */
+              <span
+                className={styles.rankBadge}
+                data-tip={entry.cosmetics?.badge ? badgeTooltip(entry.cosmetics) : undefined}
+              >
+                {entry.cosmetics?.badge && (
+                  <>
+                    <img src={badgeSrc(entry.cosmetics.badge)} alt="" width={18} height={18} />
+                    {/* The founder's position, and only ever theirs. Tiny,
+                        because it is provenance rather than a score — the
+                        column already has a number that means something else
+                        entirely. */}
+                    {/* Not in the rail: it is the widest thing this column
+                        can hold, and the width it costs comes straight off
+                        the name. The hover still says "Founder #47", and the
+                        full board still shows the digits. */}
+                    {!compact && entry.cosmetics.badgeNumber !== undefined && (
+                      <span className={styles.rankBadgeNo}>{entry.cosmetics.badgeNumber}</span>
+                    )}
+                  </>
                 )}
               </span>
             )}

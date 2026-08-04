@@ -227,6 +227,8 @@ export default function Game() {
   );
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [waiting, setWaiting] = useState<WaitingRoom | null>(null);
+  /** The room this player is queuing in, for a ghost request. See 'searching'. */
+  const queuedRoom = useRef<string | null>(null);
   /** Filled in below, once `leave` and `findGame` exist. See onFindGame. */
   const findAnother = useRef<() => void>(() => {});
   const [error, setError] = useState<string | null>(null);
@@ -309,7 +311,19 @@ export default function Game() {
         }
         // Confirmation that a seat was opened. The screen is already showing the
         // search, so this only carries the rating it queued at.
-        if (message.type === 'searching') setQueuedAt(message.rating);
+        if (message.type === 'searching') {
+          setQueuedAt(message.rating);
+          /**
+           * The room being queued in, kept for the ghost request.
+           *
+           * A socket that dies mid-search comes back with an id the server has
+           * never linked to anything, so "give up waiting" arrived from a
+           * stranger and was refused — silently, and for the whole retry
+           * window. The server has always sent this id; the client simply
+           * threw it away.
+           */
+          queuedRoom.current = message.roomId;
+        }
         if (message.type === 'searchStopped') setQueuedAt(null);
         if (message.type === 'roomCreated') {
           setError(null);
@@ -697,6 +711,7 @@ export default function Game() {
    * Leaving is the user's intent; the cleanup is bookkeeping.
    */
   const leave = useCallback(() => {
+    queuedRoom.current = null;
     setMatch(null);
     setWaiting(null);
     setRooms([]);
@@ -867,7 +882,22 @@ export default function Game() {
            * off. So this reports the wait rather than requesting an outcome,
            * and the screen carries on counting either way.
            */
-          onGiveUpWaiting={() => send({ action: 'playGhost' })}
+          /**
+           * Asked with proof, because the connection alone is not proof.
+           *
+           * The token is minted per request rather than held: it is the same
+           * one every other authenticated action uses, and a search can
+           * outlive a short-lived one. A request without it still works on the
+           * original socket — the server prefers the connection's own link —
+           * so this only has to be right for the reconnect case.
+           */
+          onGiveUpWaiting={() => {
+            void duelToken().then((token) => send({
+              action: 'playGhost',
+              ...(queuedRoom.current ? { roomId: queuedRoom.current } : {}),
+              ...(token ? { token } : {}),
+            }));
+          }}
         />
       </main>
     );

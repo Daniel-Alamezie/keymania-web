@@ -119,15 +119,35 @@
 .rank[data-me] { border-color: var(--player); background: rgba(56, 189, 248, 0.12); }
 .rank[data-top] { border-color: var(--gold); }
 
+/*
+ * Rank and podium in one cell.
+ *
+ * Wide enough for the widest thing it holds: a 17px-tall crown measures 15px
+ * across, and three digits at this size are narrower than that. Centred, so a
+ * one-digit row, a three-digit row and a medal all sit on the same axis and
+ * the names beside them start at the same x.
+ */
 .rankPos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   width: 20px;
+  height: 19px;
   font-size: 10px;
   color: var(--faint);
 }
 
-/* Fixed slot so a crown does not shunt the name out of line with the band
-   flames beneath it. 16px because the widest thing in it is a 17px-tall crown,
-   which is 15px across at that height; a flame is 11px. */
+/* The top three earn their number in the game's gold rather than the muted
+   ink the rest of the column wears — though at the moment they are wearing a
+   medal instead, this keeps the rule true if the marks are ever switched off. */
+.rankPos[data-podium] { color: var(--gold); }
+
+/*
+ * The rating band. Standings only, and rendered rather than reserved: it is
+ * absent from other boards entirely, so there is no empty column to break the
+ * left edge. See BoardRows.
+ */
 .rankFlame {
   display: flex;
   align-items: center;
@@ -143,13 +163,30 @@
  * starts at the same x whether or not its owner has earned anything — a
  * column whose left edge moves per row is a column that stops scanning.
  */
+/*
+ * The badge column, present for every row on a board where anybody wears one
+ * — see BoardRows for why it is all-or-nothing per board rather than per row.
+ *
+ * A minimum width rather than a fixed one: the founder's number sits beside
+ * its mark and needs the room, but an empty slot and a plain badge must still
+ * measure the same, or the names go ragged again for a subtler reason.
+ */
 .rankBadge {
   display: flex;
   align-items: center;
   gap: 2px;
   flex: none;
-  /* Auto rather than fixed once a number can sit beside the mark; the mark
-     itself keeps a fixed width so names still start in line. */
+  /*
+   * Fixed, not minimum, and sized for the widest thing it can hold: an 18px
+   * mark, a 2px gap and a three-digit founder number. A minimum width left the
+   * one row wearing a number seven pixels wider than the rest, which put its
+   * name out of line with every other — the same ragged edge as before, just
+   * subtle enough to look like a rendering accident rather than a rule.
+   *
+   * Rows without a number simply leave the tail of the slot empty. It is
+   * invisible: the space would have been the gap before the name anyway.
+   */
+  width: 34px;
   height: 18px;
 }
 /* 18, up from 14: at 14 the keycap read as a gold smudge and players said
@@ -171,15 +208,106 @@
 /* Pixel art, so it must never be smoothed on the way down to 14px. */
 .rankBadge img { image-rendering: pixelated; }
 
+/*
+ * The name, and the floor under it.
+ *
+ * `min-width` is the whole point. Flexbox lets a shrinkable item collapse to
+ * its content box, and with every other cell fixed the name was the only
+ * thing that *could* give — so in the 250px rail it gave everything and
+ * rendered as one letter and an ellipsis. A floor means the row runs out of
+ * space somewhere the reader can afford to lose it.
+ */
 .rankName {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rankSub { color: var(--faint); font-size: 11px; }
-.rankScore { color: var(--gold); font-size: 12px; }
+/*
+ * The secondary figure yields before the name does.
+ *
+ * `flex: 0 1 auto` with no floor, so when the row is tight this is what gets
+ * squeezed — it is context for the score, and a name is the row's subject.
+ */
+.rankSub {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+/* The score never shrinks: a rating with a digit missing is a wrong number,
+   which is worse than a truncated word. */
+.rankScore {
+  flex: none;
+  color: var(--gold);
+  font-size: 12px;
+}
+
+/* ---------- The rail ---------- */
+
+/*
+ * Compact rows, for the 300px column beside the menu. See BoardRows.
+ *
+ * Three savings, all spent on the name: the gaps come in, the badge column
+ * loses the founder's digits, and the secondary figure goes entirely. It is
+ * on the full board a click away, and a speed nobody can read next to a name
+ * nobody can read is two facts lost rather than one kept.
+ */
+/*
+ * Tighter than the full board, and deliberately with margin to spare.
+ *
+ * The first pass landed the longest possible name at exactly the width it
+ * needed — no ellipsis, and no room either. Zero headroom is not a fit, it is
+ * a coincidence: a different font fallback, a browser that rounds a fraction
+ * the other way, and the ellipsis is back. These few pixels are the
+ * difference between a layout that fits and one that happens to.
+ */
+.list[data-compact] .rank { gap: 5px; padding: 6px 6px; }
+.list[data-compact] .rankPos { width: 18px; }
+.list[data-compact] .rankBadge { width: 18px; }
+.list[data-compact] .rankSub { display: none; }
+.list[data-compact] .rankName { min-width: 0; }
+
+/*
+ * The band flame goes too, and it is the most defensible cut of the three.
+ *
+ * A flame encodes which band a rating falls in — and in this rail the rating
+ * itself is the gold number at the end of the same row. Twenty-two pixels
+ * spent restating a figure already on screen, in a row that could not fit a
+ * full-length name, is the clearest trade on the board.
+ *
+ * It stays on the full board, where there is room and the colour earns its
+ * place. Measured: without this the longest name a player can have needed 115
+ * pixels and had 106, so the one row most likely to belong to somebody
+ * important was the one still wearing an ellipsis.
+ */
+.list[data-compact] .rankFlame { display: none; }
+
+/*
+ * A phone is a narrow rail with a different name.
+ *
+ * The full board carries the roomy row, which is right at 640px and wrong at
+ * 375: measured there, the name got 72 pixels of the 115 any name can need,
+ * so every row on the board was an ellipsis. The prop cannot help — this is
+ * the same surface, just squeezed — so the width decides instead.
+ *
+ * Deliberately the same four savings as the rail, in the same order, and they
+ * have to stay in step: if one treatment learns to give up something new, the
+ * other is where somebody will forget to.
+ */
+@media (max-width: 560px) {
+  .rank { gap: 5px; padding: 6px 6px; }
+  .rankPos { width: 18px; }
+  .rankFlame { display: none; }
+  .rankBadge { width: 18px; }
+  .rankSub { display: none; }
+}
 
 .footnote {
   margin: 0;

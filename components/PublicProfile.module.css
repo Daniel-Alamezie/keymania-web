@@ -208,11 +208,24 @@
   margin-left: 3px;
 }
 
+/*
+ * The actions, given room to be actions.
+ *
+ * They had no top margin, so they sat flush against whatever ended above them
+ * — which since the collection became shelves meant a button pressed against
+ * a colour tile, reading as part of the cabinet rather than as the thing to
+ * do next.
+ *
+ * `--gap-lg`, matching the space the collection takes above itself, so the
+ * page has one rhythm between its sections rather than a different guess at
+ * each seam.
+ */
 .actions {
   display: flex;
   gap: var(--gap-sm);
   align-items: center;
   flex-wrap: wrap;
+  margin-top: var(--gap-lg);
 }
 
 .settled {
