@@ -11,6 +11,7 @@
  */
 
 import type { CountryCode } from './countries';
+import type { Streak } from './streak';
 
 import type { Cosmetic, EarnedCosmetic, PublicCosmetics } from './cosmetics';
 import type { CharacterId } from './character';
@@ -151,6 +152,21 @@ export interface ServerProfile {
    */
   bestStreak?: number;
   weekly?: { words: number; wpm: number; score: number };
+  /**
+   * The daily streak, and the calendar behind it.
+   *
+   * `current` arrives already resolved against the server's idea of today, not
+   * read off storage: nothing writes on the days somebody does not play, so a
+   * stored run would go on claiming itself forever. The client must not try to
+   * recompute it from `calendar` for the same reason it must not decide the
+   * date -- the server holds the clock everything was stamped against.
+   */
+  streak?: Streak;
+  /**
+   * The offset the server dated those days against, so the browser can notice
+   * it has gone stale and send a correction. See `syncClock`.
+   */
+  utcOffset?: number;
 }
 
 /**
@@ -214,6 +230,8 @@ export interface UpdateProfileResponse {
   displayName: string;
   handle?: string;
   character?: CharacterId;
+  /** The country as it now stands. Absent means there is none, not unchanged. */
+  country?: CountryCode;
   maxLength?: number;
   handleMaxLength?: number;
 }
@@ -275,6 +293,15 @@ export interface PublicProfile {
    */
   country?: CountryCode;
   countryRank?: GlobalRank;
+  /**
+   * Days running, and nothing more.
+   *
+   * The number is publishable in the way a rating is: persistence is standing.
+   * The calendar behind it is not, and never leaves the owner's own route --
+   * it is a precise map of when somebody sits at a keyboard, which is the fact
+   * this card withholds duel history to avoid.
+   */
+  streak?: number;
   /**
    * Recent speeds, oldest first, for the profile sparkline.
    *

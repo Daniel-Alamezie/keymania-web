@@ -321,6 +321,21 @@ export default function PublicProfile({ handle }: { handle: string }) {
           highlight
         />
         <Stat label="Best speed" value={profile.bestRankedWpm} unit="wpm" highlight />
+        {/*
+          * Days running, and only the number.
+          *
+          * Persistence is standing, in the way a rating is: it says something
+          * about a player without saying when they are at their desk. The
+          * calendar behind it stays on their own dashboard, because a grid of
+          * squares is a precise map of somebody's week and this card withholds
+          * duel history for exactly that reason.
+          *
+          * Absent rather than "0 days" for somebody with no run going. A zero
+          * here reads as a judgement on a player who may simply be new.
+          */}
+        {profile.streak !== undefined && profile.streak > 0 && (
+          <Stat label="Streak" value={profile.streak} unit={profile.streak === 1 ? 'day' : 'days'} />
+        )}
         <Stat label="Ranked duels" value={ranked.duels} />
         {/* Absent from an older server rather than shown as zero: "0m" under
             a hundred duels is a claim the card cannot mean. */}

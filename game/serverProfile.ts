@@ -1,7 +1,7 @@
 'use client';
 
 // The store owns all the state, so nothing here needs local React state.
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { asCharacter, DEFAULT_CHARACTER, type CharacterId } from '@/models/character';
 import type {
   ChallengeProgress, DuelResult, ServerProfile, Tally,
@@ -291,6 +291,12 @@ async function savePatch(
      * save would quietly remove somebody's country.
      */
     country?: string | null;
+    /**
+     * Minutes to ADD to UTC to reach this browser's local time, so the server
+     * can date server-refereed results into the player's own days. Sent only
+     * when it has drifted -- see `syncClock`.
+     */
+    tz?: number;
   },
   fallback: string,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -309,6 +315,7 @@ async function savePatch(
     handle?: string;
     character?: CharacterId;
     cosmetics?: SavedCosmetics;
+    country?: string;
   };
 
   // Trust the server's version: it sanitises and canonicalises, so what came
@@ -327,6 +334,17 @@ async function savePatch(
        * than what was asked for — and the panel must show what actually stuck.
        */
       cosmetics: foldSavedCosmetics(snapshot.profile.cosmetics, saved.cosmetics),
+      /**
+       * Assigned outright, never merged, so that removing one sticks.
+       *
+       * The route re-reads the record before answering, so an absent `country`
+       * means there genuinely is not one — not "unchanged". Falling back to the
+       * cached value would make Remove appear to do nothing, which is the same
+       * class of bug as the one this line exists to fix: the panel said "Saved."
+       * while showing the old country, because the response carried no country
+       * and the spread above quietly kept the stale one.
+       */
+      country: saved.country as ServerProfile['country'],
     };
     fetchedAt = Date.now();
     persist(profile);
@@ -358,12 +376,59 @@ const saveCharacter = (character: CharacterId) =>
 const saveCountry = (country: string | null) =>
   savePatch({ country }, 'Could not save that country.');
 
+/**
+ * Tell the server what time zone this browser is in, when it has drifted.
+ *
+ * The server dates results into local days, and it has to: ranked duels and
+ * survival runs finish server-side with no client in the conversation, so the
+ * offset cannot ride along with the result. It has to have been left on the
+ * record earlier, which is this.
+ *
+ * **Sent only when it differs from what is stored.** A player who has not moved
+ * writes nothing, ever. Without the comparison this would be a write on every
+ * single page load, on the busiest route in the app, to say something that
+ * changes about twice a year.
+ *
+ * `getTimezoneOffset` counts minutes *behind* UTC, so London in summer is -60.
+ * The negation is what makes it minutes to *add*, which is the convention the
+ * server's `epochDay` documents. Backwards here shifts every player west of
+ * Greenwich by a day.
+ */
+export function syncClock(stored: number | undefined): void {
+  const mine = -new Date().getTimezoneOffset();
+  if (stored === mine) return;
+  void savePatch({ tz: mine }, 'Could not save your time zone.');
+}
+
 const saveCosmetics = (
   wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
 ) => savePatch({ cosmetics: wanted }, 'Could not save that.');
 
+/**
+ * Once per page load, not once per component.
+ *
+ * This hook has several consumers on a single screen. The comparison inside
+ * `syncClock` already makes a repeat a no-op, but a module-level latch stops
+ * four components racing to make the same decision on the one load where the
+ * offset genuinely has drifted.
+ */
+let clockSynced = false;
+
 export function useServerProfile(): ProfileState {
   const state = useSyncExternalStore(subscribeToStore, readSnapshot, () => EMPTY);
+
+  /**
+   * Here rather than on the profile page, because the server needs this offset
+   * to date results and most players never open that page. Anyone signed in
+   * loads their record to play at all, so this is the one place that catches
+   * everybody.
+   */
+  useEffect(() => {
+    if (clockSynced || !state.profile) return;
+    clockSynced = true;
+    syncClock(state.profile.utcOffset);
+  }, [state.profile]);
+
   return { ...state, saveName, saveHandle, saveCharacter, saveCosmetics, saveCountry };
 }
 

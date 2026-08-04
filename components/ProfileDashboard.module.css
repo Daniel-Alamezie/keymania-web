@@ -143,14 +143,34 @@
   min-width: 0;
 }
 
-@media (min-width: 1400px) {
-  .side {
-    position: sticky;
-    top: 8px;
-    max-height: calc(100dvh - 40px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
+/*
+ * The settings column scrolls with the page, not against it.
+ *
+ * It was sticky with a scroll container of its own, which is a reasonable thing
+ * for a column of short fields and a bad thing next to a full-width row: two
+ * scrollbars on one screen, and a column that sat still while the thing beside
+ * it moved. It also pinned the page's width into two permanent columns, which
+ * is what kept the streak grid squeezed into 370 pixels.
+ *
+ * The rule it replaced is kept in the history rather than here. What it bought
+ * was a name field that stayed put while you typed into it; what it cost was
+ * everything below it having to fit beside it.
+ */
+
+/*
+ * Full-width rows, below the two columns rather than inside either.
+ *
+ * The top margin is not decoration. These are siblings of `.body` under a
+ * fragment, and a fragment has no layout of its own to carry a gap — so
+ * without it the streak heading sat flush against the last duel row above it,
+ * reading as part of that list rather than as a new section.
+ */
+.wide {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  margin-top: 26px;
+  min-width: 0;
 }
 
 /* Belongs to the page now rather than to a panel, so it lines up with the boxes
@@ -238,14 +258,27 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/*
+ * A tile is a fill, not a box.
+ *
+ * Every one of these carried a border, and there are a dozen on this page: two
+ * sections of six, each ruled into a grid of outlined cells. The borders were
+ * not separating anything the background and the gaps were not already
+ * separating, and the effect was a page made mostly of lines.
+ *
+ * Dropping them leaves the ruling to whitespace and gives the outline back its
+ * meaning: a border now says "this figure leads", which is the job the gold one
+ * was already doing and could not do while everything else had one too.
+ */
 .stat {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 13px 15px;
   background: var(--panel-2);
-  border: 1px solid var(--edge-soft);
+  border: 1px solid transparent;
 }
+
 .stat[data-highlight] { border-color: var(--gold); }
 
 .statLabel {

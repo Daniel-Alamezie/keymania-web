@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import styles from './WpmChart.module.css';
 
 export interface ChartPoint {
@@ -87,6 +87,7 @@ interface Placed extends ChartPoint {
  * axis. The axis is labelled with its real bounds so the zoom is never hidden.
  */
 export default function WpmChart({ points, className }: Props) {
+  const rawId = useId();
   const [hovered, setHovered] = useState<number | null>(null);
   const [view, setView] = useState<View>('all');
 
@@ -159,8 +160,71 @@ export default function WpmChart({ points, className }: Props) {
   const average = values.reduce((sum, v) => sum + v, 0) / values.length;
   const latest = placed[placed.length - 1];
   const active = hovered === null ? null : placed[hovered];
+  // Stripped of punctuation: React's ids look like `:r7:`, and a colon inside a
+  // url(#...) reference is legal in the attribute but not something every
+  // engine's fragment parser is happy with.
+  const gid = `wpm${rawId.replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  const path = (list: Placed[]) => list.map((p) => `${p.x},${p.y}`).join(' ');
+  /**
+   * The points as a smooth curve rather than a chain of straight segments.
+   *
+   * A monotone cubic: each control point is derived from the *neighbouring*
+   * points, and the handles are clamped so the curve can never rise above a
+   * local maximum or dip below a local minimum. That clamp is the whole reason
+   * to write this by hand rather than reach for a plain cardinal spline, which
+   * overshoots — and an overshoot on this chart draws a speed the player never
+   * typed, between two duels where they typed something slower.
+   *
+   * The result reads as a trend instead of a graph, which is the point: the
+   * exact figures live in the hover, and the shape is what the eye is for.
+   */
+  const curve = (list: Placed[]) => {
+    if (list.length < 2) return '';
+    const d = [`M${list[0].x},${list[0].y}`];
+
+    for (let i = 0; i < list.length - 1; i += 1) {
+      const p0 = list[i - 1] ?? list[i];
+      const p1 = list[i];
+      const p2 = list[i + 1];
+      const p3 = list[i + 2] ?? p2;
+
+      // A sixth of the neighbour span: the standard Catmull-Rom to Bezier
+      // conversion, tightened so the curve hugs its points on a chart this
+      // dense rather than billowing between them.
+      const c1x = p1.x + (p2.x - p0.x) / 6;
+      const c2x = p2.x - (p3.x - p1.x) / 6;
+
+      // Vertical handles are flattened at a turning point, which is what stops
+      // the overshoot: if this point is a peak or a trough relative to its
+      // neighbours, the curve leaves and arrives level.
+      const turn = (a: number, b: number, c: number) => ((b - a) * (c - b) <= 0 ? 0 : (c - a) / 6);
+      const c1y = p1.y + turn(p0.y, p1.y, p2.y);
+      const c2y = p2.y - turn(p1.y, p2.y, p3.y);
+
+      d.push(`C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`);
+    }
+
+    return d.join(' ');
+  };
+
+  /**
+   * The same line, closed down to the floor so the area under it can be washed.
+   *
+   * Drawn as its own path rather than by filling the polyline, which would
+   * shade the area *above* a descending run and read as a different chart
+   * entirely — the same trap the profile sparkline documents.
+   *
+   * A series with a gap in it (you played bots for a week) still closes across
+   * the gap, because the fill is a backdrop for the line rather than a claim
+   * about the days in between. The line itself is what carries the reading.
+   */
+  const area = (list: Placed[]) => {
+    if (list.length < 2) return '';
+    const floor = H - PAD.bottom;
+    // Built from the curve so the wash and the line share an edge exactly. Two
+    // different shapes here leaves a hairline of background between them.
+    return `M${list[0].x},${floor} L${curve(list).slice(1)} L${list.at(-1)!.x},${floor} Z`;
+  };
 
   return (
     <figure className={`${styles.wrap} ${className ?? ''}`}>
@@ -191,19 +255,58 @@ export default function WpmChart({ points, className }: Props) {
             y1={yFor(average)} y2={yFor(average)}
           />
 
-          {practice.length > 1 && <polyline className={styles.linePractice} points={path(practice)} />}
-          {ranked.length > 1 && <polyline className={styles.lineRanked} points={path(ranked)} />}
+          {/*
+            * Gradients keyed on the chart's own id, so two charts on one page
+            * cannot collide and resolve to whichever the browser parsed last.
+            */}
+          <defs>
+            <linearGradient id={`${gid}-ranked`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.30" />
+              <stop offset="100%" stopColor="var(--gold)" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id={`${gid}-practice`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--cool, #6fd7ff)" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="var(--cool, #6fd7ff)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
 
-          {/* Square markers, not circles — this is a pixel-art game. */}
-          {placed.map((p) => (
+          {/*
+            * The wash goes under both lines, and both washes go under both
+            * lines: drawn interleaved, the ranked fill would sit on top of the
+            * practice line and mute it wherever the two overlap.
+            */}
+          {practice.length > 1 && (
+            <path className={styles.area} d={area(practice)} fill={`url(#${gid}-practice)`} />
+          )}
+          {ranked.length > 1 && (
+            <path className={styles.area} d={area(ranked)} fill={`url(#${gid}-ranked)`} />
+          )}
+
+          {practice.length > 1 && <path className={styles.linePractice} d={curve(practice)} fill="none" pathLength={1} />}
+          {ranked.length > 1 && <path className={styles.lineRanked} d={curve(ranked)} fill="none" pathLength={1} />}
+
+          {/*
+            * One marker, on the duel being read, rather than a square on every
+            * point.
+            *
+            * Thirty markers turned the line into a dotted rule and buried the
+            * shape under its own data, which is what the curve above exists to
+            * show. Only the point under the pointer is drawn now.
+            *
+            * Nothing about hovering changed: the targets were never these
+            * squares. They are the invisible `.hit` rects further down, which
+            * are already larger than a marker ever was and sit on the nodes
+            * rather than spanning their columns — a decision that comment
+            * records and this does not disturb.
+            */}
+          {active && (
             <rect
-              key={p.at}
               className={styles.dot}
-              data-ranked={p.ranked || undefined}
-              data-active={p.index === hovered || undefined}
-              x={p.x - 2.5} y={p.y - 2.5} width={5} height={5}
+              data-ranked={active.ranked || undefined}
+              data-active
+              x={active.x - 2.5} y={active.y - 2.5} width={5} height={5}
             />
-          ))}
+          )}
 
           {/* A sparkle on the duel you just played, so it is findable in a wall
               of identical squares. Three frames cycled in CSS, like the torches. */}

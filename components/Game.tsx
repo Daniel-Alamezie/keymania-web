@@ -710,33 +710,53 @@ export default function Game() {
    * below it would be skipped and the button would appear to do nothing at all.
    * Leaving is the user's intent; the cleanup is bookkeeping.
    */
-  const leave = useCallback(() => {
+  /**
+   * Forget the duel that just ended, without touching the socket.
+   *
+   * Split out of `leave` because the two callers want different things.
+   * Somebody going back to the menu is done, and dropping the connection is
+   * right. Somebody looking for another duel is not done at all, and dropping
+   * it was costing them the game.
+   */
+  const clearDuel = useCallback(() => {
     queuedRoom.current = null;
     setMatch(null);
     setWaiting(null);
     setRooms([]);
     setRun(null);
     setStarting(false);
+  }, []);
+
+  const leave = useCallback(() => {
+    clearDuel();
     setScreen('menu');
     try {
       disconnect();
     } catch {
       /* already gone — the screen has changed either way */
     }
-  }, [disconnect]);
+  }, [clearDuel, disconnect]);
 
   /**
    * Keep the "find a new game" handler current.
    *
    * Assigned here rather than named inside the multiplayer memo, so that memo
-   * keeps a stable identity while this always holds the live `leave` and
-   * `findGame`. `leave` runs first and has to: it tears down the finished room
-   * and clears the match, and without it the search screen would be armed while
-   * the client still believed it was in a duel.
+   * keeps a stable identity while this always holds the live callbacks.
+   *
+   * **`clearDuel`, not `leave`.** This used to call `leave`, which drops the
+   * websocket — and it had to, because the server refused a search from a
+   * connection still linked to the room it had just finished in, and a
+   * disconnect was the only way to break that link. The cost was enormous:
+   * every "Find a new game" became a socket teardown, a new $connect, and a
+   * race between the old $disconnect and the new search. Players waited minutes.
+   *
+   * The server now treats a finished room as one you have left, so this takes
+   * exactly the path the Play button takes: forget the last duel, ask for
+   * another, on the connection that is already open.
    */
   useEffect(() => {
-    findAnother.current = () => { leave(); void findGame(); };
-  }, [leave, findGame]);
+    findAnother.current = () => { clearDuel(); void findGame(); };
+  }, [clearDuel, findGame]);
 
   // Memoised so the duel does not tear down its subscription on every render.
   const multiplayer: MultiplayerConfig | undefined = useMemo(

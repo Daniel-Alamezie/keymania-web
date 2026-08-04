@@ -413,6 +413,20 @@
 
 .scopeOption {
   flex: 1 1 0;
+  /*
+   * A real tap target. Measured at 375px it came out twenty pixels tall, which
+   * is less than half the smallest thing a thumb can reliably hit — and this
+   * control sits directly above the board tabs, so a miss lands on Weekly
+   * instead of Friends and looks like the toggle doing something wrong.
+   *
+   * The rail is tight for vertical space, so the height is bought with padding
+   * rather than a taller box: the text stays where it was and the hit area
+   * grows around it.
+   */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   /* Zero basis and equal grow: two words of different lengths must not give
      the segments different widths, or the control looks like it is weighted
      towards whichever happens to be selected. */

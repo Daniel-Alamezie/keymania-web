@@ -1,0 +1,253 @@
+/*
+ * A year of squares.
+ *
+ * The layout is a commit calendar's, because that shape is already read
+ * fluently. Everything about how it looks is not: hard corners, the game's gold
+ * ramp, and the pixel font on the labels. A rounded green grid would have been
+ * a widget sitting in KeyMania rather than part of it.
+ */
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /*
+   * The ceiling on a square, in one place because three rules depend on it:
+   * the squares, the month labels above them, and the gutter beside them all
+   * have to agree or the columns stop lining up.
+   */
+  --cell: 14px;
+}
+
+/*
+ * Past about this width the gaps would start doing the spreading on their own
+ * and the year would look sparse rather than airy. Beyond it the grid stops
+ * growing and sits at the left, where the rest of the section already is.
+ */
+.grid { max-width: 1180px; }
+
+/*
+ * Fifty-three columns do not fit a phone, and they should not be made to.
+ *
+ * Squeezing a year into 300 pixels gives four-pixel cells that read as noise;
+ * scrolling keeps the square legible and costs a drag on the one surface where
+ * the recent weeks are what anybody wants. The component scrolls this to the
+ * right end on mount so it opens on today.
+ */
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Momentum on iOS, and a scrollbar that does not sit on the bottom row. */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+/*
+ * Weekday labels in a fixed gutter, everything else to the right of it.
+ *
+ * `width: 100%` with a `min-width` floor, rather than `max-content`. At
+ * max-content the squares were a fixed eleven pixels, so a year came to about
+ * 720 and simply stopped there — beside a chart that fills its section, the
+ * grid read as the smaller, lesser thing. It now grows into whatever width it
+ * is given and only scrolls when there genuinely is not enough.
+ */
+.plot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 4px 6px;
+  width: 100%;
+  min-width: min-content;
+}
+
+.months {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  /* The same track definition as the squares below, so a label sits over its
+     own column at every width rather than drifting as the cells grow. */
+  grid-template-columns: repeat(var(--weeks, 53), minmax(9px, var(--cell)));
+  gap: 2px;
+  justify-content: space-between;
+  /*
+   * A backstop, not the fix. `monthLabels` already keeps names clear of the
+   * right edge; this stops any label that still overhangs from widening the
+   * calendar and summoning a scrollbar under a grid that fits.
+   */
+  overflow: hidden;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.month {
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+/*
+ * Seven equal rows rather than seven 11px ones.
+ *
+ * The squares are no longer a fixed height, so a gutter measured in pixels
+ * would drift out of step with them the moment the grid grew. Sharing the row
+ * with `.weeks` and splitting it evenly keeps every label on its own line
+ * whatever size the cells end up.
+ */
+.days {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 2px;
+  font-size: 8px;
+  color: var(--faint);
+  text-align: right;
+  align-items: center;
+}
+
+.day { line-height: 1; }
+
+.weeks {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  /* The week count comes from the component, so this and the model cannot
+     disagree about how many columns a year has. */
+  grid-template-columns: repeat(var(--weeks, 53), minmax(9px, var(--cell)));
+  gap: 2px;
+  /*
+   * The squares stop growing at `--cell`, and the leftover width goes into the
+   * gaps rather than into the squares.
+   *
+   * At `1fr` a year of columns divided a wide section into eighteen-pixel
+   * blocks, which was heavier than the section needed to be. Capping alone
+   * would have left the grid ending short of the right margin, which is the
+   * thing that made it look undersized in the first place. Spreading the slack
+   * across the gaps keeps both edges and takes the weight out.
+   */
+  justify-content: space-between;
+}
+
+.week {
+  display: grid;
+  grid-template-rows: repeat(7, auto);
+  gap: 2px;
+}
+
+/*
+ * The square.
+ *
+ * Eleven pixels: small enough that a year fits in a readable strip, large
+ * enough to be a deliberate tap target for the tooltip. No border radius, in a
+ * game where nothing else is rounded.
+ */
+/*
+ * The base size, which only the legend swatches now use. The squares in the
+ * grid itself are sized by their column below.
+ */
+.cell {
+  width: 11px;
+  height: 11px;
+  background: var(--edge-soft);
+  cursor: default;
+}
+
+/*
+ * A square that follows its column.
+ *
+ * `aspect-ratio` is what keeps it square while the width is decided by the
+ * grid: without it the cells would stretch into rectangles on a wide screen,
+ * which is the sort of thing that looks merely "off" without anybody being able
+ * to say why.
+ */
+.weeks .cell {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/*
+ * The ramp, built from the score colour rather than from green.
+ *
+ * Four steps of the same gold at rising opacity, so the brightest day matches
+ * the colour every score on every board is already drawn in. Level 0 keeps the
+ * empty tint: a day nobody played is part of the picture.
+ */
+.cell[data-level='1'] { background: rgb(255 214 110 / 0.22); }
+.cell[data-level='2'] { background: rgb(255 214 110 / 0.45); }
+.cell[data-level='3'] { background: rgb(255 214 110 / 0.72); }
+.cell[data-level='4'] { background: var(--gold); }
+
+/*
+ * Days that have not happened yet.
+ *
+ * Invisible rather than empty. An unplayed Wednesday and a Wednesday still to
+ * come are different facts, and drawing them alike tells somebody they have
+ * already missed the rest of this week.
+ */
+.cell[data-future] { background: none; }
+
+/* Today, outlined so the eye lands on the end of the run. */
+.cell[data-today] {
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+/* The key and the share button share a line: both are footnotes to the grid. */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm, 12px);
+  flex-wrap: wrap;
+}
+
+.share {
+  flex: none;
+  font-family: var(--font-pixel), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: none;
+  border: 2px solid var(--edge-soft);
+  padding: 8px 12px;
+  /* A real tap target on a phone, which is the device the native share sheet
+     makes this feature worth having on at all. */
+  min-height: 44px;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.share:hover:not(:disabled) { border-color: var(--gold); }
+.share:disabled { opacity: 0.6; cursor: default; }
+
+.key {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.keyLabel { margin: 0 4px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * The squares fade in once, left to right, and then stop.
+   *
+   * A calendar that keeps animating is a heartbeat competing with the page it
+   * sits on. This is the arrival and nothing more; there is no loop.
+   */
+  .weeks .cell { animation: cellIn 260ms ease-out backwards; }
+  .week:nth-child(4n) .cell { animation-delay: 40ms; }
+  .week:nth-child(4n + 1) .cell { animation-delay: 80ms; }
+  .week:nth-child(4n + 2) .cell { animation-delay: 120ms; }
+  .week:nth-child(4n + 3) .cell { animation-delay: 160ms; }
+}
+
+@keyframes cellIn {
+  from { opacity: 0; transform: scale(0.6); }
+}

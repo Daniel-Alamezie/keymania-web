@@ -21,6 +21,7 @@ import { useUiSounds } from './SoundToggle';
 import WpmChart, { type ChartPoint } from './WpmChart';
 import styles from './ProfileDashboard.module.css';
 import CountryPicker from './CountryPicker';
+import StreakGrid from './StreakGrid';
 
 /**
  * The player's dashboard: who they are on the board, how fast they are now, and
@@ -212,6 +213,7 @@ export default function ProfileDashboard() {
               which beats the browser's `[hidden] { display: none }` — so the
               attribute did nothing and every tab showed the record as well. */}
           {tab === 'profile' && (
+          <>
           <div className={styles.body}>
             <div className={styles.main}>
 
@@ -263,10 +265,19 @@ export default function ProfileDashboard() {
                       of a pixel font in a tile sized for four, so it broke after
                       the dash and dragged the whole row taller to match. The
                       label carries the W–L, where there is room for it. */}
+                  {/*
+                    * Record and win rate in one tile, because they were one
+                    * fact stated twice: 18-11 *is* 62%, and reading both is
+                    * arithmetic somebody has already been shown the answer to.
+                    *
+                    * It also happened to be what made this section seven tiles
+                    * in a three-column grid, so the last one sat alone in a
+                    * third of a row looking like a mistake. Six lays as two
+                    * full rows.
+                    */}
                   <Stat label="Record (W–L)" value={ranked.wins}
-                        suffix={`–${ranked.duels - ranked.wins}`} />
-                  <Stat label="Win rate" value={rankedRate ?? 0} unit="%"
-                        note={rankedRate === null ? 'no ranked duels yet' : undefined} />
+                        suffix={`–${ranked.duels - ranked.wins}`}
+                        note={rankedRate === null ? 'no ranked duels yet' : `${rankedRate}% won`} />
                   <Stat label="Best speed" value={ranked.bestWpm} unit="wpm" />
                   <Stat label="Best accuracy" value={ranked.bestAccuracy} unit="%" />
                   <Stat label="Best combo" value={ranked.bestCombo} prefix="x" />
@@ -284,19 +295,15 @@ export default function ProfileDashboard() {
                 <dl className={styles.stats}>
                   <Stat label="Duels" value={practice.duels} />
                   <Stat label="Record (W–L)" value={practice.wins}
-                        suffix={`–${practice.duels - practice.wins}`} />
-                  <Stat label="Win rate" value={practiceRate ?? 0} unit="%"
-                        note={practiceRate === null ? 'no practice yet' : undefined} />
+                        suffix={`–${practice.duels - practice.wins}`}
+                        note={practiceRate === null ? 'no practice yet' : `${practiceRate}% won`} />
                   <Stat label="Best speed" value={practice.bestWpm} unit="wpm" />
                   <Stat label="Best accuracy" value={practice.bestAccuracy} unit="%" />
                   <Stat label="Best combo" value={practice.bestCombo} prefix="x" />
                 </dl>
               </section>
 
-              <section className={styles.section}>
-                <h2 className={`${styles.heading} pixel-font`}>How you have been going</h2>
-                <WpmChart points={points} />
-              </section>
+
 
               {profile.history.length > 0 && (
                 <section className={styles.section}>
@@ -340,6 +347,35 @@ export default function ProfileDashboard() {
 
             </aside>
           </div>
+
+          <div className={styles.wide}>
+              {/*
+                * The year, and the run it adds up to.
+                *
+                * On this page and no other. The grid is a map of when somebody
+                * is at their keyboard, which is exactly what the public card
+                * withholds duel history to avoid -- other people see the
+                * number, never the shape behind it.
+                */}
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>Daily streak</h2>
+                <p className={styles.muted}>
+                  {profile.streak?.current
+                    ? `${profile.streak.current} ${profile.streak.current === 1 ? 'day' : 'days'} `
+                      + `running. Best: ${profile.streak.best}.`
+                    : 'Type anything today to start one. Any mode counts.'}
+                  {' '}
+                  You can miss one day a week without losing it.
+                </p>
+                <StreakGrid streak={profile.streak} handle={profile.handle} />
+              </section>
+
+              <section className={styles.section}>
+                <h2 className={`${styles.heading} pixel-font`}>How you have been going</h2>
+                <WpmChart points={points} />
+              </section>
+          </div>
+          </>
           )}
 
           {tab === 'challenges' && (
@@ -454,7 +490,10 @@ function Skeleton() {
           <section className={styles.section}>
             <h2 className={`${styles.heading} pixel-font`}>Ranked · versus players</h2>
             <dl className={styles.stats}>
-              {['Rating', 'Duels', 'Record (W–L)', 'Win rate', 'Best speed', 'Best accuracy']
+              {/* The same six the loaded section shows, in the same order. A
+                  skeleton that names a tile the real thing does not have swaps
+                  a label out from under the reader as it settles. */}
+              {['Rating', 'Duels', 'Record (W–L)', 'Best speed', 'Best accuracy', 'Best combo']
                 .map((label) => <GhostStat key={label} label={label} />)}
             </dl>
           </section>

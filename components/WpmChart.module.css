@@ -17,6 +17,9 @@
 }
 
 .grid {
+  /* Quieter now the fill carries the shape. At the old weight the guides
+     read as part of the data rather than as a backdrop for it. */
+  opacity: 0.45;
   stroke: var(--edge-soft);
   stroke-width: 1;
 }
@@ -37,6 +40,21 @@
  * two, so they get a line each on a shared timeline.
  * -------------------------------------------------------------------------- */
 .lineRanked,
+/*
+ * The wash under each line.
+ *
+ * Borrowed from the profile card's sparkline so the two charts speak the same
+ * language: a soft fall-off under the trend rather than a bare stroke on a
+ * grid. It carries no information the line does not — it is there to give the
+ * shape weight, which is the whole difference between a diagram and something
+ * somebody wants to look at.
+ *
+ * Non-interactive, so it can never swallow a hover meant for a marker.
+ */
+.area {
+  pointer-events: none;
+}
+
 .linePractice {
   fill: none;
   stroke-width: 2;
@@ -50,22 +68,42 @@
 
 .linePractice {
   stroke: var(--player);
-  /* Dashed as well as differently coloured, so the two are still tellable
-     apart without relying on colour alone. */
-  stroke-dasharray: 5 3;
-  opacity: 0.85;
+  /*
+   * Solid, and thinner than the ranked line rather than dashed.
+   *
+   * It was `stroke-dasharray: 5 3`, which was right for a chain of straight
+   * segments and wrong the moment the line became a curve: five on and three
+   * off around a bend does not read as "this series is dashed", it reads as a
+   * line that has come apart. The whole reason for the curve is that a shape
+   * should look continuous.
+   *
+   * The dash was carrying a real job though — telling the two series apart
+   * without relying on colour, which matters to anyone who cannot separate gold
+   * from blue. Weight takes that job over: this line is thinner and slightly
+   * softer than the ranked one, so the difference survives in greyscale. The
+   * legend beneath names both in words, which is the belt to this brace.
+   */
+  stroke-width: 1.5;
+  opacity: 0.8;
 }
 
+/*
+ * The marker on the point being read.
+ *
+ * No longer scaled up. The 1.7x existed to lift one square out of thirty
+ * identical ones, which is a comparison that no longer happens: this is the
+ * only marker drawn, so the scale was not emphasis against anything, just size
+ * — and at six pixels enlarged it sat on the curve like a block.
+ *
+ * The transition goes with it. There is nothing to animate between when the
+ * element appears and disappears rather than changing state.
+ */
 .dot {
   fill: var(--player);
   stroke: var(--bg-deep);
   stroke-width: 1;
-  transition: transform 120ms ease;
-  transform-box: fill-box;
-  transform-origin: center;
 }
 .dot[data-ranked] { fill: var(--gold); }
-.dot[data-active] { transform: scale(1.7); }
 
 .axis {
   fill: var(--faint);
@@ -206,4 +244,39 @@
   color: var(--bg-deep);
   background: var(--gold);
   border-color: var(--gold);
+}
+
+/* ---------- Arrival -------------------------------------------------------
+ *
+ * The same gesture the profile card's sparkline makes: the line draws itself in
+ * from the left, once, and the wash fades up behind it as it finishes. Two
+ * charts showing the same kind of thing should behave the same way, and this is
+ * the half that was missing after the styling was matched.
+ *
+ * `pathLength={1}` on the paths is what makes this exact. The sparkline uses a
+ * magic dash length larger than any path it expects, which works until a path
+ * is longer and the dash starts repeating — visible as gaps in a line that is
+ * meant to be solid. Normalising the length to 1 means the dash arithmetic is
+ * the same for every path there could ever be.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .lineRanked,
+  .linePractice {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: drawLine 900ms ease-out forwards;
+  }
+
+  /* Behind the line and slightly after it, so the shape arrives before the
+     weight under it does. Any earlier and the fill appears under a line that
+     is not there yet. */
+  .area { animation: washIn 500ms ease-out 420ms backwards; }
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes washIn {
+  from { opacity: 0; }
 }
