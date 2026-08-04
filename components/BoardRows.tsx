@@ -120,18 +120,14 @@ export default function BoardRows({ entries, board, asStranger, compact }: {
          * read 100% all the way down. The speed is the figure that says how the
          * distance was earned.
          */
-        const { score, sub, brief } = ({
-          standings: { score: rating, sub: `${entry.wpm} wpm`, brief: `${entry.wpm}` },
-          // The unit stays on accuracy: "99" beside a speed would be a second
-          // bare number meaning something else, and the percent sign is one
-          // character. It is the word "wpm" that is expensive, not the idea
-          // of a unit.
-          speed: { score: entry.wpm, sub: `${entry.accuracy}%`, brief: `${entry.accuracy}%` },
-          streak: { score: entry.streak ?? 0, sub: `${entry.wpm} wpm`, brief: `${entry.wpm}` },
+        const { score, sub } = ({
+          standings: { score: rating, sub: `${entry.wpm} wpm` },
+          speed: { score: entry.wpm, sub: `${entry.accuracy}%` },
+          streak: { score: entry.streak ?? 0, sub: `${entry.wpm} wpm` },
           // Words, because everybody typed the same script: the count alone
           // is comparable in a way it never is on the other boards.
-          weekly: { score: entry.words ?? 0, sub: `${entry.wpm} wpm`, brief: `${entry.wpm}` },
-        } satisfies Record<BoardKind, { score: number; sub: string; brief: string }>)[board];
+          weekly: { score: entry.words ?? 0, sub: `${entry.wpm} wpm` },
+        } satisfies Record<BoardKind, { score: number; sub: string }>)[board];
 
         return (
           <li
@@ -265,28 +261,26 @@ export default function BoardRows({ entries, board, asStranger, compact }: {
             )}
 
             {/*
-              * Speed, and in the rail it drops its unit.
+              * Speed, with its unit, everywhere.
               *
-              * It used to be hidden in the rail entirely, which was the right
-              * call at the time and is not any more. Measured on the real
-              * 250px column: "148 wpm" costs 46 pixels and takes the name cell
-              * from 135 to 84, at which point nine-character names start
-              * truncating. The bare figure costs 20 and lands at 110 — where
-              * exactly the same names truncate as when it was hidden
-              * altogether. It is, in truncation terms, free.
+              * This went through both wrong answers first. It was hidden in the
+              * rail entirely, which lost the figure; then shown as a bare "148",
+              * which kept the figure and lost what it meant -- and a lone number
+              * next to another lone number is not information, it is a puzzle.
               *
-              * Two numbers on one row need telling apart, and the styling does
-              * most of that: the score is gold, larger and in the pixel font,
-              * the speed small and grey. The tooltip carries what the unit
-              * would have said, which is the part the width could not afford.
+              * The width that made those trades look necessary was not fixed.
+              * The name cell tracks the rail at rail minus 212 with the unit
+              * spelled out, so the unit is affordable the moment the rail
+              * clears 366 pixels; the menu grid had two hundred pixels of its
+              * own reserved budget going unspent, and the flanks now take
+              * enough of it to make this fit outright. See Game.module.css.
+              *
+              * Two numbers on one row still have to be told apart, and the
+              * styling does that: the score is gold, larger and in the pixel
+              * font; this is small and grey. The unit removes the last of the
+              * ambiguity rather than a tooltip having to.
               */}
-            <span
-              className={styles.rankSub}
-              data-tip={compact ? sub : undefined}
-              aria-label={sub}
-            >
-              <span aria-hidden="true">{compact ? brief : sub}</span>
-            </span>
+            <span className={styles.rankSub}>{sub}</span>
             <span className={`${styles.rankScore} pixel-font`} aria-label={meta.scoreLabel}>
               {score}
             </span>

@@ -45,16 +45,23 @@
    * of the row's own budget sat unused on every wide screen. 360 spends them:
    * 360 + 520 + 360 plus two 20px gaps is 1280, still inside the cap.
    *
-   * It is the standings column that wanted them. At 300 the name cell is 112px
-   * and a sixteen-character name needs 154, so the longest names truncated on
-   * the panel players actually look at. At 360 it is 172 and every name a
-   * player can have fits with room over. Measured, not estimated: the cell
-   * tracks the rail exactly, at rail minus 188.
+   * It is the standings column that wanted them, and the figure it wanted them
+   * for is the speed beside each name -- carried with its unit, because "148"
+   * alone next to a rating is a second unlabelled number rather than a fact.
+   *
+   * Measured, not estimated: the name cell tracks the rail exactly, at rail
+   * minus 212 once "wpm" is spelled out. The longest name a player can have is
+   * sixteen characters and needs 154 pixels, so the unit becomes affordable at
+   * 366 and comfortable at 380 -- where the name cell is 168 and nothing on
+   * the panel truncates at all.
+   *
+   * 380 + 520 + 380 plus two 20px gaps is 1320, still inside the cap above.
+   * Below that the flanks shrink on their own; this is a ceiling, not a floor.
    *
    * The record panel opposite gets the same width because a grid column is
    * symmetrical, which costs nothing and is why this was not a one-sided fix.
    */
-  grid-template-columns: minmax(230px, 360px) minmax(340px, 520px) minmax(230px, 360px);
+  grid-template-columns: minmax(230px, 380px) minmax(340px, 520px) minmax(230px, 380px);
   align-items: start;
   justify-content: center;
   gap: 20px;
