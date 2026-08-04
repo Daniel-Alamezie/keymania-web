@@ -1,4 +1,4 @@
-"""The weekly podium, redrawn as prizes rather than marks.
+"""The animated prize badges: the podium, plus First Blood and Unbroken.
 
 The first crown and medals were 16-grid silhouettes from scripts/badges.py —
 right for a board row, but flat next to the founder badge once it started
@@ -166,11 +166,91 @@ BRONZE_MEDAL = [
     "........................",
 ]
 
+# First Blood, reworked from a 16-grid dagger to a greatsword at the podium's
+# own scale, so a worn badge no longer changes visual weight with its owner's
+# luck. Drawn along the anti-diagonal: the blade lies on lines of constant
+# x+y, the guard crosses it, and the map below was *computed* and then baked
+# in -- a 45-degree shape hand-typed in ASCII is a shape with a typo in it.
+FIRST_BLOOD = [
+    "........................",
+    "........................",
+    "........................",
+    "...............####@@...",
+    "..............####@@....",
+    ".............####@@.....",
+    "............####@@......",
+    "...........####@@.......",
+    "..........####@@........",
+    ".........####@@.........",
+    ".....Gg.####@@..........",
+    "......Gg###@@...........",
+    ".......Gg#@@............",
+    ".......bGg@.............",
+    "......bB.Gg.............",
+    "....ggB...Gg............",
+    ".....gg.................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+]
+
+# Unbroken: the thin zigzag becomes the fat bolt of the reference, with the
+# pale top-left edge and the orange underside that make it read as a solid
+# object rather than a glyph.
+STREAK = [
+    "........................",
+    ".........wwwwwww........",
+    "........ww######........",
+    "........ww#####.........",
+    ".......ww######.........",
+    ".......w######..........",
+    "......w#######..........",
+    "......w########.........",
+    ".....w###########.......",
+    ".....w########@@@@@.....",
+    "....@@@@@#####@@@@@@@...",
+    ".........#######@@......",
+    ".........#####@@........",
+    "........#####@@.........",
+    "........####@@..........",
+    ".......####@@...........",
+    ".......###@@............",
+    "......###@@.............",
+    "......##@@..............",
+    ".....##@@...............",
+    ".....#@@................",
+    "....#@@.................",
+    "....@@..................",
+    "........................",
+]
+
 PALETTES = {
     "crown": {"#": GOLD, "@": GOLD_DEEP},
     "silver": {"#": SILVER, "@": SILVER_DEEP, "r": RED, "R": RED_DEEP},
     "bronze": {"#": BRONZE, "@": BRONZE_DEEP, "r": RED, "R": RED_DEEP, "s": SILVER},
+    "first-blood": {"#": SILVER, "@": SILVER_DEEP,
+                    "g": GOLD, "G": GOLD_DEEP, "b": BRONZE, "B": BRONZE_DEEP},
+    "streak": {"#": GOLD, "@": GOLD_DEEP, "w": WHITE},
 }
+
+# What the shine crosses, per badge: the lit face of whatever it is made of.
+LIGHT = {
+    "crown": GOLD,
+    "silver": SILVER,
+    "bronze": BRONZE,
+    "first-blood": SILVER,
+    "streak": GOLD,
+}
+
+# Which way the light travels. The sweep normally advances along x+y
+# diagonals -- but the sword's blade *lies* along those diagonals, so that
+# sweep would flash its whole length at once. Its light advances along x-y
+# instead, which runs hilt to tip: the classic gleam up a blade.
+AXIS = {"first-blood": lambda x, y: x - y}
 
 # Where each badge twinkles: the crown on its centre peak, the medals on the
 # upper-left of the disc, which is where the sweep's light last implied a
@@ -179,6 +259,8 @@ SPARKLE = {
     "crown": (12, 4),
     "silver": (7, 4),
     "bronze": (7, 9),
+    "first-blood": (15, 5),   # just shy of the tip, where an edge catches light
+    "streak": (9, 3),         # the upper limb, beside the pale edge
 }
 
 # Ribbed edges are the silver medal's signature in the inspiration, and one
@@ -236,10 +318,11 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
 
     # What the light crosses: lit metal only. Ribbons, clasps, stripes and
     # emblems keep their colour, so the badge glints without changing shape.
-    light = {"crown": GOLD, "silver": SILVER, "bronze": BRONZE}[name]
+    light = LIGHT[name]
+    axis = AXIS.get(name, lambda x, y: x + y)
     metal = [(x, y) for (x, y), colour in cells.items() if colour == light]
     assert metal, f"{name}: nothing for the shine to cross"
-    diagonals = sorted({x + y for x, y in metal})
+    diagonals = sorted({axis(x, y) for x, y in metal})
 
     sx, sy = SPARKLE[name]
     star_small = {(sx, sy)}
@@ -252,7 +335,7 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
         for x, y in edge:
             pixels[x, y] = OUTLINE
         for (x, y), colour in cells.items():
-            lit = colour == light and (x + y) in band
+            lit = colour == light and axis(x, y) in band
             pixels[x, y] = WHITE if lit else colour
         for x, y in star:
             pixels[x, y] = WHITE
@@ -271,7 +354,8 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    for name, rows in (("crown", CROWN), ("silver", SILVER_MEDAL), ("bronze", BRONZE_MEDAL)):
+    for name, rows in (("crown", CROWN), ("silver", SILVER_MEDAL), ("bronze", BRONZE_MEDAL),
+                       ("first-blood", FIRST_BLOOD), ("streak", STREAK)):
         frames, held = build(name, rows)
         path = OUT / f"{name}.png"
         frames[0].save(
