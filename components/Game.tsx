@@ -8,7 +8,7 @@ import { audio } from '@/game/audio';
 import { BOT_PROFILES } from '@/game/constants';
 import { BOT_UNLOCK_WPM, bestSpeed, isBotUnlocked, suggestedBot } from '@/game/botLadder';
 import { useProfile } from '@/game/profile';
-import { useServerProfile } from '@/game/serverProfile';
+import { resolveDisplayName, useDisplayName, useServerProfile } from '@/game/serverProfile';
 import { Flame } from './RankFlame';
 import { ratingFlame } from '@/models/rating';
 import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
@@ -235,6 +235,22 @@ export default function Game() {
   const [showGuide, setShowGuide] = useState(false);
   const [showSound, setShowSound] = useState(false);
   const account = useAccount();
+  /**
+   * The name to seat a player under, which is not the account's.
+   *
+   * `account.displayName` is assembled from Kinde's given and family names, or
+   * failing those the local part of an email. It is what somebody is called by
+   * their identity provider, not what they chose to be called here — and these
+   * four call sites were sending it, so a player named "G_Fruit" in KeyMania
+   * was seated as "G" and appeared that way on their own duel plate.
+   *
+   * `resolveDisplayName` is the rule the account bar and the menu key already
+   * follow: the chosen name when there is one, the account name when there is
+   * not, and `null` while the record is still loading — which is different from
+   * both and must not be flattened into an empty string, or somebody would be
+   * seated anonymously for the moment before their profile arrives.
+   */
+  const seatName = resolveDisplayName(useDisplayName(), account.displayName);
   const rating = useRating();
 
   /**
@@ -539,8 +555,8 @@ export default function Game() {
       setStarting(false);
       return;
     }
-    send({ action: 'createRoom', name: account.displayName ?? '', visibility: 'private', token, mode: 'survival' });
-  }, [connect, send, account.displayName]);
+    send({ action: 'createRoom', name: seatName ?? account.displayName, visibility: 'private', token, mode: 'survival' });
+  }, [connect, send, seatName, account.displayName]);
 
   /** Same arming path as survival, pointed at the week's script. */
   const startWeekly = useCallback(async () => {
@@ -554,8 +570,8 @@ export default function Game() {
       setStarting(false);
       return;
     }
-    send({ action: 'createRoom', name: account.displayName ?? '', visibility: 'private', token, mode: 'weekly' });
-  }, [connect, send, account.displayName]);
+    send({ action: 'createRoom', name: seatName ?? account.displayName, visibility: 'private', token, mode: 'weekly' });
+  }, [connect, send, seatName, account.displayName]);
 
   /**
    * Find me a game.
@@ -605,8 +621,8 @@ export default function Game() {
       track({ name: 'queue_left', seconds: 0, reason: 'session_expired' });
       return;
     }
-    send({ action: 'quickPlay', name: account.displayName ?? '', token });
-  }, [connect, send, account.displayName]);
+    send({ action: 'quickPlay', name: seatName ?? account.displayName, token });
+  }, [connect, send, seatName, account.displayName]);
 
   /**
    * Stop looking.
@@ -674,8 +690,8 @@ export default function Game() {
     setError(null);
     setScreen('menu');
     connect();
-    void enterRoom(roomId, account.displayName ?? '');
-  }, [connect, enterRoom, account.displayName]);
+    void enterRoom(roomId, seatName ?? account.displayName);
+  }, [connect, enterRoom, seatName, account.displayName]);
 
   useRoomOffers(joinInvited);
 
