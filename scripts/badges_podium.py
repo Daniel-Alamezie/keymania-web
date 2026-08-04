@@ -100,10 +100,15 @@ CROWN = [
     "........................",
 ]
 
-# Second place. A disc with a ribbed edge (added below, in code), a temple of
-# pillars for its face, and a forked ribbon hanging under it. The empty row
-# between disc and ribbon is deliberate: the outline pass fills it, so the
-# ribbon reads as tucked behind the medal rather than welded to it.
+# Second place. A disc with a ribbed edge (added below, in code), II on its
+# face, and a forked ribbon hanging under it. The empty row between disc and
+# ribbon is deliberate: the outline pass fills it, so the ribbon reads as
+# tucked behind the medal rather than welded to it.
+#
+# The first face was meant as a temple of pillars and was universally read as
+# the numeral III -- which is the wrong number on second place. So it is the
+# numeral now, and the right one: the podium counts in Roman, II here and III
+# on the bronze, and both medals spell it the same way.
 SILVER_MEDAL = [
     "........................",
     "........................",
@@ -111,14 +116,14 @@ SILVER_MEDAL = [
     ".......##########.......",
     "......############......",
     ".....##############.....",
-    ".....##############.....",
-    "....###@@@@@@@@@@###....",
-    "....####@@#@@#@@####....",
-    "....####@@#@@#@@####....",
-    "....####@@#@@#@@####....",
-    "....####@@#@@#@@####....",
-    "....###@@@@@@@@@@###....",
-    ".....##############.....",
+    ".....####@@##@@####.....",
+    "....#####@@##@@#####....",
+    "....#####@@##@@#####....",
+    "....#####@@##@@#####....",
+    "....#####@@##@@#####....",
+    "....#####@@##@@#####....",
+    "....#####@@##@@#####....",
+    ".....####@@##@@####.....",
     ".....##############.....",
     "......############......",
     ".......##########.......",
@@ -132,8 +137,8 @@ SILVER_MEDAL = [
 ]
 
 # Third place. The ribbon rides on top — straps meeting at a silver clasp —
-# and the disc carries the numeral, because at a glance "3" is the only fact
-# this badge needs to state.
+# and the disc carries III, in the same strokes as the silver's II, so the
+# pair read as two rungs of one ladder rather than two different signs.
 BRONZE_MEDAL = [
     "........................",
     ".......Rr......rR.......",
@@ -145,15 +150,15 @@ BRONZE_MEDAL = [
     ".........######.........",
     ".......##########.......",
     "......############......",
-    ".....##############.....",
-    ".....##############.....",
-    "....#####@@@@@######....",
-    "....#########@######....",
-    "....#########@######....",
-    "....######@@@@######....",
-    "....#########@######....",
-    "....#########@######....",
-    ".....####@@@@@#####.....",
+    ".....###@@#@@#@@###.....",
+    ".....###@@#@@#@@###.....",
+    "....####@@#@@#@@####....",
+    "....####@@#@@#@@####....",
+    "....####@@#@@#@@####....",
+    "....####@@#@@#@@####....",
+    "....####@@#@@#@@####....",
+    "....####@@#@@#@@####....",
+    ".....###@@#@@#@@###.....",
     ".....##############.....",
     "......############......",
     ".......##########.......",
