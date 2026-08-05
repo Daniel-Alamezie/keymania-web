@@ -149,6 +149,17 @@ export type DuelAction =
        * duel, wearing the default.
        */
       character?: CharacterId;
+      /**
+       * A fixed script, for a boss fight on a restricted alphabet.
+       *
+       * Solo play normally generates each sentence as it goes, from the whole
+       * word bank. A module's boss cannot: it may only use keys the module has
+       * taught, and the general bank is full of letters a beginner has not met.
+       * Supplying the script routes the duel down the same path multiplayer
+       * already walks — sentences read from a list in order — so the boss needs
+       * no new sentence machinery, only a different list.
+       */
+      script?: string[];
     }
   | {
       type: 'startMulti';

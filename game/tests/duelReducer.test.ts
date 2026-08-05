@@ -550,3 +550,54 @@ describe('healing a desync mid-duel', () => {
     expect(healed.fighters.map((f) => f.health)).toEqual([61, 62]);
   });
 });
+
+/**
+ * A boss fight is an ordinary bot duel that arrives with its script already
+ * written, because it may only use the keys its module has taught. Supplying
+ * one routes solo play down the path multiplayer already walks, so the
+ * restriction holds for the whole duel rather than only its opening pair.
+ */
+describe('starting on a supplied script', () => {
+  const SCRIPT = ['ask fall', 'salad lads', 'flask all'];
+
+  const boss = (): DuelState =>
+    duelReducer(initialState('rival'), { type: 'start', difficulty: 'rival', script: SCRIPT });
+
+  it('opens on the script rather than on a generated sentence', () => {
+    const state = boss();
+    expect(state.sentence).toBe('ask fall ');
+    expect(state.upcoming).toBe('salad lads ');
+    expect(state.script).toEqual(SCRIPT);
+  });
+
+  it('walks the script in order as sentences are finished', () => {
+    let state: DuelState = { ...boss(), phase: 'playing' };
+    state = type(state, 'ask fall ');
+    expect(state.sentence).toBe('salad lads ');
+    expect(state.upcoming).toBe('flask all ');
+  });
+
+  /** The restriction has to survive the whole fight, not just its opening. */
+  it('never draws a generated sentence, however long the fight runs', () => {
+    let state: DuelState = { ...boss(), phase: 'playing' };
+    for (let i = 0; i < SCRIPT.length * 3; i += 1) {
+      state = type(state, `${state.sentence.trim()} `);
+      const line = state.sentence.trim();
+      expect(SCRIPT).toContain(line);
+    }
+  });
+
+  it('leaves an ordinary bot duel generating as before', () => {
+    const plain = duelReducer(initialState('rival'), { type: 'start', difficulty: 'rival' });
+    expect(plain.script).toBeNull();
+    expect(plain.sentence.trim().length).toBeGreaterThan(0);
+  });
+
+  it('ignores an empty script rather than opening on nothing to type', () => {
+    const empty = duelReducer(initialState('rival'), {
+      type: 'start', difficulty: 'rival', script: [],
+    });
+    expect(empty.script).toBeNull();
+    expect(empty.sentence.trim().length).toBeGreaterThan(0);
+  });
+});

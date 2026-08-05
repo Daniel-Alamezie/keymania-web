@@ -14,12 +14,26 @@ export interface BotHandle {
  * timing: it completes words at a target words-per-minute with human-ish
  * jitter, and occasionally fumbles, which costs it a recovery pause.
  */
-export function startBot(difficulty: Difficulty, onWord: (event: BotWordEvent) => void): BotHandle {
+export function startBot(
+  difficulty: Difficulty,
+  onWord: (event: BotWordEvent) => void,
+  /**
+   * Where the bot's words come from. Defaults to the general bank.
+   *
+   * A module's boss passes its own restricted source instead, so the opponent
+   * can only say what the module has taught. The bot is a clock rather than a
+   * typist — it never checks a key — but the lengths it is pacing against have
+   * to come from the same vocabulary the player is being given, or a boss on
+   * six short home-row words would be timed as though it were typing
+   * "extraordinary".
+   */
+  nextSentence: () => string = randomSentence,
+): BotHandle {
   const profile = BOT_PROFILES[difficulty];
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  let words = toWords(randomSentence());
+  let words = toWords(nextSentence());
   let index = 0;
 
   const scheduleNext = () => {
@@ -53,7 +67,7 @@ export function startBot(difficulty: Difficulty, onWord: (event: BotWordEvent) =
       });
 
       if (finishedSentence) {
-        words = toWords(randomSentence());
+        words = toWords(nextSentence());
         index = 0;
       }
       scheduleNext();
