@@ -12,7 +12,7 @@ import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
 import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
-import SoundToggle from './SoundToggle';
+import ArenaControls from './ArenaControls';
 import RunPause from './RunPause';
 import styles from './Survival.module.css';
 import weekly from './Weekly.module.css';
@@ -238,16 +238,11 @@ export default function Weekly({
       data-layout="plain"
       data-keyboard={keyboardUp || undefined}
     >
-      <div className={styles.controls}>
-        <SoundToggle className={styles.iconBtn} />
-        <button
-          className={styles.iconBtn}
-          onClick={() => setPaused(true)}
-          aria-label="Leave the sprint"
-        >
-          ✕
-        </button>
-      </div>
+      <ArenaControls
+        className={styles.controls}
+        onLeave={() => setPaused(true)}
+        leaveLabel="Leave the sprint"
+      />
 
       <ArenaScene bare className={styles.arena}>
         <div className={styles.stream}>

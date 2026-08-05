@@ -25,7 +25,7 @@ import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
 import type { Side } from '@/models/duel';
 import type { BladeTier } from '@/models/scoring';
-import SoundToggle from './SoundToggle';
+import ArenaControls from './ArenaControls';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
 import ArenaScene from './ArenaScene';
@@ -1063,21 +1063,16 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
           it. Outside .screen's shake by virtue of being fixed-position. */}
       {fxControl.testing && <FxSwitcher {...fxControl} />}
 
-      <div className={styles.controls}>
-        <SoundToggle className={styles.iconBtn} />
-        {/* Hidden once decided: there is nothing left to forfeit, and offering
-            to quit over the top of the collapse undercuts it. */}
-        {state.winner === null && state.phase !== 'over' && (
-          <button
-            className={styles.iconBtn}
-            onClick={() => setConfirmQuit(true)}
-            aria-label="Leave the duel"
-            title="Leave the duel (Esc)"
-          >
-            ✕
-          </button>
-        )}
-      </div>
+      {/* Hidden once decided: there is nothing left to forfeit, and offering
+          to quit over the top of the collapse undercuts it. */}
+      <ArenaControls
+        className={styles.controls}
+        onLeave={state.winner === null && state.phase !== 'over'
+          ? () => setConfirmQuit(true)
+          : undefined}
+        leaveLabel="Leave the duel"
+        leaveTitle="Leave the duel (Esc)"
+      />
 
       <header className={styles.hud} data-solo={foes.length > 1 || undefined}>
         <HealthBar
