@@ -2,7 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import type { ChallengeProgress } from '@/models/profile';
+import { noticeHeading, noticeLine } from '@/models/challengeNotice';
 import { markChallengesSeen } from '@/game/seenChallenges';
+import { useCosmeticCatalogue } from '@/game/serverProfile';
 import { offerProfileTab } from '@/game/profileIntent';
 import inviteStyles from './InviteToast.module.css';
 import styles from './ChallengeToast.module.css';
@@ -28,6 +30,9 @@ export default function ChallengeToast({ challenges, fresh }: {
   fresh: string[];
 }) {
   const router = useRouter();
+  // The one place that knows what a reward id means. Read here rather than
+  // threaded down from InviteHost, which has no other reason to hold it.
+  const catalogue = useCosmeticCatalogue();
 
   /**
    * The whole current list, not just the fresh ids. The moment that matters
@@ -43,7 +48,7 @@ export default function ChallengeToast({ challenges, fresh }: {
     router.push('/profile');
   };
 
-  const newest = challenges.find((c) => c.id === fresh[0]);
+  const line = noticeLine(challenges.find((c) => c.id === fresh[0]), catalogue);
 
   return (
     <aside className={`${inviteStyles.toast} ${styles.challenge}`}>
@@ -57,17 +62,16 @@ export default function ChallengeToast({ challenges, fresh }: {
       </button>
 
       <p className={inviteStyles.who}>
-        <strong className={inviteStyles.name}>
-          {fresh.length === 1 ? 'A new challenge is in' : `${fresh.length} new challenges are in`}
-        </strong>
+        <strong className={inviteStyles.name}>{noticeHeading(fresh.length)}</strong>
       </p>
       {/*
-        * The first fresh title, verbatim. "New challenges" alone is a door
-        * with no window: naming what is actually being asked is what turns
-        * curiosity into a click — and if there are more, the count above has
-        * already said so.
+        * The first fresh challenge, as a sentence: what it asks and what it
+        * pays. "New challenges" alone is a door with no window — naming the
+        * ask is what turns curiosity into a click, and naming the reward is
+        * what makes it worth the click. If there are more, the count above
+        * has already said so. See models/challengeNotice.ts for the wording.
         */}
-      {newest && <p className={styles.tease}>{newest.title}</p>}
+      {line && <p className={styles.tease}>{line}</p>}
 
       <div className={inviteStyles.actions}>
         <button type="button" className="btn btn-primary" onClick={open}>

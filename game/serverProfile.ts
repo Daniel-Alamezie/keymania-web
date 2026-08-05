@@ -3,6 +3,7 @@
 // The store owns all the state, so nothing here needs local React state.
 import { useEffect, useSyncExternalStore } from 'react';
 import { asCharacter, DEFAULT_CHARACTER, type CharacterId } from '@/models/character';
+import type { Cosmetic } from '@/models/cosmetics';
 import type {
   ChallengeProgress, DuelResult, ServerProfile, Tally,
 } from '@/models/profile';
@@ -490,6 +491,7 @@ export function useCharacter(): CharacterId {
  */
 const NO_CHALLENGES: ChallengeProgress[] = [];
 const ONLY_DEFAULT: CharacterId[] = [DEFAULT_CHARACTER];
+const NO_COSMETICS: Cosmetic[] = [];
 
 export function useUnlocked(): CharacterId[] {
   return useSyncExternalStore(
@@ -504,6 +506,24 @@ export function useChallenges(): ChallengeProgress[] {
     subscribeToStore,
     () => readSnapshot().profile?.challenges ?? NO_CHALLENGES,
     () => NO_CHALLENGES,
+  );
+}
+
+/**
+ * The whole cosmetic catalogue, for anything that has to turn an id into a name.
+ *
+ * A reward is stored as an id everywhere — on the challenge, on the record, in
+ * the equip request — and the catalogue is the one place that knows what one
+ * means. Read through a hook rather than passed down from whichever component
+ * happened to hold the profile, so the challenge list, the prize box and the
+ * toast all resolve a reward the same way instead of three surfaces each
+ * learning the catalogue separately.
+ */
+export function useCosmeticCatalogue(): Cosmetic[] {
+  return useSyncExternalStore(
+    subscribeToStore,
+    () => readSnapshot().profile?.cosmetics?.catalogue ?? NO_COSMETICS,
+    () => NO_COSMETICS,
   );
 }
 
