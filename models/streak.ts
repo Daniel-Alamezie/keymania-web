@@ -23,6 +23,33 @@ export interface Streak {
   calendar?: string;
 }
 
+/**
+ * How many days in the record were typed on at all.
+ *
+ * Counted from the calendar rather than stored, on the same reasoning as
+ * everything else derived here: the server already sends the string, and a
+ * second figure on the record would be one more thing that can disagree with
+ * the squares a player is looking at.
+ *
+ * Distinct from the streak in the way that matters to somebody reading their
+ * own year: a streak is the current run and resets, this only ever grows. A
+ * player whose best run is four days can still have typed on ninety of them,
+ * and that is the fact the calendar is actually showing.
+ *
+ * Any non-zero level counts. The bands say how much was typed; this asks only
+ * whether the person turned up.
+ */
+export function daysTyped(streak: Streak | undefined): number {
+  if (!streak?.calendar) return 0;
+  let days = 0;
+  for (const mark of streak.calendar) {
+    // Anything that is not '0' — including a level from a newer server than
+    // this build knows about, which is still a day somebody played.
+    if (mark !== '0' && Number(mark) > 0) days += 1;
+  }
+  return days;
+}
+
 /** Rows, Monday at the top. */
 export const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 

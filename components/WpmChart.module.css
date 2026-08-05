@@ -178,13 +178,28 @@
 .tipWhen { font-size: 10px; color: var(--faint); }
 
 /* ---------- Legend ---------- */
+/*
+ * Two groups, not one row of three.
+ *
+ * The series keys say what the lines are; the average says what the dashed
+ * one is worth. Setting all three at even spacing made a statistic look like
+ * a third series, so the keys hold the left and the figure takes the right.
+ */
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 14px;
   margin-top: 10px;
   font-size: 10px;
   color: var(--faint);
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 /* Square swatches, matching the markers on the chart. */
@@ -203,6 +218,22 @@
 .avgKey::before {
   height: 2px;
   background: var(--muted);
+}
+
+/*
+ * The figure reads as a figure.
+ *
+ * "Average 57 wpm" set uniformly is three words a reader has to finish before
+ * the number lands. Lifting the digits into the interface's own colour and the
+ * pixel face makes the value the thing you see and the words the label around
+ * it, which is how every other statistic on the profile is already set.
+ */
+.avgValue {
+  margin: 0 4px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 12px;
+  font-weight: inherit;
+  color: var(--ink);
 }
 
 .empty {
