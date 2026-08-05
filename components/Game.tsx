@@ -250,6 +250,48 @@ export default function Game() {
   const [tutorial, setTutorial] = useState(false);
 
   /**
+   * Browser Back, inside the learn flow.
+   *
+   * These screens are state rather than routes -- the URL stays `/` the whole
+   * way through -- so Back went to whatever page came before the menu and
+   * walked straight out of the app. On a duel that is arguably fine, because a
+   * duel is a thing you are doing. The path is a thing you are *browsing*:
+   * ladder, module, lesson. Back is the obvious gesture and it was the one
+   * gesture that threw everything away.
+   *
+   * So a history entry is pushed on the way in and re-pushed after each one is
+   * consumed, and Back steps down a level instead: lesson to module, module to
+   * ladder, ladder to menu. The last step spends the entry rather than
+   * replacing it, so a second Back leaves the page as it always did.
+   *
+   * Refs rather than dependencies: the listener must see where the player is
+   * *now*, and re-binding it on every depth change would push a fresh entry
+   * each time and bury the real history under our own.
+   */
+  const depth = useRef({ walk, opened, tutorial });
+  useEffect(() => { depth.current = { walk, opened, tutorial }; }, [walk, opened, tutorial]);
+
+  const inLearn = screen === 'learn';
+  useEffect(() => {
+    if (!inLearn) return;
+    window.history.pushState({ km: 'learn' }, '');
+
+    const onPop = () => {
+      const here = depth.current;
+      const trap = () => window.history.pushState({ km: 'learn' }, '');
+
+      if (here.walk) { setWalk(null); setOpened(here.walk.module); trap(); return; }
+      if (here.tutorial) { setTutorial(false); trap(); return; }
+      if (here.opened) { setOpened(null); trap(); return; }
+      /* At the ladder: let this one go, and land back on the menu. */
+      setScreen('menu');
+    };
+
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [inLearn]);
+
+  /**
    * Record a finished module, then go back to the ladder.
    *
    * The write is fire-and-forget on purpose: the star is the server's to keep
