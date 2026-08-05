@@ -239,7 +239,7 @@ export default function Weekly({
       data-keyboard={keyboardUp || undefined}
     >
       <div className={styles.controls}>
-        <SoundToggle className={styles.iconBtn} />
+        <SoundToggle className={styles.soundSlot} />
         <button
           className={styles.iconBtn}
           onClick={() => setPaused(true)}
