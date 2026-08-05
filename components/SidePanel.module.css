@@ -249,6 +249,21 @@
   font-size: 12px;
 }
 
+/*
+ * The unit, deliberately quieter than the number it labels.
+ *
+ * Same gold would make "wpm" compete with "202" for the eye, and the number is
+ * the thing being ranked. Small, dimmer, and not in the pixel font — three
+ * characters of context rather than a second figure.
+ */
+.rankUnit {
+  margin-left: 3px;
+  font-family: var(--font-body), monospace;
+  font-size: 9px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+
 /* ---------- The rail ---------- */
 
 /*
