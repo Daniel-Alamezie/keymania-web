@@ -1,0 +1,54 @@
+/*
+ * Two hands, one finger lit. Quiet by default — this is a reference somebody
+ * glances at, and the goal is to stop needing it, so nothing here should pull
+ * the eye away from the words being typed.
+ */
+
+.hands {
+  width: min(280px, 62vw);
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.palm {
+  fill: var(--edge-soft);
+  opacity: 0.28;
+}
+
+.finger {
+  fill: var(--edge-soft);
+  opacity: 0.34;
+  transition: fill 90ms linear, opacity 90ms linear;
+}
+
+.key {
+  font-size: 9px;
+  fill: var(--muted);
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.space {
+  fill: var(--edge-soft);
+  opacity: 0.22;
+}
+
+/*
+ * The one that matters. Gold, opaque, and the only thing on the diagram with
+ * any weight — a hint that lights three fingers softly is a hint nobody can
+ * act on in the half second they have.
+ */
+[data-live] .finger {
+  fill: var(--gold);
+  opacity: 1;
+}
+
+[data-live] .key {
+  fill: var(--bg-deep);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finger { transition: none; }
+}

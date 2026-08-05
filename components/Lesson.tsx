@@ -14,6 +14,7 @@ import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
 import SoundToggle from './SoundToggle';
 import RunPause from './RunPause';
+import Hands from './Hands';
 import styles from './Survival.module.css';
 import lesson from './Lesson.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
@@ -240,6 +241,15 @@ export default function Lesson({
             * hint that only appears when you are stuck is a hint you consult
             * after already having reached with the wrong finger.
             */}
+          {/*
+            * The hands, and the words underneath them.
+            *
+            * Both, because they answer at different speeds: the diagram is
+            * read at a glance and the sentence is what somebody falls back on
+            * when the diagram has not clicked yet. The picture leads.
+            */}
+          {!over && <Hands next={next} />}
+
           {!over && next && (
             <span className={lesson.finger}>
               <kbd className={`${lesson.nextKey} pixel-font`}>
