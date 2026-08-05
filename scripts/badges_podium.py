@@ -247,6 +247,11 @@ STREAK = [
 # gold hardware) translated into the game's palette rather than copied: the
 # reference's vivid orange would sit beside the boards like a sticker from
 # somebody else's game — the lesson every badge in this file was drawn under.
+# The winning shape, fused from two of three drawn candidates: the broad
+# flap and double-buckled pocket of the inspo-faithful variant, the side
+# pockets of the compact one. The third — a bedroll-and-straps silhouette —
+# lost at 20px, where it read as a crate: the same small-size failure every
+# discarded shape in this file records.
 BACKPACK = [
     "........................",
     "..........####..........",
@@ -259,9 +264,9 @@ BACKPACK = [
     ".....www###########.....",
     ".....w############@.....",
     "...ffw############@ff...",
-    "...ffw############@ff...",
     "...ffw##ffffffff##@ff...",
-    "...ffw##fffggfff##@ff...",
+    "...ffw##ffgffgff##@ff...",
+    "...ffw##FFFFFFFF##@ff...",
     "...FFw##ffffffff##@FF...",
     ".....w##ffffffff##@.....",
     ".....w##ffffffff##@.....",
@@ -314,7 +319,7 @@ SPARKLE = {
     "bronze": (7, 9),
     "first-blood": (15, 5),   # just shy of the tip, where an edge catches light
     "streak": (9, 3),         # the upper limb, beside the pale edge
-    "backpack": (11, 13),     # the gold buckle: where a glint belongs on a strap
+    "backpack": (13, 12),     # the right-hand buckle: where the sweep's light exits
 }
 
 # Ribbed edges are the silver medal's signature in the inspiration, and one
