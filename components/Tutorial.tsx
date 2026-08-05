@@ -138,20 +138,59 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
           <>
             <h1 className={`${styles.title} pixel-font`}>That is home</h1>
             <p className={styles.body}>
-              Come back to it after every key. It will feel slow at first —
-              slower than hunting — and it is the only thing that gets you past
-              about thirty words a minute.
+              Come back to it after every key. It feels slower than hunting —
+              and it is the only thing that gets you past thirty words a
+              minute. The lessons keep showing you which finger to use.
             </p>
-            <p className={styles.body}>
-              The lessons will keep showing you which finger to use, so you do
-              not have to remember all of this now.
-            </p>
-            <p className={styles.body}>
-              The path keeps score in stars. <strong>Finish every lesson</strong>
-              {' '}in a module for the first. <strong>Stay above 95%</strong> for
-              the second — that opens the boss. <strong>Beat the boss</strong>
-              {' '}for the third, and the third opens the next module. Stars only
-              ever go up, so replaying costs nothing.
+
+            {/*
+              * The scoring, drawn rather than described.
+              *
+              * This was a fifty-word paragraph, and rules read as homework in
+              * prose. Three rows of the ladder — stars, what earns them, what
+              * they open — say the same thing at a glance in nine words. Each
+              * row carries the full sentence for a screen reader; the visual
+              * parts are hidden from it so nothing is read twice.
+              */}
+            <div className={styles.rules}>
+              <div
+                className={styles.step}
+                aria-label="Finish every lesson: one star."
+              >
+                <span className={styles.stepStars} aria-hidden="true">
+                  <i data-on>★</i><i>★</i><i>★</i>
+                </span>
+                <span className={styles.stepWhat} aria-hidden="true">finish every lesson</span>
+                <span className={styles.stepOpens} aria-hidden="true" />
+              </div>
+              <div
+                className={styles.step}
+                aria-label="Stay above 95 percent: two stars, and the boss opens."
+              >
+                <span className={styles.stepStars} aria-hidden="true">
+                  <i data-on>★</i><i data-on>★</i><i>★</i>
+                </span>
+                <span className={styles.stepWhat} aria-hidden="true">stay above 95%</span>
+                <span className={styles.stepOpens} aria-hidden="true">
+                  <span className={`${styles.chip} pixel-font`}>⚔ boss</span>
+                </span>
+              </div>
+              <div
+                className={styles.step}
+                aria-label="Beat the boss: three stars, and the next module opens."
+              >
+                <span className={styles.stepStars} aria-hidden="true">
+                  <i data-on>★</i><i data-on>★</i><i data-on>★</i>
+                </span>
+                <span className={styles.stepWhat} aria-hidden="true">beat the boss</span>
+                <span className={styles.stepOpens} aria-hidden="true">
+                  <span className={`${styles.chip} pixel-font`}>next module</span>
+                </span>
+              </div>
+            </div>
+
+            <p className={styles.prompt}>
+              Stars only ever go up — replaying costs nothing.
             </p>
             <button className="btn btn-primary" onClick={onDone}>Start module 1</button>
             <button className="btn btn-ghost" onClick={onExit}>Back to the path</button>

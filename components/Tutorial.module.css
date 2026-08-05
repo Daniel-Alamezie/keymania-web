@@ -87,3 +87,60 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ------------------------------------------------- the scoring, as a picture */
+
+/*
+ * The star ladder, drawn. Three rows: the stars, the three words that earn
+ * them, and a chip for what they open. Reads top to bottom as a staircase —
+ * each row one star brighter than the last — which is the rule itself, shown.
+ */
+.rules {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--gap-sm);
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: var(--gap-sm);
+  text-align: left;
+}
+
+.stepStars {
+  display: flex;
+  gap: 2px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.stepStars i {
+  font-style: normal;
+  color: var(--edge-soft);
+}
+
+.stepStars i[data-on] { color: var(--gold); }
+
+.stepWhat {
+  font-size: 11px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+
+.stepOpens { justify-self: end; }
+
+/* What the rung opens: the door, worn as a small gold chip. */
+.chip {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  border: 2px solid var(--gold-deep);
+  padding: 4px 7px;
+  white-space: nowrap;
+}
