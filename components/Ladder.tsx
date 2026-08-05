@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   completedCount, MAX_STARS, MODULES, nextModuleId, nodeState, starsFor,
   type LearnModule, type ModuleId, type NodeState,
 } from '@/game/learnPath';
 import { contentFor, hasContent } from '@/game/curriculum';
 import { flameHeat, flameLabel, flameStage } from '@/game/flame';
+import { seenServerSnapshot, seenSnapshot, subscribeSeen } from '@/game/tutorialSeen';
 import PathFlame from './PathFlame';
 import styles from './Ladder.module.css';
 
@@ -14,6 +15,8 @@ export interface LadderProps {
   /** The progress string from the profile. Undefined for somebody new. */
   progress: string | undefined;
   onStart: (id: ModuleId) => void;
+  /** The hand tutorial, which is a node here but not a module. */
+  onTutorial: () => void;
   onExit: () => void;
   /**
    * The how-to-play guide, which the menu no longer links to directly.
@@ -102,7 +105,10 @@ function costOf(id: ModuleId): string {
   return `${lessons} lessons and a boss, about 5 minutes`;
 }
 
-export default function Ladder({ progress, onStart, onExit, onGuide }: LadderProps) {
+export default function Ladder({
+  progress, onStart, onTutorial, onExit, onGuide,
+}: LadderProps) {
+  const seen = useSyncExternalStore(subscribeSeen, seenSnapshot, seenServerSnapshot);
   const [view, setView] = useState<View>('path');
 
   const frontier = nextModuleId(progress);
@@ -217,6 +223,35 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
 
       {view === 'path' ? (
         <div className={styles.path}>
+          {/*
+            * The hand tutorial, first and outside the map.
+            *
+            * A node, not a module: it awards nothing, so it has no progress
+            * character and no entry in `MODULE_IDS` — which is what lets it
+            * sit at the front without shifting every player's stars by one.
+            *
+            * It never locks and never shows stars, and it goes quiet once it
+            * has been read, so it stops competing with the frontier for the
+            * eye of somebody who is forty modules in and knows all this.
+            */}
+          <button
+            className={styles.node}
+            data-state="next"
+            data-quiet={seen || undefined}
+            onClick={onTutorial}
+            aria-label="How to hold your hands. Information, no stars."
+          >
+            <span className={`${styles.pip} pixel-font`} aria-hidden="true">✋</span>
+            <span className={styles.body}>
+              <span className={`${styles.name} pixel-font`}>How this works</span>
+              <span className={styles.teaches}>which finger presses which key</span>
+              <span className={styles.cost}>a minute, and nothing is scored</span>
+            </span>
+            <span className={styles.tail}>
+              <span className={`${styles.flag} pixel-font`}>{seen ? 'READ' : 'START HERE'}</span>
+            </span>
+          </button>
+
           {MODULES.map((module, at) => {
             const state = nodeState(progress, module.id);
             const stars = starsFor(progress, module.id);

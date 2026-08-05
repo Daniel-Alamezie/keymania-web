@@ -404,3 +404,23 @@
   cursor: pointer;
   z-index: 2;
 }
+
+/*
+ * The tutorial node, once it has been read.
+ *
+ * Still available — what it teaches is what people forget — but no longer
+ * shouting. Before this it competed with the frontier for "START HERE", which
+ * is the one thing the ladder must answer unambiguously.
+ */
+.node[data-quiet] {
+  border-color: var(--edge-soft);
+  box-shadow: none;
+}
+
+.node[data-quiet] .pip {
+  border-color: var(--edge-soft);
+  background: var(--bg-deep);
+  color: var(--muted);
+}
+
+.node[data-quiet] .flag { color: var(--muted); }

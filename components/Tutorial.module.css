@@ -1,0 +1,89 @@
+/*
+ * The hand tutorial. Calm on purpose — this is the first thing a beginner
+ * meets, and everything here is designed to say "nothing is being measured".
+ * No timer, no counter beyond the step, no accuracy, no way to fail.
+ */
+
+.screen {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md) var(--gap-sm) var(--gap-lg);
+}
+
+.head {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}
+
+.count {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The hands are the subject here, not a hint in the corner, so they get room. */
+.stage {
+  width: min(560px, 100%);
+  display: grid;
+  place-items: center;
+  padding: var(--gap-sm) 0;
+}
+
+.stage svg { width: min(420px, 86vw); }
+
+.card {
+  width: min(560px, 100%);
+  padding: var(--gap-md);
+  border: 2px solid var(--edge-soft);
+  background: var(--panel);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  max-width: 46ch;
+}
+
+.body strong { color: var(--gold); }
+
+/* The instruction, said quietly. It is a prompt, not a demand. */
+.prompt {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.skip {
+  background: none;
+  border: 0;
+  padding: var(--gap-xs);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}

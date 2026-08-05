@@ -28,6 +28,7 @@ import Weekly from './Weekly';
 import Ladder from './Ladder';
 import Lesson from './Lesson';
 import ModuleSheet from './ModuleSheet';
+import Tutorial from './Tutorial';
 import { bankFor, contentFor, moduleStars } from '@/game/curriculum';
 import { recordLesson, runFor } from '@/game/moduleRun';
 import { MODULES, nextModuleId, type ModuleId } from '@/game/learnPath';
@@ -238,6 +239,15 @@ export default function Game() {
    * ladder, and out of the second should return to the panel.
    */
   const [opened, setOpened] = useState<ModuleId | null>(null);
+
+  /**
+   * The hand tutorial, which is a screen but not a module.
+   *
+   * Its own flag rather than a value in `opened`, because it is not a module
+   * and giving it a `ModuleId` slot would be the first step towards it needing
+   * one in `MODULE_IDS`.
+   */
+  const [tutorial, setTutorial] = useState(false);
 
   /**
    * Record a finished module, then go back to the ladder.
@@ -1104,6 +1114,20 @@ export default function Game() {
       }
     }
 
+    /* How to hold your hands. Information, and it stores nothing. */
+    if (tutorial) {
+      return (
+        <Tutorial
+          onDone={() => {
+            setTutorial(false);
+            /* Straight into module 1, which is what they came for. */
+            if (contentFor(MODULES[0].id)) setOpened(MODULES[0].id);
+          }}
+          onExit={() => setTutorial(false)}
+        />
+      );
+    }
+
     /* The module panel: what it is, and which lessons are done. */
     if (opened && contentFor(opened)) {
       return (
@@ -1129,6 +1153,7 @@ export default function Game() {
             if (!contentFor(id)) return;
             setOpened(id);
           }}
+          onTutorial={() => setTutorial(true)}
           onExit={() => setScreen('menu')}
           onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
         />
