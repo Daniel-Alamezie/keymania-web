@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import SignInLink from './SignInLink';
 import {
@@ -82,7 +82,30 @@ export default function ProfileDashboard() {
    * three returns too late: this component bails out for loading, for signed
    * out and for error, so a hook there runs on some renders and not others.
    */
-  const earnedIds = profile?.cosmetics?.earned;
+  /**
+   * What the panel would actually SHOW, not everything owned.
+   *
+   * `earned` holds every id the record carries; `catalogue` is what the server
+   * chose to serve. They differ whenever a kind is withheld behind a flag —
+   * and when that flag flips, a whole category appears at once.
+   *
+   * Counting against `earned` got this exactly backwards. Titles were earned
+   * for months while TITLES_LIVE was off, so they sat in `earned`, invisible.
+   * Every visit to this tab marked them seen — and the day titles launched,
+   * four of them appeared with no badge at all, because the badge had been
+   * quietly cleared for things nobody could ever have looked at.
+   *
+   * Intersecting with the catalogue fixes both directions: nothing is marked
+   * seen before it can be seen, and anything that becomes visible later is
+   * news on the day it arrives.
+   */
+  const earnedIds = useMemo(() => {
+    const cosmetics = profile?.cosmetics;
+    if (!cosmetics?.earned?.length) return undefined;
+    const servable = new Set(cosmetics.catalogue?.map((item) => item.id) ?? []);
+    return cosmetics.earned.filter((id) => servable.has(id));
+  }, [profile?.cosmetics]);
+
   const unseen = useUnseenCosmetics(earnedIds);
 
 
