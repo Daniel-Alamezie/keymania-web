@@ -418,9 +418,10 @@ export default function ProfileDashboard() {
             <section className={styles.section}>
               <h2 className={`${styles.heading} pixel-font`}>Challenges</h2>
               <p className={styles.muted}>
-                Each one earns a character. Progress is worked out from your record,
-                so anything you have already done counts — including duels you played
-                before the challenge existed.
+                Each one earns something to keep: a character, a badge, a name
+                colour. Progress is worked out from your record, so anything you
+                have already done counts, including duels you played before the
+                challenge existed.
               </p>
               <ChallengeList
                 challenges={profile.challenges ?? []}

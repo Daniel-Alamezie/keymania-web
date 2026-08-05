@@ -35,15 +35,21 @@
 
 .item {
   display: grid;
-  /* Two columns with the note pinned right, so a row of "2 / 3" and a row of
-     "Earned" line up rather than each sitting wherever its text ends. */
-  grid-template-columns: 1fr auto;
+  /*
+   * Three columns. The note stays pinned right of the bar, so "2 / 3" and
+   * "Earned" line up rather than each sitting wherever its text ends; the
+   * prize takes a column of its own on the far right and spans both rows,
+   * which is what lets a reader scan the rewards straight down the page.
+   */
+  grid-template-columns: 1fr auto auto;
   grid-template-areas:
-    'top  top'
-    'bar  note';
+    'top  top   prize'
+    'bar  note  prize';
   align-items: center;
   gap: 6px 10px;
-  padding: 10px 12px;
+  /* No right padding: the prize box carries its own, and doubling them left
+     the boxes floating short of the row's edge. */
+  padding: 10px 0 10px 12px;
   background: var(--panel-2);
   border: 2px solid var(--edge);
 }
@@ -55,8 +61,7 @@
 .top {
   grid-area: top;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
 }
 
@@ -66,13 +71,116 @@
   line-height: 1.4;
 }
 
-/* What it grants. Quiet — the challenge is the ask, this is the footnote. */
-.reward {
-  flex: 0 0 auto;
+/*
+ * What it grants: its own box, on the far right of every row.
+ *
+ * The prize used to be a word beside the title, which told a player who
+ * already knew the roster what they were getting and told a new one nothing.
+ * Boxed, it becomes a thing rather than a tag: the art shows the actual
+ * character, badge or colour, and the line beneath says what sort of thing
+ * it is. The fixed width is what makes the column scannable — a strip of
+ * rewards down the page answers "what is there to win here?" in one look.
+ */
+.prize {
+  grid-area: prize;
+  /* Full height of the row, so the boxes form a continuous strip rather than
+     a dotted line of chips floating at different heights. */
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  /* Wide enough for "Name colour" on one line, which is the longest kind. */
+  min-width: 96px;
+  /*
+   * Negative top and bottom bleed the box through the row's own 10px padding,
+   * so the divider is a full-height rule rather than a short line floating in
+   * the middle of the row. `align-self: stretch` alone only reaches the
+   * padding box, which left a gap at both ends and read as a detached chip.
+   */
+  margin: -10px 0 -10px 12px;
+  padding: 8px 10px;
+  background: var(--bg-deep);
+  border-left: 2px solid var(--edge);
+  text-align: center;
+}
+
+/* Won already: the box goes green with the rest of the row, so a finished
+   prize reads as owned rather than as still on offer. */
+.item[data-done] .prize { border-left-color: color-mix(in srgb, var(--good) 45%, var(--edge)); }
+
+.rewardArt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* A fixed box, whatever the art: a 22px sprite and a 20px badge must not
+     make neighbouring rows ragged. */
+  width: 26px;
+  height: 26px;
+}
+
+/* Hard pixels, like everywhere else this art appears. */
+.rewardArt img { image-rendering: pixelated; }
+
+.rewardText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   font-size: 9px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold);
+}
+
+.item[data-done] .rewardText { color: var(--good); }
+
+.rewardKind {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--edge);
+}
+
+/*
+ * On a narrow screen the prize drops under the row rather than squeezing the
+ * title into a two-word column. Same reasoning as the invite dock going
+ * full-width on a phone: a fixed side column beside a 300px row is not a
+ * layout, it is two things fighting.
+ */
+@media (max-width: 560px) {
+  .item {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'top    top'
+      'bar    note'
+      'prize  prize';
+    padding-right: 12px;
+  }
+
+  .prize {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
+    margin: 4px 0 0;
+    padding: 8px 10px;
+    border-left: 0;
+    border-top: 2px solid var(--edge);
+    text-align: left;
+  }
+
+  .item[data-done] .prize {
+    border-left-color: var(--edge);
+    border-top-color: color-mix(in srgb, var(--good) 45%, var(--edge));
+  }
+
+  .rewardText { align-items: flex-start; }
 }
 
 .track {
@@ -104,6 +212,9 @@
   font-size: 10px;
   color: var(--faint);
   white-space: nowrap;
+  /* The row lost its right padding to the prize box, so the note keeps its
+     own gap from the divider rather than sitting against it. */
+  padding-right: 2px;
 }
 .item[data-done] .note { color: var(--good); }
 

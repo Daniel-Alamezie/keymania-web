@@ -1,9 +1,58 @@
 'use client';
 
-import { characterById } from '@/models/character';
-import type { Cosmetic } from '@/models/cosmetics';
+import Image from 'next/image';
+import { characterById, characterFrame } from '@/models/character';
+import { badgeSrc, type Cosmetic } from '@/models/cosmetics';
 import type { ChallengeProgress } from '@/models/profile';
+import PixelSprite from './PixelSprite';
 import styles from './ChallengeList.module.css';
+
+/**
+ * What a challenge pays, resolved far enough to draw.
+ *
+ * The chip used to be a bare label — "GHOST", "WAYFARER" — which tells a
+ * player who already knows the roster what they are getting and tells a new
+ * player nothing. A prize you cannot picture is a challenge without a pull,
+ * so every reward now carries its kind in words and, where there is one, the
+ * thing itself: the character's sprite, the badge's own art, the colour as a
+ * swatch. Titles have only words, which is what a title is.
+ */
+function resolveReward(
+  reward: ChallengeProgress['reward'],
+  catalogue: Cosmetic[] | undefined,
+): { label: string; kind: string; art: React.ReactNode } | null {
+  if (reward.kind === 'character') {
+    return {
+      label: characterById(reward.character).name,
+      kind: 'Character',
+      // Frame 1 only, like the picker: the bob belongs in the arena.
+      art: <PixelSprite name={characterFrame(reward.character, 1)} height={22} />,
+    };
+  }
+
+  const item = catalogue?.find((c) => c.id === reward.cosmetic);
+  if (!item) return null;
+
+  if (item.kind === 'badge') {
+    return {
+      label: item.label,
+      kind: 'Badge',
+      // `unoptimized`, like every badge drawn anywhere: the pipeline would
+      // resample the pixels soft, and an APNG loses its animation entirely.
+      art: item.value
+        ? <Image src={badgeSrc(item.value)} alt="" width={20} height={20} unoptimized />
+        : null,
+    };
+  }
+  if (item.kind === 'nameColour') {
+    return {
+      label: item.label,
+      kind: 'Name colour',
+      art: <span className={styles.swatch} style={{ background: item.value }} aria-hidden="true" />,
+    };
+  }
+  return { label: item.label, kind: 'Title', art: null };
+}
 
 /**
  * Challenges, and how close each one is.
@@ -102,21 +151,35 @@ export default function ChallengeList({ challenges, limit, signedIn = true, cata
       <ul className={styles.list}>
         {shown.map((challenge) => {
           const pct = Math.round((challenge.progress / challenge.goal) * 100);
-          // Destructured so the union narrows: through `challenge.reward.…`
-          // the compiler treats each access as potentially a different value.
-          const { reward: pays } = challenge;
-          const reward = pays.kind === 'character'
-            ? characterById(pays.character).name
-            // Resolved against the catalogue, which owns what an id means —
-            // the same seam publicCosmetics guards on the server side.
-            : catalogue?.find((c) => c.id === pays.cosmetic)?.label ?? null;
+          const reward = resolveReward(challenge.reward, catalogue);
 
           return (
             <li key={challenge.id} className={styles.item} data-done={challenge.done || undefined}>
               <div className={styles.top}>
                 <span className={styles.title}>{challenge.title}</span>
-                {reward && <span className={styles.reward}>{reward}</span>}
               </div>
+
+              {/*
+                * The prize, in its own box down the right-hand side.
+                *
+                * It sat inline beside the title first, where it fought the
+                * progress note for the same corner and read as a tag on the
+                * sentence rather than as a thing you get. Boxed and pinned to
+                * one column, the page gains a strip a player can scan straight
+                * down to see everything on offer — which is the question the
+                * list is really being asked.
+                */}
+              {reward && (
+                <div className={styles.prize}>
+                  {reward.art && <span className={styles.rewardArt}>{reward.art}</span>}
+                  <span className={styles.rewardText}>
+                    {reward.label}
+                    {/* The kind in plain words, under the name. "Wayfarer" is
+                        a mystery; "Wayfarer, badge" is a prize. */}
+                    <small className={styles.rewardKind}>{reward.kind}</small>
+                  </span>
+                </div>
+              )}
 
               {/* The bar is drawn even when finished, filled, because a row
                   that loses its bar on completion changes height and makes the
