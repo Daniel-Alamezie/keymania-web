@@ -41,6 +41,7 @@ import {
 import {
   featuresServerSnapshot, featuresSnapshot, subscribeFeatures,
 } from '@/game/features';
+import { coarseServerSnapshot, coarseSnapshot, subscribeCoarse } from '@/game/pointer';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
@@ -165,6 +166,28 @@ export default function Game() {
     featuresServerSnapshot,
   );
 
+  /**
+   * Touch devices do not get the path, and this is a feature rather than a
+   * limitation dressed up as one.
+   *
+   * The whole thing teaches a physical keyboard: the tutorial opens by asking
+   * somebody to feel the ridges on F and J, the lessons name a finger per
+   * keystroke, and the hand diagram is eight fingers over eight keys. On a
+   * phone that is a story about hardware the reader does not have — and an
+   * on-screen keyboard has no home row to return to, which is the one habit
+   * the path exists to build.
+   *
+   * Hidden rather than shown-and-degraded: a beginner who taps Learn on a
+   * phone and finds an exercise they physically cannot do has been told the
+   * game is not for them, which is the opposite of what this feature is for.
+   */
+  const coarse = useSyncExternalStore(
+    subscribeCoarse,
+    coarseSnapshot,
+    coarseServerSnapshot,
+  );
+  const pathHere = pathOpen && !coarse;
+
   /** Progress for a signed-out visitor, kept locally until there is an account. */
   const guestPath = useSyncExternalStore(subscribeLocal, localSnapshot, serverLocalSnapshot);
 
@@ -175,10 +198,12 @@ export default function Game() {
    * stands in with the same shape, so nothing downstream has to know which one
    * it was handed.
    */
-  const learn = profile?.learn
-    ?? (pathOpen && !profile
-      ? { path: guestPath, next: nextModuleId(guestPath) ?? null }
-      : undefined);
+  const learn = coarse
+    ? undefined
+    : profile?.learn
+      ?? (pathHere && !profile
+        ? { path: guestPath, next: nextModuleId(guestPath) ?? null }
+        : undefined);
 
   /**
    * Carry a signed-out player's progress into their new account.
