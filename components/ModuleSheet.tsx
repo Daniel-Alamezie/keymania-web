@@ -104,7 +104,8 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
             the two currencies are never read as one running total. */}
         <Stars earned={moduleStars} />
         <p className={styles.rule}>
-          A star for finishing · another for 95% · a third for beating the boss
+          One star for finishing. Another for staying above 95%.
+          A third for beating the boss.
         </p>
       </div>
 

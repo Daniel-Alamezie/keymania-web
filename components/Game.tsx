@@ -1188,7 +1188,7 @@ export default function Game() {
           // because only those results are server-verified enough to rank.
           <SignInLink from="play" className={`btn btn-primary ${styles.play} ${styles.loginBtn}`}>
             Sign in to play
-            <small className="btn-sub">Google or email · unlocks the leaderboard</small>
+            <small className="btn-sub">keeps your record, and puts you on the board</small>
           </SignInLink>
         )}
 

@@ -99,7 +99,7 @@ const SOON = 'SOON';
 function costOf(id: ModuleId): string {
   const content = contentFor(id);
   const lessons = content ? content.lessons.length : 3;
-  return `${lessons} lessons + boss · about 5 min`;
+  return `${lessons} lessons and a boss, about 5 minutes`;
 }
 
 export default function Ladder({ progress, onStart, onExit, onGuide }: LadderProps) {
