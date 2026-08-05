@@ -34,7 +34,20 @@ import styles from './Tutorial.module.css';
 const HOME = [...'asdfjkl;', ' '];
 
 /** Act one's beats, then the finger walk. */
-type Act = 'story' | 'find-f' | 'find-j' | 'both' | 'home' | 'walk';
+type Act =
+  | 'story' | 'find-f' | 'find-j' | 'both' | 'home'
+  | 'spread-left' | 'spread-right' | 'placed'
+  | 'walk';
+
+/**
+ * The rolls that seat each hand. From the landmark outward-in on the left
+ * (little finger first, ending on the F it already knows) and inward-out on
+ * the right — both are the natural drum of fingers on a table, and neither
+ * can be done comfortably unless the hand is actually resting where it
+ * should be. That is the point: the roll is the placement, proved.
+ */
+const LEFT_ROLL = ['a', 's', 'd', 'f'];
+const RIGHT_ROLL = ['j', 'k', 'l', ';'];
 
 export interface TutorialProps {
   onDone: () => void;
@@ -49,6 +62,8 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
   const [fDown, setFDown] = useState(false);
   const [jDown, setJDown] = useState(false);
   const [found, setFound] = useState({ f: false, j: false });
+  /** How far through the current hand's roll. */
+  const [rollAt, setRollAt] = useState(0);
 
   const actRef = useRef(act);
   useEffect(() => { actRef.current = act; }, [act]);
@@ -62,12 +77,21 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
    * find home again by touch — would never have happened.
    */
   const armedRef = useRef(false);
+  const rollRef = useRef(0);
+
+  /** Enter a hand's roll from the start, wherever it is entered from. */
+  const beginRoll = useCallback((next: Act) => {
+    rollRef.current = 0;
+    setRollAt(0);
+    setAct(next);
+  }, []);
 
   const finished = act === 'walk' && at >= HOME.length;
   const wanted = act === 'walk' && at < HOME.length ? HOME[at] : undefined;
 
   useEffect(() => { if (finished) markSeen(); }, [finished]);
   useEffect(() => { if (act === 'both') armedRef.current = false; }, [act]);
+
 
   const advance = useCallback(() => {
     setAt((was) => Math.min(HOME.length, was + 1));
@@ -110,6 +134,34 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
       }
 
       if (phase === 'home') {
+        if (key === ' ' || e.key === 'Enter') { e.preventDefault(); beginRoll('spread-left'); }
+        return;
+      }
+
+      if (phase === 'spread-left' || phase === 'spread-right') {
+        const roll = phase === 'spread-left' ? LEFT_ROLL : RIGHT_ROLL;
+        const idx = rollRef.current;
+        /* Only the next key in the roll advances; anything else is ignored
+           rather than punished — same rule as everywhere on this screen. */
+        if (key !== roll[idx]) return;
+        e.preventDefault();
+        audio.key(idx + (phase === 'spread-right' ? LEFT_ROLL.length : 0));
+        const next = idx + 1;
+        if (next < roll.length) {
+          rollRef.current = next;
+          setRollAt(next);
+          return;
+        }
+        if (phase === 'spread-left') {
+          beginRoll('spread-right');
+        } else {
+          audio.lessonDone();
+          setAct('placed');
+        }
+        return;
+      }
+
+      if (phase === 'placed') {
         if (key === ' ' || e.key === 'Enter') { e.preventDefault(); setAct('walk'); }
         return;
       }
@@ -150,16 +202,20 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
       window.removeEventListener('keyup', onUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, [advance, onExit]);
+  }, [advance, beginRoll, onExit]);
 
-  const inActOne = act !== 'walk';
+  const inSpread = act === 'spread-left' || act === 'spread-right' || act === 'placed';
+  const inActOne = act === 'story' || act === 'find-f' || act === 'find-j'
+    || act === 'both' || act === 'home';
 
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
         <button className="btn btn-ghost" onClick={onExit}>← Path</button>
         <span className={styles.count}>
-          {inActOne ? 'Finding home' : `${Math.min(at + 1, HOME.length)} / ${HOME.length}`}
+          {inActOne ? 'Finding home'
+            : inSpread ? 'Taking position'
+              : `${Math.min(at + 1, HOME.length)} / ${HOME.length}`}
         </span>
       </header>
 
@@ -185,6 +241,37 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             J
             <i className={styles.bump} />
           </div>
+        </div>
+      )}
+
+      {/* Act two's stage: the home row itself, as keycaps, one hand rolled
+          into place at a time. The bumps stay drawn on F and J — the row is
+          act one's landmarks with the rest of the hand grown around them. */}
+      {inSpread && (
+        <div className={styles.keyRow} aria-hidden="true">
+          {LEFT_ROLL.map((key, i) => (
+            <div
+              key={key}
+              className={`${styles.rowKey} pixel-font`}
+              data-lit={(act !== 'spread-left' || i < rollAt) || undefined}
+              data-hint={(act === 'spread-left' && i === rollAt) || undefined}
+            >
+              {key}
+              {key === 'f' && <i className={styles.bumpSmall} />}
+            </div>
+          ))}
+          <span className={styles.splitGap} />
+          {RIGHT_ROLL.map((key, i) => (
+            <div
+              key={key}
+              className={`${styles.rowKey} pixel-font`}
+              data-lit={(act === 'placed' || (act === 'spread-right' && i < rollAt)) || undefined}
+              data-hint={(act === 'spread-right' && i === rollAt) || undefined}
+            >
+              {key}
+              {key === 'j' && <i className={styles.bumpSmall} />}
+            </div>
+          ))}
         </div>
       )}
 
@@ -255,8 +342,51 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
               always find this position, and every other key is a short reach
               away from it.
             </p>
+            <button className="btn btn-primary" onClick={() => beginRoll('spread-left')}>
+              Where do the other fingers go?
+            </button>
+          </>
+        )}
+
+        {act === 'spread-left' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>The left hand falls into place</h1>
+            <p className={styles.body}>
+              Keep your index on <strong>F</strong>. The rest of the hand
+              spreads outward — middle finger on <strong>D</strong>, ring on
+              <strong> S</strong>, little finger on <strong>A</strong>.
+            </p>
+            <p className={styles.prompt}>
+              Rest them there, then roll from the outside in:
+              A, S, D, F — like drumming your fingers.
+            </p>
+          </>
+        )}
+
+        {act === 'spread-right' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>Now the right</h1>
+            <p className={styles.body}>
+              Index on <strong>J</strong>, middle on <strong>K</strong>, ring
+              on <strong>L</strong>, little finger on the
+              <strong> semicolon</strong>.
+            </p>
+            <p className={styles.prompt}>
+              Roll from the inside out: J, K, L, ;
+            </p>
+          </>
+        )}
+
+        {act === 'placed' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>That is the position</h1>
+            <p className={styles.body}>
+              Eight fingers on eight keys, thumbs resting on space. This is
+              where your hands live now — every other key is a reach that
+              comes straight back here.
+            </p>
             <button className="btn btn-primary" onClick={() => setAct('walk')}>
-              Now, one finger at a time
+              Meet your fingers
             </button>
           </>
         )}
