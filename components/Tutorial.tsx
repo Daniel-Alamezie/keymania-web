@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Hands from './Hands';
 import { fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
+import { track } from '@/game/analytics';
 import { markSeen } from '@/game/tutorialSeen';
 import styles from './Tutorial.module.css';
 
@@ -90,6 +91,18 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
   const wanted = act === 'walk' && at < HOME.length ? HOME[at] : undefined;
 
   useEffect(() => { if (finished) markSeen(); }, [finished]);
+
+  /* The funnel starts here: how many who open the path read the tutorial at
+     all, and how many of those reach the end of it. */
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    track({ name: 'learn_tutorial', step: 'started' });
+  }, []);
+  useEffect(() => {
+    if (finished) track({ name: 'learn_tutorial', step: 'finished' });
+  }, [finished]);
   useEffect(() => { if (act === 'both') armedRef.current = false; }, [act]);
 
 
@@ -477,7 +490,10 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
           sit through this, and making them would be the first thing the path
           did to them. */}
       {!finished && (
-        <button className={styles.skip} onClick={onExit}>
+        <button
+          className={styles.skip}
+          onClick={() => { track({ name: 'learn_tutorial', step: 'skipped' }); onExit(); }}
+        >
           I already know this
         </button>
       )}

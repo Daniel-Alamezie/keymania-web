@@ -34,7 +34,9 @@ import {
   bankFor, contentFor, MODULE_STAR_ACCURACY, moduleStars,
 } from '@/game/curriculum';
 import { recordLesson, runFor } from '@/game/moduleRun';
-import { MODULES, nextModuleId, starsFor, type ModuleId } from '@/game/learnPath';
+import {
+  completedCount, MODULES, nextModuleId, starsFor, type ModuleId,
+} from '@/game/learnPath';
 import {
   clearLocal, localSnapshot, recordLocal, serverLocalSnapshot, subscribeLocal, unsavedModules,
 } from '@/game/localPath';
@@ -419,7 +421,10 @@ export default function Game() {
     }
     /* Beating the boss earns the moment; leaving early just returns. The
        fanfare plays on the celebration screen itself, not here. */
-    if (bossBeaten) setCelebrate({ module: id, stars, wpm: wpm ?? null, granted: [] });
+    if (bossBeaten) {
+      track({ name: 'learn_module_completed', module: id, stars, granted: 0 });
+      setCelebrate({ module: id, stars, wpm: wpm ?? null, granted: [] });
+    }
     setWalk(null);
   }, [saveModule, profile, lessonState]);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1215,6 +1220,8 @@ export default function Game() {
           /* Keyed so each lesson mounts fresh rather than inheriting the
              cursor and the miss count of the one before it. */
           key={`${walk.module}-${walk.at}-${walk.run}`}
+          module={walk.module}
+          index={walk.at}
           title={lesson.title}
           script={lesson.script}
           /* Remembered as it happens, not at the end of the module. Somebody
@@ -1233,8 +1240,16 @@ export default function Game() {
             /* Decided at click time, after the result is recorded: into the
                boss if 95% is held, back to the sheet — which says exactly
                what is missing — if it is not. */
-            if (bossOpen(walk.module)) setWalk({ ...walk, at: walk.at + 1 });
-            else { setWalk(null); setOpened(walk.module); }
+            if (bossOpen(walk.module)) { setWalk({ ...walk, at: walk.at + 1 }); return; }
+            /* The gate held somebody back. The most important number here:
+               if people pile up against 95% and stop, the gate is wrong. */
+            track({
+              name: 'learn_boss_blocked',
+              module: walk.module,
+              accuracy: Math.round(lessonState(walk.module).accuracy * 100),
+            });
+            setWalk(null);
+            setOpened(walk.module);
           }}
           nextLabel={last
             ? `THE ${MODULES.find((m) => m.id === walk.module)?.title.toUpperCase()} BOSS`
@@ -1272,6 +1287,13 @@ export default function Game() {
             difficulty="rookie"
             boss={bank}
             onBossResult={(won, wpm) => {
+              track({
+                name: 'learn_boss',
+                module: walk.module,
+                result: won ? 'won' : 'lost',
+                wpm,
+                boss_wpm: bank.wpm ?? 0,
+              });
               /* A defeat stays on the duel's own card, rematch and all —
                  losing the boss costs nothing and retrying is right there.
                  Only leaving records the run without its third star. */
@@ -1281,7 +1303,12 @@ export default function Game() {
                  the win was the anticlimatic thing being fixed. */
               window.setTimeout(() => finishModule(walk.module, true, wpm), 1300);
             }}
-            onExit={() => finishModule(walk.module, false)}
+            onExit={() => {
+              track({
+                name: 'learn_boss', module: walk.module, result: 'left', wpm: 0, boss_wpm: bank.wpm ?? 0,
+              });
+              finishModule(walk.module, false);
+            }}
           />
         );
       }
@@ -1530,7 +1557,14 @@ export default function Game() {
             <button
               className={`btn ${styles.mode} ${styles.full}`}
               data-mode="learn"
-              onClick={() => { track({ name: 'guide_opened' }); setScreen('learn'); }}
+              onClick={() => {
+            track({
+              name: 'learn_opened',
+              signed_in: Boolean(profile),
+              modules_passed: completedCount(learn.path),
+            });
+            setScreen('learn');
+          }}
             >
               Learn to type
               <small className="btn-sub">the whole keyboard, one row at a time</small>

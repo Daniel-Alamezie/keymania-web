@@ -336,6 +336,7 @@ async function savePatch(
     character?: CharacterId;
     cosmetics?: SavedCosmetics;
     country?: string;
+    learn?: { path: string; next: string | null };
   };
 
   // Trust the server's version: it sanitises and canonicalises, so what came
@@ -365,6 +366,22 @@ async function savePatch(
        * and the spread above quietly kept the stale one.
        */
       country: saved.country as ServerProfile['country'],
+      /**
+       * The path as the server now holds it, folded in like everything else
+       * here — and for the same reason the country line above exists.
+       *
+       * Without this the spread kept the stale path, so finishing a module
+       * left the ladder showing the old stars and the next module locked
+       * until a page reload. `invalidateProfile` marked the cache stale but
+       * nothing refetched: Game is already mounted, so no subscriber remounts
+       * to trigger one.
+       *
+       * Falls back to the cached value rather than being assigned outright,
+       * unlike country: an absent `learn` means the feature is switched off,
+       * not that the path was cleared, and blanking it would hide somebody's
+       * progress the moment a flag flipped.
+       */
+      learn: saved.learn ?? snapshot.profile.learn,
     };
     fetchedAt = Date.now();
     persist(profile);
@@ -425,7 +442,13 @@ const saveModule = async (module: ModuleId, stars: number) => {
 
   const granted = (snapshot.profile?.cosmetics?.earned ?? [])
     .filter((id) => !before.has(id));
-  invalidateProfile();
+  /**
+   * No invalidation: the response now carries the new path and savePatch has
+   * already folded it in, so the cache is correct rather than merely known to
+   * be wrong. Marking it stale here would leave the ladder showing old stars
+   * until something happened to remount and refetch — which is the bug this
+   * pair of changes fixes.
+   */
   return { ...result, granted };
 };
 

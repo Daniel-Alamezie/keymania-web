@@ -10,6 +10,7 @@ import {
 import { useConfirmKey } from '@/game/useConfirmKey';
 import { fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
+import { track } from '@/game/analytics';
 import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
 import ArenaControls from './ArenaControls';
@@ -20,6 +21,9 @@ import lesson from './Lesson.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
 
 export interface LessonConfig {
+  /** Which module and index this is, for the funnel. */
+  module: string;
+  index: number;
   /** The lesson's name. Shown while typing and on the card. */
   title: string;
   script: string[];
@@ -56,7 +60,7 @@ export interface LessonConfig {
  * has to become a refereed result — see the same note in `lessonReducer`.
  */
 export default function Lesson({
-  title, script, onDone, onAgain, onExit, onNext, nextLabel,
+  module, index, title, script, onDone, onAgain, onExit, onNext, nextLabel,
 }: LessonConfig) {
   const [state, dispatch] = useReducer(
     lessonReducer,
@@ -96,13 +100,29 @@ export default function Lesson({
    * to the path, and a caller passing a fresh closure on every render would
    * otherwise record the same lesson repeatedly.
    */
+  /* Started, so a lesson somebody opened and abandoned is visible as the gap
+     between this and its finish. */
+  const began = useRef(false);
+  useEffect(() => {
+    if (began.current) return;
+    began.current = true;
+    track({ name: 'learn_lesson', module, lesson: index, step: 'started' });
+  }, [module, index]);
+
   const reported = useRef(false);
   useEffect(() => {
     if (!over || reported.current) return;
     reported.current = true;
+    track({
+      name: 'learn_lesson',
+      module,
+      lesson: index,
+      step: 'finished',
+      accuracy: Math.round(lessonAccuracy(stateRef.current) * 100),
+    });
     audio.lessonDone();
     onDone({ stars: lessonStars(stateRef.current), accuracy: lessonAccuracy(stateRef.current) });
-  }, [over, onDone]);
+  }, [over, onDone, module, index]);
 
   const typeChar = useCallback((raw: string) => {
     const snapshot = stateRef.current;

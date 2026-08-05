@@ -97,6 +97,48 @@ export type GameEvent =
    * no damage renders, typing still sends, and without this event the only
    * evidence is a player's screenshot. Two of those arrived before it existed.
    */
+  /* ---------------------------------------------------------------- learn
+   *
+   * The path exists to answer one question -- does an on-ramp keep the
+   * players who currently bounce off ranked duels -- and it cannot be
+   * answered by whether anybody clicked Learn. It is answered by where they
+   * stop. So these are shaped as a funnel with the drop-out points named,
+   * not as a scatter of clicks:
+   *
+   *   learn_opened -> learn_tutorial (started/finished) -> learn_lesson
+   *   (started/finished) -> learn_boss (won/lost) -> learn_module_completed
+   *
+   * Every one carries the module, because "people give up" is not actionable
+   * and "people give up on numbers" is. `signed_in` rides along on the
+   * entry points: a guest walking the path is the population this was built
+   * for, and their behaviour is the whole hypothesis.
+   */
+  | { name: 'learn_opened'; signed_in: boolean; modules_passed: number }
+  | { name: 'learn_tutorial'; step: 'started' | 'finished' | 'skipped' }
+  | {
+      name: 'learn_lesson';
+      module: string;
+      /** Index within the module, so a drop-out has a position. */
+      lesson: number;
+      step: 'started' | 'finished';
+      /** Only on finish. Rounded: this is a distribution, not a score. */
+      accuracy?: number;
+    }
+  /**
+   * The gate, and the most important number here. If people pile up against
+   * 95% and stop, the gate is wrong; if they clear it in a retry or two, it
+   * is doing its job. Nothing else tells us which.
+   */
+  | { name: 'learn_boss_blocked'; module: string; accuracy: number }
+  | {
+      name: 'learn_boss';
+      module: string;
+      result: 'won' | 'lost' | 'left';
+      /** The player's speed, against the module's calibrated boss pace. */
+      wpm: number;
+      boss_wpm: number;
+    }
+  | { name: 'learn_module_completed'; module: string; stars: number; granted: number }
   | { name: 'handler_crashed'; messageType: string; error: string };
 
 /**
