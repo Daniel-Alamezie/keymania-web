@@ -144,3 +144,75 @@
   padding: 4px 7px;
   white-space: nowrap;
 }
+
+/* ------------------------------------------------- act one: the two bumps */
+
+/*
+ * Two keys, drawn big enough to be the whole story. They mirror the real
+ * keyboard: down while the physical key is held, lit gold once found, and a
+ * slow beckon on whichever one is being asked for. The depth is a hard
+ * shadow rather than a gradient, because this is a keycap in a pixel game,
+ * not a render of one.
+ */
+.keys {
+  display: flex;
+  justify-content: center;
+  gap: clamp(20px, 7vw, 56px);
+  padding: var(--gap-lg) 0 calc(var(--gap-lg) + 8px);
+}
+
+.bigKey {
+  position: relative;
+  width: clamp(110px, 32vw, 190px);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(44px, 13vw, 80px);
+  color: var(--muted);
+  background: var(--panel);
+  border: 3px solid var(--edge);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.45);
+  transition: transform 70ms linear, box-shadow 70ms linear;
+}
+
+/* Held down, exactly while the real key is. The press IS the acknowledgement. */
+.bigKey[data-down] {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.bigKey[data-lit] {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+/* The one being asked for beckons — a hard two-step blink, not a soft pulse,
+   because everything in this game cuts rather than fades. */
+.bigKey[data-hint] {
+  animation: beckon 1.1s steps(2) infinite;
+}
+
+@keyframes beckon {
+  50% { border-color: var(--gold); }
+}
+
+/*
+ * The bump itself, drawn on the key at the same place your finger finds it.
+ * `currentColor`, so it lights up with the key — the detail the whole act is
+ * about should be the brightest thing on it once found.
+ */
+.bump {
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26%;
+  height: 6px;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bigKey { transition: none; }
+  .bigKey[data-hint] { animation: none; border-color: var(--gold); }
+}

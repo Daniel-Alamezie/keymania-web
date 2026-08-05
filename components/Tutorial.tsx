@@ -10,31 +10,31 @@ import styles from './Tutorial.module.css';
 /**
  * How to hold your hands, before anything asks you to type.
  *
- * The finger hints on a lesson arrive *while* somebody is already typing,
- * which corrects rather than teaches — by the time the hint is read the wrong
- * finger has usually already moved. This is the missing beat before that: the
- * resting position, named, one finger at a time, with nothing being scored.
+ * Two acts, and the order is the story.
  *
- * **Nothing here is worth a star, and that is the design.** It is information,
- * not an exercise, so it stores nothing, cannot be failed, and cannot be
- * rushed. That also happens to be what keeps it cheap: a node awarding nothing
- * needs no progress character, and a node with no progress character needs no
- * entry in `MODULE_IDS` — so none of the append-only machinery is touched.
+ * **Act one is the bumps.** Every keyboard in the world carries a raised
+ * ridge on F and on J, and most people have never consciously noticed the
+ * thing their index fingers have been resting on for years. It is the single
+ * most physical fact in touch typing — the whole skill hangs off being able
+ * to find home without looking — so it gets the whole screen: two giant keys
+ * that visibly answer the real presses, then a beat where both must be found
+ * together with eyes on the screen. Felt, not read.
  *
- * It asks for one press per finger rather than just showing a diagram. Reading
- * "your left little finger sits on A" and pressing A with it are different
- * events, and only the second one puts anything in the hands.
+ * **Act two is the walk**: each finger named and pressed once, on the same
+ * hand diagram the lessons use afterwards.
+ *
+ * Nothing here is worth a star, and that is the design. It is information,
+ * not an exercise: it stores nothing, cannot be failed, and cannot be rushed.
+ * A wrong key does nothing at all — no miss, no shake, no count — because
+ * punishing a stray press on the screen built to make somebody comfortable
+ * would be exactly backwards.
  */
 
-/**
- * The home row left to right, then the space bar.
- *
- * Space is last and is not an afterthought: it is the most pressed key on the
- * board by a wide margin, and it is the one people reach for with a stray
- * index finger for years. A tutorial that covers eight fingers and ignores the
- * thumbs teaches most of a habit.
- */
+/** The home row, left to right, then the space bar. One step per finger. */
 const HOME = [...'asdfjkl;', ' '];
+
+/** Act one's beats, then the finger walk. */
+type Act = 'story' | 'find-f' | 'find-j' | 'both' | 'home' | 'walk';
 
 export interface TutorialProps {
   onDone: () => void;
@@ -42,90 +42,238 @@ export interface TutorialProps {
 }
 
 export default function Tutorial({ onDone, onExit }: TutorialProps) {
-  /** -1 is the opening beat, 0..7 the fingers, HOME.length the close. */
-  const [at, setAt] = useState(-1);
+  const [act, setAct] = useState<Act>('story');
+  const [at, setAt] = useState(0);
+
+  /** The giant keys mirror the real ones: down while held, lit once found. */
+  const [fDown, setFDown] = useState(false);
+  const [jDown, setJDown] = useState(false);
+  const [found, setFound] = useState({ f: false, j: false });
+
+  const actRef = useRef(act);
+  useEffect(() => { actRef.current = act; }, [act]);
   const atRef = useRef(at);
   useEffect(() => { atRef.current = at; }, [at]);
+  const downRef = useRef({ f: false, j: false });
+  /**
+   * The both-at-once beat only counts after both keys have been UP since the
+   * act began. Without this, the J still held from the previous beat would
+   * complete it instantly, and the one thing this act teaches — leave, then
+   * find home again by touch — would never have happened.
+   */
+  const armedRef = useRef(false);
 
-  const finished = at >= HOME.length;
-  const wanted = at >= 0 && at < HOME.length ? HOME[at] : undefined;
+  const finished = act === 'walk' && at >= HOME.length;
+  const wanted = act === 'walk' && at < HOME.length ? HOME[at] : undefined;
 
   useEffect(() => { if (finished) markSeen(); }, [finished]);
+  useEffect(() => { if (act === 'both') armedRef.current = false; }, [act]);
 
   const advance = useCallback(() => {
     setAt((was) => Math.min(HOME.length, was + 1));
   }, []);
 
-  /**
-   * A key press, which is the only way forward through the fingers.
-   *
-   * A wrong key does nothing at all — no miss, no shake, no count. There is
-   * nothing to get wrong here yet, and punishing a stray press on the screen
-   * that exists to make somebody comfortable would be exactly backwards.
-   */
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'Escape') { e.preventDefault(); onExit(); return; }
 
-      const step = atRef.current;
-      if (step < 0 || step >= HOME.length) {
-        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); }
+      const key = e.key.toLowerCase();
+      if (key === 'f' || key === 'j') {
+        downRef.current[key] = true;
+        (key === 'f' ? setFDown : setJDown)(true);
+      }
+
+      const phase = actRef.current;
+
+      if (phase === 'story') return;
+
+      if (phase === 'find-f') {
+        if (key === 'f') { e.preventDefault(); audio.key(0); setFound((s) => ({ ...s, f: true })); setAct('find-j'); }
         return;
       }
 
+      if (phase === 'find-j') {
+        if (key === 'j') { e.preventDefault(); audio.key(1); setFound((s) => ({ ...s, j: true })); setAct('both'); }
+        return;
+      }
+
+      if (phase === 'both') {
+        if ((key === 'f' || key === 'j')
+          && armedRef.current
+          && downRef.current.f && downRef.current.j) {
+          e.preventDefault();
+          audio.lessonDone();
+          setAct('home');
+        }
+        return;
+      }
+
+      if (phase === 'home') {
+        if (key === ' ' || e.key === 'Enter') { e.preventDefault(); setAct('walk'); }
+        return;
+      }
+
+      /* The walk. */
+      const step = atRef.current;
+      if (step >= HOME.length) return;
       if (e.key.length !== 1) return;
       e.preventDefault();
-      if (e.key.toLowerCase() !== HOME[step]) return;
+      if (key !== HOME[step]) return;
       audio.key(step);
       advance();
     };
 
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const onUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (key === 'f' || key === 'j') {
+        downRef.current[key] = false;
+        (key === 'f' ? setFDown : setJDown)(false);
+      }
+      /* Both hands off: the both-at-once beat is now armed. */
+      if (actRef.current === 'both' && !downRef.current.f && !downRef.current.j) {
+        armedRef.current = true;
+      }
+    };
+
+    const onBlur = () => {
+      downRef.current = { f: false, j: false };
+      setFDown(false);
+      setJDown(false);
+    };
+
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+      window.removeEventListener('blur', onBlur);
+    };
   }, [advance, onExit]);
+
+  const inActOne = act !== 'walk';
 
   return (
     <main className={styles.screen}>
       <header className={styles.head}>
         <button className="btn btn-ghost" onClick={onExit}>← Path</button>
         <span className={styles.count}>
-          {at < 0 ? 'Before you start' : `${Math.min(at + 1, HOME.length)} / ${HOME.length}`}
+          {inActOne ? 'Finding home' : `${Math.min(at + 1, HOME.length)} / ${HOME.length}`}
         </span>
       </header>
 
-      <div className={styles.stage}>
-        <Hands next={wanted} />
-      </div>
+      {/* Act one's stage: two keys, drawn big enough to be the whole story.
+          They answer the real keyboard — down while held, lit once found. */}
+      {inActOne && (
+        <div className={styles.keys} aria-hidden="true">
+          <div
+            className={`${styles.bigKey} pixel-font`}
+            data-down={fDown || undefined}
+            data-lit={found.f || undefined}
+            data-hint={(act === 'find-f' || act === 'both') || undefined}
+          >
+            F
+            <i className={styles.bump} />
+          </div>
+          <div
+            className={`${styles.bigKey} pixel-font`}
+            data-down={jDown || undefined}
+            data-lit={found.j || undefined}
+            data-hint={(act === 'find-j' || act === 'both') || undefined}
+          >
+            J
+            <i className={styles.bump} />
+          </div>
+        </div>
+      )}
+
+      {act === 'walk' && (
+        <div className={styles.stage}>
+          <Hands next={wanted} />
+        </div>
+      )}
 
       <div className={styles.card}>
-        {at < 0 && (
+        {act === 'story' && (
           <>
-            <h1 className={`${styles.title} pixel-font`}>Eight keys, eight fingers</h1>
+            <h1 className={`${styles.title} pixel-font`}>Two keys are different</h1>
             <p className={styles.body}>
-              Touch typing is one habit: every finger has its own keys, and it
-              comes back to the same place after each one. That resting place is
-              the middle row — <strong>a s d f</strong> and <strong>j k l ;</strong>.
+              Run a fingertip along the middle row of your keyboard. On
+              <strong> F</strong> and on <strong>J</strong> there is a small
+              raised ridge — a bump you can feel.
             </p>
             <p className={styles.body}>
-              Rest your fingers on them now. You should be able to feel a small
-              bump on <strong>F</strong> and <strong>J</strong>, which is how you
-              find home without looking.
+              Every keyboard in the world has them, and they exist for one
+              reason: so your hands can find their place
+              <strong> without your eyes</strong>.
             </p>
-            <button className="btn btn-primary" onClick={advance}>Show me</button>
+            <button className="btn btn-primary" onClick={() => setAct('find-f')}>
+              I can feel them
+            </button>
           </>
         )}
 
-        {at >= 0 && !finished && (
+        {act === 'find-f' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>The left landmark</h1>
+            <p className={styles.body}>
+              Rest your <strong>left index finger</strong> on the bump,
+              and press.
+            </p>
+            <p className={styles.prompt}>The key on screen will answer.</p>
+          </>
+        )}
+
+        {act === 'find-j' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>The right landmark</h1>
+            <p className={styles.body}>
+              Now your <strong>right index finger</strong> on <strong>J</strong>.
+            </p>
+            <p className={styles.prompt}>Take your time — nothing here is scored.</p>
+          </>
+        )}
+
+        {act === 'both' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>Eyes off the keyboard</h1>
+            <p className={styles.body}>
+              Lift both hands away. Now — looking at the
+              <strong> screen</strong>, not down — find both bumps by touch
+              alone, and press <strong>F and J together</strong>.
+            </p>
+            <p className={styles.prompt}>This is the whole trick. Everything else is reach.</p>
+          </>
+        )}
+
+        {act === 'home' && (
+          <>
+            <h1 className={`${styles.title} pixel-font`}>You found home</h1>
+            <p className={styles.body}>
+              Without looking. That is what the bumps buy you — your hands can
+              always find this position, and every other key is a short reach
+              away from it.
+            </p>
+            <button className="btn btn-primary" onClick={() => setAct('walk')}>
+              Now, one finger at a time
+            </button>
+          </>
+        )}
+
+        {act === 'walk' && !finished && (
           <>
             <h1 className={`${styles.title} pixel-font`}>
               {HOME[at] === ' ' ? 'Space' : HOME[at].toUpperCase()}
             </h1>
             <p className={styles.body}>
               {HOME[at] === ' '
-                ? <>The space bar belongs to your <strong>thumbs</strong>. Use
-                  whichever is nearer — it makes no difference, as long as it is
-                  not a finger.</>
+                ? (
+                  <>The space bar belongs to your <strong>thumbs</strong>. Use
+                    whichever is nearer — it makes no difference, as long as it is
+                    not a finger.
+                  </>
+                )
                 : <>Your <strong>{fingerLabel(HOME[at])}</strong>.</>}
             </p>
             <p className={styles.prompt}>
@@ -144,13 +292,9 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             </p>
 
             {/*
-              * The scoring, drawn rather than described.
-              *
-              * This was a fifty-word paragraph, and rules read as homework in
-              * prose. Three rows of the ladder — stars, what earns them, what
-              * they open — say the same thing at a glance in nine words. Each
-              * row carries the full sentence for a screen reader; the visual
-              * parts are hidden from it so nothing is read twice.
+              * The scoring, drawn rather than described. Three rows of the
+              * ladder — stars, what earns them, what they open — with the
+              * full sentence on each row for a screen reader.
               */}
             <div className={styles.rules}>
               <div
@@ -192,6 +336,7 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             <p className={styles.prompt}>
               Stars only ever go up — replaying costs nothing.
             </p>
+
             <button className="btn btn-primary" onClick={onDone}>Start module 1</button>
             <button className="btn btn-ghost" onClick={onExit}>Back to the path</button>
           </>
