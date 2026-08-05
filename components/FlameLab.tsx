@@ -54,7 +54,7 @@ export default function FlameLab() {
       {/* The live one, full size and centred exactly as the ladder shows it. */}
       <section className={styles.stage}>
         <div className={styles.stageInner}>
-          <PathFlame heat={flameHeat(live)} stage={flameStage(live)} offset={0} />
+          <PathFlame heat={flameHeat(live)} stage={flameStage(live)} offset={0} contained />
         </div>
         <div className={styles.controls}>
           <input
@@ -84,6 +84,7 @@ export default function FlameLab() {
                   heat={flameHeat(progress)}
                   stage={flameStage(progress)}
                   offset={0}
+                  contained
                 />
               </div>
               <figcaption className={styles.caption}>

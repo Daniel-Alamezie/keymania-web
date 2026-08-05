@@ -18,12 +18,7 @@
 
 .note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 
-/*
- * The live sample. `PathFlame` is `position: fixed`, so it is given a
- * containing block here — a transform on an ancestor is what makes a fixed
- * child resolve against that ancestor instead of the viewport. Without it
- * every flame on this page would stack in the middle of the screen.
- */
+/* The live sample, at the size the slider is driving. */
 .stage {
   display: flex;
   flex-direction: column;
@@ -31,17 +26,26 @@
   gap: var(--gap-md);
 }
 
+/*
+ * Portrait, and sized so the tallest stage fits whole.
+ *
+ * The sprite grid is 19x26, so a square frame wastes width and clips height —
+ * which is exactly what happened: the inferno overflowed and the part being
+ * inspected was the part cut off. Height is capped against the viewport so the
+ * slider and the readout stay on screen beside it; there is no point being
+ * able to see the whole flame if you have to scroll away from the control that
+ * changes it.
+ */
 .stageInner {
   position: relative;
-  transform: translateZ(0);
-  width: min(90vw, 520px);
-  height: min(60dvh, 480px);
+  width: min(88vw, 340px);
+  aspect-ratio: 19 / 26;
+  max-height: 62dvh;
   border: 2px solid var(--edge-soft);
   background: var(--bg-deep);
-  overflow: hidden;
 }
 
-.controls { width: min(90vw, 520px); text-align: center; }
+.controls { width: min(88vw, 340px); text-align: center; }
 
 .slider { width: 100%; }
 
@@ -63,11 +67,9 @@
 
 .cellFlame {
   position: relative;
-  transform: translateZ(0);
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 19 / 26;
   border: 2px solid var(--edge-soft);
   background: var(--bg-deep);
-  overflow: hidden;
 }
 
 .caption {

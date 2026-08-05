@@ -19,6 +19,15 @@ export interface PathFlameProps {
    * second one guessing at the same numbers.
    */
   offset: number;
+  /**
+   * Size to the parent instead of to the viewport.
+   *
+   * On the ladder this is fixed behind the whole screen, which is why it sizes
+   * in viewport units. Anywhere it is being *looked at* rather than sat behind
+   * — the bench, mainly — that is wrong: it overflows whatever box it is given
+   * and the thing you were trying to inspect is the part that got clipped.
+   */
+  contained?: boolean;
 }
 
 /**
@@ -64,14 +73,14 @@ function cells(frame: readonly string[]) {
   return out;
 }
 
-export default function PathFlame({ heat, stage, offset }: PathFlameProps) {
+export default function PathFlame({ heat, stage, offset, contained }: PathFlameProps) {
   /* Regenerated only when the stage changes, which is a handful of times in a
      player's whole life with the feature. */
   const drawn = useMemo(() => flameFrames(stage).map(cells), [stage]);
 
   return (
     <div
-      className={styles.wrap}
+      className={`${styles.wrap}${contained ? ` ${styles.contained}` : ''}`}
       aria-hidden="true"
       data-stage={stage}
       style={{

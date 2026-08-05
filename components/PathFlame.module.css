@@ -145,3 +145,25 @@
   .frame { animation: none; opacity: 0; }
   .frame:first-of-type { opacity: 1; }
 }
+
+/*
+ * Bench mode: fill the box you were given, whole.
+ *
+ * `position: fixed` and viewport sizing are right behind the ladder and wrong
+ * anywhere the flame is the subject rather than the backdrop — it overflowed
+ * its frame and clipped exactly the shape being inspected. Absolute, inset to
+ * the parent, and no parallax, because there is nothing here to scroll.
+ */
+.contained {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+
+/* Breathing room, so no stage ever touches an edge of its frame. */
+.contained .flame {
+  width: calc((52% + 48% * var(--heat, 0.2)) * 0.88);
+  height: calc((52% + 48% * var(--heat, 0.2)) * 0.88);
+}
