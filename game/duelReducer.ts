@@ -103,8 +103,18 @@ const healSlot = (fighters: Fighter[], slot: number): Fighter[] =>
 export function duelReducer(state: DuelState, action: DuelAction): DuelState {
   switch (action.type) {
     case 'start': {
-      const sentence = freshSentence();
-      const upcoming = freshSentence(sentence);
+      /**
+       * A boss fight arrives with its script already written, because it may
+       * only use the keys its module has taught. Everything downstream then
+       * behaves exactly as multiplayer does — `drawNext` walks `state.script`
+       * in order and the generator is never consulted — so the restriction
+       * holds for the whole duel rather than only its opening pair.
+       */
+      const scripted = action.script && action.script.length > 0 ? action.script : null;
+      const sentence = scripted ? `${scripted[0]} ` : freshSentence();
+      const upcoming = scripted
+        ? `${scripted[1 % scripted.length]} `
+        : freshSentence(sentence);
 
       /**
        * Who the two of you are.
@@ -130,6 +140,8 @@ export function duelReducer(state: DuelState, action: DuelAction): DuelState {
         ],
         sentence,
         upcoming,
+        /* Null for an ordinary bot duel, which keeps generating as it goes. */
+        script: scripted,
         // Both sentences are charged up front, and every later sentence is
         // charged while it is still `upcoming`. A charged word is 8px wider
         // than a plain one, so deciding its charge only once it is reached

@@ -1,0 +1,101 @@
+/*
+ * Only what a lesson adds to Survival's shell: the progress bar that stands
+ * where the sprint's clock stands, the lesson's name, and the stars on the
+ * card. Everything shared lives in Survival.module.css — three screens now on
+ * one skeleton, same reason as before.
+ */
+
+/*
+ * The bar occupies the sprint's clock slot, and says the opposite thing. It
+ * fills rather than drains, and it has no late state to turn red: there is
+ * nothing here to be late for.
+ */
+.track {
+  width: 180px;
+  max-width: 60vw;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--edge-soft);
+}
+
+.fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width 90ms linear;
+}
+
+.title {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/*
+ * Accuracy is present but quiet, and deliberately not the big number. A
+ * beginner watching a percentage tick down on every fumble is being taught to
+ * fear the keyboard, which is the habit this whole mode exists to avoid. It is
+ * here so the figure on the end card is not a surprise, and no louder.
+ */
+.accuracy {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stars {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 2px 0 4px;
+}
+
+.star {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--edge-soft);
+}
+
+.star[data-earned] {
+  color: var(--gold);
+}
+
+.nextUp {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+/*
+ * The finger hint: which key is wanted, and whose job it is.
+ *
+ * Sits under the gauge rather than over the stream, so it is glanceable
+ * without competing with the words being typed. Loud enough to be read at a
+ * glance and quiet enough not to become the thing somebody stares at — the
+ * goal is to stop needing it.
+ */
+.finger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.nextKey {
+  min-width: 30px;
+  padding: 4px 7px;
+  text-align: center;
+  border: 2px solid var(--gold);
+  background: var(--bg-deep);
+  color: var(--gold);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.hand {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}

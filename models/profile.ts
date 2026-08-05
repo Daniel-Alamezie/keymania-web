@@ -163,6 +163,22 @@ export interface ServerProfile {
    */
   streak?: Streak;
   /**
+   * The learning path: how far along, and where to go next.
+   *
+   * **Absent is the off switch.** The server omits this entirely unless
+   * `LEARN_LIVE` is set, so its presence is what tells the client the feature
+   * is open — there is no separate flag to keep in step and no way for the
+   * menu to offer a path the API would refuse to record. A client that
+   * decided this for itself would show a Learn button on production the day
+   * before the curriculum was ready.
+   *
+   * `path` is one character per module, indexed by position in `MODULE_IDS`.
+   * `next` is the first module not yet passed, or null when every one has
+   * been — derived by the server rather than here, so the two cannot disagree
+   * about what "next" means.
+   */
+  learn?: { path: string; next: string | null };
+  /**
    * The offset the server dated those days against, so the browser can notice
    * it has gone stale and send a correction. See `syncClock`.
    */

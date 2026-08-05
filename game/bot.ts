@@ -14,12 +14,34 @@ export interface BotHandle {
  * timing: it completes words at a target words-per-minute with human-ish
  * jitter, and occasionally fumbles, which costs it a recovery pause.
  */
-export function startBot(difficulty: Difficulty, onWord: (event: BotWordEvent) => void): BotHandle {
-  const profile = BOT_PROFILES[difficulty];
+export function startBot(
+  difficulty: Difficulty,
+  onWord: (event: BotWordEvent) => void,
+  /**
+   * Where the bot's words come from. Defaults to the general bank.
+   *
+   * A module's boss passes its own restricted source instead, so the opponent
+   * can only say what the module has taught. The bot is a clock rather than a
+   * typist — it never checks a key — but the lengths it is pacing against have
+   * to come from the same vocabulary the player is being given, or a boss on
+   * six short home-row words would be timed as though it were typing
+   * "extraordinary".
+   */
+  nextSentence: () => string = randomSentence,
+  /**
+   * Override the tier's speed, for a module boss. Calibrated per module in
+   * the curriculum — a mandatory boss at Rookie's 34 wpm would be twice the
+   * speed of the beginners it now gates. Error rate and jitter stay the
+   * tier's own: a slow boss should still fumble like a person.
+   */
+  wpm?: number,
+): BotHandle {
+  const base = BOT_PROFILES[difficulty];
+  const profile = wpm ? { ...base, wpm } : base;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  let words = toWords(randomSentence());
+  let words = toWords(nextSentence());
   let index = 0;
 
   const scheduleNext = () => {
@@ -53,7 +75,7 @@ export function startBot(difficulty: Difficulty, onWord: (event: BotWordEvent) =
       });
 
       if (finishedSentence) {
-        words = toWords(randomSentence());
+        words = toWords(nextSentence());
         index = 0;
       }
       scheduleNext();

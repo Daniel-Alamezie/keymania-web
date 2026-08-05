@@ -49,6 +49,10 @@ BLUE_DEEP = (11, 111, 164, 255)
 RED = (239, 68, 68, 255)        # --bad: the ribbon's lit face
 RED_DEEP = (168, 43, 24, 255)   # badges.py RED: the ribbon's shade
 WHITE = (255, 250, 232, 255)
+# The path fire's white tone, lifted from PathFlame.module.css (#9ee0fb): the
+# mastery badge should read as the same fire the player watched grow for
+# weeks, not as a new white invented for the occasion.
+PALE = (158, 224, 251, 255)
 # Near the game's own dark, not pure black: these sit on purple panels, and a
 # true-black outline reads as a sticker from another game.
 OUTLINE = (30, 22, 52, 255)
@@ -64,6 +68,9 @@ SWEEP_STEP = 3
 BAND = 5
 # The twinkle: small, wide, small — one blink, then back to rest.
 SPARKLE_MS = (100, 140, 100)
+# Embers: single motes drifting off the mastery flame after the sparkle.
+# Slow enough to read as rising rather than flickering.
+EMBER_MS = 130
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +286,111 @@ BACKPACK = [
     "........................",
 ]
 
+# The Keysmith: a key in the game's gold, for reaching the bottom row.
+#
+# The classic ring-bowed key - bow at the top, long shaft, two teeth at the
+# foot - because that silhouette says "key" at fourteen pixels with no
+# interior detail needed, which is rule one of this file. The deep gold
+# rides the right-hand side of the bow and shaft: the same single light
+# source every other badge already agrees on.
+KEYSMITH = [
+    "........................",
+    ".........######.........",
+    ".......##########.......",
+    "......###......#@@......",
+    "......###......#@@......",
+    "......###......#@@......",
+    "......###......#@@......",
+    ".......#########@@......",
+    ".........###@@@.........",
+    "...........#@...........",
+    "..........###@..........",
+    "..........###@..........",
+    "...........#@...........",
+    "...........#@...........",
+    "...........#@...........",
+    "...........#@...........",
+    "...........#@##@........",
+    "...........#@##@........",
+    "...........#@...........",
+    "...........#@###@.......",
+    "...........#@###@.......",
+    "...........#@...........",
+    "........................",
+    "........................",
+]
+
+# The white flame: three-starring the whole path.
+#
+# The same fire the ladder burns behind a mastered path - blue-deep skin,
+# the pale #9ee0fb mid, a white heart. The first draft was smooth and
+# symmetric and read as a water droplet, which is this file's oldest
+# recorded failure ('a flame that read as a water droplet') repeated to the
+# letter. What fixed it is what always fixes it: a tip that leans, a
+# separate tongue merging into the body, and a notch in the flank. The
+# licks are the flame; the outline is just where they happen to stop.
+WHITE_FLAME = [
+    "........................",
+    ".............@..........",
+    "............@#@.........",
+    "............@#@.........",
+    "...........@##@.........",
+    "......@....@##w@........",
+    ".....@#@..@##ww@........",
+    ".....@#@..@#www#@.......",
+    "......@#@@##www#@.......",
+    "......@##wwwwww#@.......",
+    ".......@##wwwww#@.......",
+    "......@##wwwwwww#@......",
+    ".....@##wwwwwwww#@......",
+    ".....@##wwwwwwww##@.....",
+    "....@##wwwwwwwww##@.....",
+    ".....@##wwwwwwww##@.....",
+    ".....@##wwwwwww##@......",
+    "......@##wwwww###@......",
+    ".......@##www###@.......",
+    "........@##ww##@........",
+    ".........@####@.........",
+    "........................",
+    "........................",
+    "........................",
+]
+
+# The Path: module 12, the whole route walked.
+#
+# A staircase climbed and a flag planted -- the game's own ladder metaphor
+# made literal. The ladder screen is a climb, the rules card is a staircase
+# of stars, so the badge for finishing it is the staircase itself with the
+# summit flagged. Three treads rather than twelve: at fourteen pixels the
+# silhouette is the design, and a winding trail or a dozen steps turns to
+# mud. The pennant is the medals' ribbon red, flying back over the climb.
+THE_PATH = [
+    "........................",
+    "........................",
+    "..........rrrrrrr#@.....",
+    "............rrrrr#@.....",
+    "..............rrr#@.....",
+    ".................#@.....",
+    ".................#@.....",
+    ".................#@.....",
+    ".................#@.....",
+    "..............######@@..",
+    "..............######@@..",
+    "..............######@@..",
+    "........############@@..",
+    "........############@@..",
+    "........############@@..",
+    "..##################@@..",
+    "..##################@@..",
+    "..@@@@@@@@@@@@@@@@@@@@..",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+]
+
 PALETTES = {
     "crown": {"#": GOLD, "@": GOLD_DEEP},
     "silver": {"#": SILVER, "@": SILVER_DEEP, "r": RED, "R": RED_DEEP},
@@ -290,6 +402,11 @@ PALETTES = {
     # sky, so the two badges sit together on one profile without arguing.
     "backpack": {"#": BLUE, "@": BLUE_DEEP, "w": WHITE,
                  "f": BRONZE, "F": BRONZE_DEEP, "g": GOLD},
+    "keysmith": {"#": GOLD, "@": GOLD_DEEP},
+    # 'w' here is the heart, not an edge highlight: it must NOT be the lit
+    # colour, or the sweep would erase the one thing that makes it a flame.
+    "white-flame": {"#": PALE, "@": BLUE_DEEP, "w": WHITE},
+    "the-path": {"#": GOLD, "@": GOLD_DEEP, "r": RED, "R": RED_DEEP},
 }
 
 # What the shine crosses, per badge: the lit face of whatever it is made of.
@@ -302,6 +419,11 @@ LIGHT = {
     # The blue body, not the leather: the light crosses the canvas and the
     # pockets keep their colour, so the pack glints without changing shape.
     "backpack": BLUE,
+    "keysmith": GOLD,
+    # The pale mid-band: the sweep whitens the skin while the heart,
+    # already white, holds still - which is how a fire catches light.
+    "white-flame": PALE,
+    "the-path": GOLD,
 }
 
 # Which way the light travels. The sweep normally advances along x+y
@@ -320,6 +442,9 @@ SPARKLE = {
     "first-blood": (15, 5),   # just shy of the tip, where an edge catches light
     "streak": (9, 3),         # the upper limb, beside the pale edge
     "backpack": (13, 12),     # the right-hand buckle: where the sweep's light exits
+    "keysmith": (7, 4),       # the upper-left of the bow, same sky as the rest
+    "white-flame": (11, 6),   # just under the tip, where a flame is brightest
+    "the-path": (17, 3),      # the pole top, beside the pennant
 }
 
 # Ribbed edges are the silver medal's signature in the inspiration, and one
@@ -368,6 +493,20 @@ def outline(cells: dict) -> set[tuple[int, int]]:
     return edge
 
 
+# Motes drifting off a badge after its sparkle, frame by frame. Only the
+# mastery flame uses this: embers are what the spec asks for, and they are
+# the one thing the sweep-and-sparkle grammar cannot say. Cells may sit OFF
+# the silhouette, because coming off it is the point. Fresh motes are white,
+# fading ones the pale mid.
+EMBERS = {
+    "white-flame": [
+        {(19, 10): WHITE, (3, 12): PALE},
+        {(20, 8): PALE, (2, 10): PALE},
+        {(20, 6): PALE},
+    ],
+}
+
+
 def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
     palette = PALETTES[name]
     cells = parse(rows, palette)
@@ -388,7 +527,8 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
     star_wide = {(sx, sy), (sx - 1, sy), (sx + 1, sy), (sx, sy - 1), (sx, sy + 1)}
     assert star_wide <= set(cells), f"{name}: sparkle off the badge at {sx},{sy}"
 
-    def compose(band: set[int] = frozenset(), star: set = frozenset()) -> Image.Image:
+    def compose(band: set[int] = frozenset(), star: set = frozenset(),
+                motes: dict | None = None) -> Image.Image:
         image = Image.new("RGBA", (GRID, GRID), (0, 0, 0, 0))
         pixels = image.load()
         for x, y in edge:
@@ -398,6 +538,9 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
             pixels[x, y] = WHITE if lit else colour
         for x, y in star:
             pixels[x, y] = WHITE
+        for (x, y), colour in (motes or {}).items():
+            assert 0 <= x < GRID and 0 <= y < GRID, f"{name}: ember off-grid at {x},{y}"
+            pixels[x, y] = colour
         return image.resize((GRID * SCALE, GRID * SCALE), Image.Resampling.NEAREST)
 
     frames = [compose()]
@@ -408,6 +551,9 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
     for star, ms in zip((star_small, star_wide, star_small), SPARKLE_MS):
         frames.append(compose(star=star))
         held.append(ms)
+    for motes in EMBERS.get(name, []):
+        frames.append(compose(motes=motes))
+        held.append(EMBER_MS)
     return frames, held
 
 
@@ -415,7 +561,8 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for name, rows in (("crown", CROWN), ("silver", SILVER_MEDAL), ("bronze", BRONZE_MEDAL),
                        ("first-blood", FIRST_BLOOD), ("streak", STREAK),
-                       ("backpack", BACKPACK)):
+                       ("backpack", BACKPACK), ("keysmith", KEYSMITH),
+                       ("white-flame", WHITE_FLAME), ("the-path", THE_PATH)):
         frames, held = build(name, rows)
         path = OUT / f"{name}.png"
         frames[0].save(

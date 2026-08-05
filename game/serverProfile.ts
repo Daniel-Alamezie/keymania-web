@@ -4,6 +4,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { asCharacter, DEFAULT_CHARACTER, type CharacterId } from '@/models/character';
 import type { Cosmetic } from '@/models/cosmetics';
+import type { ModuleId } from './learnPath';
 import type {
   ChallengeProgress, DuelResult, ServerProfile, Tally,
 } from '@/models/profile';
@@ -44,6 +45,16 @@ export interface ProfileState {
   saveCosmetics: (
     wanted: { title?: string | null; badge?: string | null; nameColour?: string | null },
   ) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Record a passed module of the learning path.
+   *
+   * The server keeps the best of what it is told and ignores anything that
+   * would lower a star, so replaying a mastered module and doing badly costs
+   * nothing. It also ignores this entirely when LEARN_LIVE is off, which is
+   * why nothing here checks the flag a second time.
+   */
+  saveModule: (module: ModuleId, stars: number) =>
+  Promise<{ ok: boolean; error?: string; granted?: string[] }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -286,6 +297,14 @@ async function savePatch(
     character?: CharacterId;
     cosmetics?: { title?: string | null; badge?: string | null; nameColour?: string | null };
     /**
+     * A passed module of the learning path.
+     *
+     * Ignored upstream unless LEARN_LIVE is set, and the server keeps the best
+     * of the stars it is told rather than the last, so sending a worse result
+     * than one already held is a no-op rather than a loss.
+     */
+    learn?: { module: ModuleId; stars: number };
+    /**
      * Three distinct states, and the route upstream reads them the same way:
      * a code sets it, `null` clears it, and omitting the key leaves it alone.
      * `undefined` must never be sent as an explicit null or every unrelated
@@ -378,6 +397,39 @@ const saveCountry = (country: string | null) =>
   savePatch({ country }, 'Could not save that country.');
 
 /**
+ * Record a passed module, then re-read the record.
+ *
+ * The write is not merged back optimistically, unlike a name or a country.
+ * The server decides what a result becomes -- it keeps the best of the stars
+ * it is told, and it is the only thing that knows what passing a module
+ * unlocked -- so guessing the new progress string here would mean two places
+ * implementing "stars only climb" and one of them eventually disagreeing. The
+ * cost is a round trip on the one screen that can afford it: the player is
+ * reading a result card, not typing.
+ */
+const saveModule = async (module: ModuleId, stars: number) => {
+  /**
+   * What was owned before the write, so the answer to "what did this grant?"
+   * can be a diff of server truth rather than a client-side mirror of
+   * MODULE_UNLOCKS — which would be one more copy of the same fact, and the
+   * copy that drifts. The PUT re-reads the record before answering and
+   * savePatch folds its cosmetics into the snapshot, so after the await the
+   * earned list IS the server's.
+   */
+  const before = new Set(snapshot.profile?.cosmetics?.earned ?? []);
+  const result = await savePatch(
+    { learn: { module, stars } },
+    'Could not save your progress on that module.',
+  );
+  if (!result.ok) return result;
+
+  const granted = (snapshot.profile?.cosmetics?.earned ?? [])
+    .filter((id) => !before.has(id));
+  invalidateProfile();
+  return { ...result, granted };
+};
+
+/**
  * Tell the server what time zone this browser is in, when it has drifted.
  *
  * The server dates results into local days, and it has to: ranked duels and
@@ -430,7 +482,9 @@ export function useServerProfile(): ProfileState {
     syncClock(state.profile.utcOffset);
   }, [state.profile]);
 
-  return { ...state, saveName, saveHandle, saveCharacter, saveCosmetics, saveCountry };
+  return {
+    ...state, saveName, saveHandle, saveCharacter, saveCosmetics, saveCountry, saveModule,
+  };
 }
 
 /**

@@ -1,0 +1,196 @@
+/*
+ * The fire behind the path, as pixels.
+ *
+ * Everything sizes off `--heat` (0 to 1) so growth is one variable rather than
+ * a set of stages with hard edges — a flame that jumped between five fixed
+ * sizes would read as a progress bar wearing a costume.
+ */
+
+.wrap {
+  position: fixed;
+  /*
+   * Centred, not sitting on the floor.
+   *
+   * It was anchored to the bottom first, where it read as scenery behind the
+   * list rather than as the thing the screen is about. In the middle it is the
+   * first thing seen, and the list reads as sitting in front of it — which is
+   * the right way round: the fire is the encouragement, and encouragement that
+   * has to be scrolled to is not encouragement.
+   */
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, calc(-50% + var(--shift, 0px)), 0);
+  width: min(86vw, 520px);
+  height: min(86vw, 520px);
+  pointer-events: none;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  will-change: transform;
+}
+
+/*
+ * The warmth. A wide, soft radial that is most of the effect while the flame
+ * is small — a lone spark on a dark screen looks like a dead pixel without it.
+ * The one deliberately un-pixelated thing here, because light is not a sprite.
+ */
+.glow {
+  position: absolute;
+  width: 165%;
+  aspect-ratio: 1 / 1;
+  background: radial-gradient(
+    circle at 50% 52%,
+    rgba(255, 176, 60, calc(0.13 + 0.19 * var(--heat, 0.2))) 0%,
+    rgba(214, 96, 30, calc(0.08 + 0.13 * var(--heat, 0.2))) 34%,
+    transparent 70%
+  );
+  animation: breathe 5.5s ease-in-out infinite;
+}
+
+/*
+ * From an ember to a blaze, scaled by heat.
+ *
+ * The range is deliberately wide -- 16% to 100% -- because the point is that
+ * the fire *grows*. A flame that only ever varies between "quite big" and "a
+ * bit bigger" is a progress bar; somebody arriving at nothing should see a
+ * lone coal and somebody who mastered the path should see it fill the screen.
+ */
+.flame {
+  position: relative;
+  width: calc(52% + 48% * var(--heat, 0.2));
+  height: calc(52% + 48% * var(--heat, 0.2));
+  overflow: visible;
+}
+
+.frame {
+  opacity: 0;
+  /*
+   * Eight frames at ~11fps. `steps(1)` and hard opacity cuts, because pixel
+   * art flickers by cutting between drawn frames -- easing between them is the
+   * one thing that makes a sprite look like vector art in a costume. Each
+   * frame owns one slot of the cycle and the delays are set inline from the
+   * frame count, so adding frames never needs a CSS edit.
+   */
+  animation: cycle 0.72s steps(1) infinite;
+}
+
+@keyframes cycle {
+  0% { opacity: 1; }
+  12.5% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/*
+ * The palette: what fire actually does as it heats — red, orange, blue, white.
+ *
+ * **Not the leaderboard's flames.** Those are earned status markers, gold
+ * meaning a rating of 450 through grinding ranked duels; this is a backdrop
+ * nobody else ever sees. Handing out that gold for finishing a beginner's
+ * tutorial would cheapen the one somebody ground for, so the path takes the
+ * temperature scale instead and leaves gold alone.
+ *
+ * Flat fills throughout: a gradient inside a pixel is a mistake.
+ */
+.outer { fill: #7a2410; }
+.mid { fill: #c04a12; }
+.core { fill: #e0761c; }
+
+/* Coal: barely alight, sitting back in the dark. */
+.wrap[data-tone='coal'] .outer { fill: #5c1b0c; }
+.wrap[data-tone='coal'] .mid { fill: #a8360f; }
+.wrap[data-tone='coal'] .core { fill: #d9701c; }
+
+/* Amber: a proper flame, and the last of the warm range. */
+.wrap[data-tone='amber'] .outer { fill: #8a2a0d; }
+.wrap[data-tone='amber'] .mid { fill: #d1600f; }
+.wrap[data-tone='amber'] .core { fill: #f2a52a; }
+
+/* Azure: hot enough to turn, which is where the fire stops being ordinary. */
+.wrap[data-tone='azure'] .outer { fill: #10386e; }
+.wrap[data-tone='azure'] .mid { fill: #1f6fc4; }
+.wrap[data-tone='azure'] .core { fill: #7fd4f5; }
+
+/* White: the hottest a fire gets, and the only one on a mastered path. */
+.wrap[data-tone='white'] .outer { fill: #1f5fa8; }
+.wrap[data-tone='white'] .mid { fill: #9ee0fb; }
+.wrap[data-tone='white'] .core { fill: #ffffff; }
+
+/*
+ * The embers. One cell or two, rising and drifting, on a long stagger so the
+ * shower never visibly repeats. They inherit the fire's core colour, because
+ * a spark is a piece of the fire that left.
+ */
+.spark {
+  fill: #e0761c;
+  opacity: 0;
+  animation: ember 2.8s ease-out infinite;
+}
+
+.wrap[data-tone='coal'] .spark { fill: #d9701c; }
+.wrap[data-tone='amber'] .spark { fill: #f2a52a; }
+.wrap[data-tone='azure'] .spark { fill: #7fd4f5; }
+.wrap[data-tone='white'] .spark { fill: #ffffff; }
+
+@keyframes ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: 0.9; }
+  70% { opacity: 0.55; }
+  100% {
+    transform: translate(calc(var(--drift, 0) * 1px), calc(var(--rise, -10) * 1px));
+    opacity: 0;
+  }
+}
+
+/*
+ * Opacity climbs with heat so the fire also gets *denser*, not only larger —
+ * an ember should sit back in the dark and an inferno should dominate.
+ */
+.outer, .mid, .core { opacity: calc(0.42 + 0.58 * var(--heat, 0.2)); }
+
+/*
+ * A mastered path is allowed to be louder. It is the only genuinely finished
+ * state, and the one place a little excess is the correct amount.
+ */
+.wrap[data-tone='white'] .glow { animation-duration: 3.2s; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.84; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/*
+ * Motion off: the fire stays, still, on its first frame. Removing it entirely
+ * would take the encouragement with it, and the size — which is the actual
+ * signal — does not depend on movement. Parallax goes, because that one is
+ * genuinely motion coupled to scrolling and is the part most likely to make
+ * somebody feel ill.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .wrap { transform: translate3d(-50%, -50%, 0); }
+  .glow { animation: none; }
+  .spark { animation: none; opacity: 0; }
+  .frame { animation: none; opacity: 0; }
+  .frame:first-of-type { opacity: 1; }
+}
+
+/*
+ * Bench mode: fill the box you were given, whole.
+ *
+ * `position: fixed` and viewport sizing are right behind the ladder and wrong
+ * anywhere the flame is the subject rather than the backdrop — it overflowed
+ * its frame and clipped exactly the shape being inspected. Absolute, inset to
+ * the parent, and no parallax, because there is nothing here to scroll.
+ */
+.contained {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+
+/* Breathing room, so no stage ever touches an edge of its frame. */
+.contained .flame {
+  width: calc((52% + 48% * var(--heat, 0.2)) * 0.88);
+  height: calc((52% + 48% * var(--heat, 0.2)) * 0.88);
+}

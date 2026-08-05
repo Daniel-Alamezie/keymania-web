@@ -1,0 +1,87 @@
+/*
+ * The flame bench. Dev only, so it is plain — this is a measuring tool and
+ * anything decorative here would be competing with the thing being measured.
+ */
+
+.page {
+  height: 100dvh;
+  overflow-y: auto;
+  padding: var(--gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+.head { text-align: center; }
+
+.title { margin: 0; font-size: 20px; letter-spacing: 0.12em; color: var(--ink); }
+
+.note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
+/* The live sample, at the size the slider is driving. */
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+}
+
+/*
+ * Portrait, and sized so the tallest stage fits whole.
+ *
+ * The sprite grid is 19x26, so a square frame wastes width and clips height —
+ * which is exactly what happened: the inferno overflowed and the part being
+ * inspected was the part cut off. Height is capped against the viewport so the
+ * slider and the readout stay on screen beside it; there is no point being
+ * able to see the whole flame if you have to scroll away from the control that
+ * changes it.
+ */
+.stageInner {
+  position: relative;
+  width: min(88vw, 340px);
+  aspect-ratio: 19 / 26;
+  max-height: 62dvh;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+}
+
+.controls { width: min(88vw, 340px); text-align: center; }
+
+.slider { width: 100%; }
+
+.readout {
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--gap-md);
+}
+
+.cell { margin: 0; }
+
+.cellFlame {
+  position: relative;
+  aspect-ratio: 19 / 26;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+}
+
+.caption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.caption strong { color: var(--gold); font-size: 12px; }
+
+.dim { color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }

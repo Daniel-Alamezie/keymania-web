@@ -7,6 +7,7 @@ import {
   rivals, you, type Fighter as FighterState,
 } from '@/game/duelReducer';
 import { startBot } from '@/game/bot';
+import { bossLine, bossScript, bossWords, type BossBank } from '@/game/bossBank';
 import { audio } from '@/game/audio';
 // `trackEvent`, not `track`: this file already has a `track` that collects
 // timers for cleanup, and the two silently compiled into each other.
@@ -119,6 +120,25 @@ interface DuelProps {
    * broken instead of the connection being lost.
    */
   linkDown?: boolean;
+  /**
+   * A module's boss: the same bot duel, on a restricted alphabet.
+   *
+   * Both fighters are held to the module's keys — the player through a script
+   * handed to the reducer, the bot through the same bank feeding its pacing.
+   * Nothing else about the duel changes, and in particular it stays exactly as
+   * uncompetitive as ordinary bot practice: no rating, no board, no result
+   * saved. That is inherited rather than re-implemented, by leaving
+   * `multiplayer` absent.
+   */
+  boss?: BossBank;
+  /**
+   * How a boss fight ended, for the module that sent the player into it.
+   *
+   * Only meaningful with `boss` set. The duel already folds itself into the
+   * practice record the same way any bot duel does -- this is not that, it is
+   * the one bit the learning path needs and cannot get anywhere else.
+   */
+  onBossResult?: (won: boolean, wpm: number) => void;
   onExit: () => void;
 }
 
@@ -174,7 +194,9 @@ const FINISH_HOLD_MS = 1900;
  */
 const PULSE_EVERY_MS = 2000;
 
-export default function Duel({ difficulty, multiplayer, linkDown, onExit }: DuelProps) {
+export default function Duel({
+  difficulty, multiplayer, linkDown, boss, onBossResult, onExit,
+}: DuelProps) {
   /**
    * Who you fight as, straight from the profile store.
    *
@@ -424,11 +446,29 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
    * is exactly how one of them ends up missing the analytics call or the
    * keyboard nudge.
    */
+  /**
+   * The boss's restricted vocabulary, resolved once per bank.
+   *
+   * Both halves come from here so the two fighters cannot diverge: the player
+   * gets a fixed script, and the bot gets lines drawn from the same words. A
+   * bot pacing itself against the general bank while the player typed
+   * home-row words would be timed as though it were typing "extraordinary",
+   * and the fight would be unwinnable for reasons nobody could see.
+   */
+  const bossVocabulary = useMemo(() => (boss ? bossWords(boss) : null), [boss]);
+  const botSentence = useMemo(
+    () => (bossVocabulary ? () => bossLine(bossVocabulary) : undefined),
+    [bossVocabulary],
+  );
+
   const beginDuel = useCallback(() => {
     openKeyboard();
     trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
-    dispatch({ type: 'start', difficulty, character: mine });
-  }, [openKeyboard, difficulty, mine, touch]);
+    /* A fresh script per attempt, so a retried boss is not the same lines. */
+    dispatch({
+      type: 'start', difficulty, character: mine, script: boss ? bossScript(boss) : undefined,
+    });
+  }, [openKeyboard, difficulty, mine, touch, boss]);
 
   /**
    * What the spacebar does, given whichever panel is currently up.
@@ -612,9 +652,17 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
   /** The bot only exists in solo play. */
   useEffect(() => {
     if (isMulti || state.phase !== 'playing') return;
-    const bot = startBot(state.difficulty, (event) => dispatch({ type: 'botWord', ...event }));
+    const bot = startBot(
+      state.difficulty,
+      (event) => dispatch({ type: 'botWord', ...event }),
+      botSentence,
+      /* A module boss types at the curriculum's calibrated pace, not the
+         tier's: it now gates the next module, and Rookie's 34 wpm is twice
+         the speed of the beginners it would be gating. */
+      boss?.wpm,
+    );
     return () => bot.stop();
-  }, [isMulti, state.phase, state.difficulty]);
+  }, [isMulti, state.phase, state.difficulty, botSentence, boss?.wpm]);
 
   /**
    * The live speed readout.
@@ -642,6 +690,13 @@ export default function Duel({ difficulty, multiplayer, linkDown, onExit }: Duel
     audio.finishSwell(state.winner === state.mySlot);
 
     const stats = stateRef.current.stats;
+
+    /* The module's answer, before the record-keeping: a boss decides a star,
+       and its speed is what the completion screen measures against the bots. */
+    if (boss) {
+      onBossResult?.(state.winner === state.mySlot, stats.endedAt ? finalWpm(stats) : 0);
+    }
+
     if (stats.endedAt) {
       saveResult({
         stats,

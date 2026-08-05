@@ -25,6 +25,23 @@ import FeedbackBox from './FeedbackBox';
 import Searching from './Searching';
 import Survival from './Survival';
 import Weekly from './Weekly';
+import Ladder from './Ladder';
+import Lesson from './Lesson';
+import ModuleSheet from './ModuleSheet';
+import ModuleComplete from './ModuleComplete';
+import Tutorial from './Tutorial';
+import {
+  bankFor, contentFor, MODULE_STAR_ACCURACY, moduleStars,
+} from '@/game/curriculum';
+import { recordLesson, runFor } from '@/game/moduleRun';
+import { MODULES, nextModuleId, starsFor, type ModuleId } from '@/game/learnPath';
+import {
+  clearLocal, localSnapshot, recordLocal, serverLocalSnapshot, subscribeLocal, unsavedModules,
+} from '@/game/localPath';
+import {
+  featuresServerSnapshot, featuresSnapshot, subscribeFeatures,
+} from '@/game/features';
+import { coarseServerSnapshot, coarseSnapshot, subscribeCoarse } from '@/game/pointer';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
@@ -42,7 +59,7 @@ import { duelToken } from '@/game/duelToken';
 import { previewMatch } from '@/game/previewMatch';
 import styles from './Game.module.css';
 
-type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'weekly';
+type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'weekly' | 'learn';
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -122,11 +139,289 @@ export default function Game() {
    * protecting with a round trip.
    */
   const local = useProfile();
-  const { profile } = useServerProfile();
+  const { profile, saveModule } = useServerProfile();
   const myBest = profile
     ? bestSpeed(profile.ranked.bestWpm, profile.practice.bestWpm)
     : bestSpeed(0, local.bestWpm);
   const suggestion = suggestedBot(myBest);
+  /**
+   * The learning path, or nothing at all.
+   *
+   * Present only when the server chose to send it, which it does only under
+   * LEARN_LIVE. Read once here so the menu, the ladder and the fold-in of the
+   * how-to-play link all agree about whether the feature exists.
+   */
+  /**
+   * Whether the path is open, for somebody with no account.
+   *
+   * `getProfile` carries this for anybody signed in and is the authority, but
+   * it needs a token — and the path is deliberately open to signed-out
+   * visitors, because the players it exists for are the least likely to have
+   * made an account before seeing any value. So the unauthenticated
+   * `/api/features` answers the same question from the same `LEARN_LIVE`.
+   */
+  const { learn: pathOpen } = useSyncExternalStore(
+    subscribeFeatures,
+    featuresSnapshot,
+    featuresServerSnapshot,
+  );
+
+  /**
+   * Touch devices do not get the path, and this is a feature rather than a
+   * limitation dressed up as one.
+   *
+   * The whole thing teaches a physical keyboard: the tutorial opens by asking
+   * somebody to feel the ridges on F and J, the lessons name a finger per
+   * keystroke, and the hand diagram is eight fingers over eight keys. On a
+   * phone that is a story about hardware the reader does not have — and an
+   * on-screen keyboard has no home row to return to, which is the one habit
+   * the path exists to build.
+   *
+   * Hidden rather than shown-and-degraded: a beginner who taps Learn on a
+   * phone and finds an exercise they physically cannot do has been told the
+   * game is not for them, which is the opposite of what this feature is for.
+   */
+  const coarse = useSyncExternalStore(
+    subscribeCoarse,
+    coarseSnapshot,
+    coarseServerSnapshot,
+  );
+  const pathHere = pathOpen && !coarse;
+
+  /** Progress for a signed-out visitor, kept locally until there is an account. */
+  const guestPath = useSyncExternalStore(subscribeLocal, localSnapshot, serverLocalSnapshot);
+
+  /**
+   * The path, from whichever side owns it.
+   *
+   * Signed in, the server's record wins outright. Signed out, the local copy
+   * stands in with the same shape, so nothing downstream has to know which one
+   * it was handed.
+   */
+  const learn = coarse
+    ? undefined
+    : profile?.learn
+      ?? (pathHere && !profile
+        ? { path: guestPath, next: nextModuleId(guestPath) ?? null }
+        : undefined);
+
+  /**
+   * Carry a signed-out player's progress into their new account.
+   *
+   * The nudge to sign in is only honest if this exists: without it, "save your
+   * progress" would be the sentence that loses it. Only climbs — a module the
+   * account already holds at three stars is never pushed back down because
+   * this device saw one — and the local copy is dropped once it has been
+   * handed over, so it cannot resurrect later and overwrite better work.
+   */
+  const merged = useRef(false);
+  useEffect(() => {
+    if (!profile?.learn || merged.current) return;
+    const owed = unsavedModules(profile.learn.path);
+    merged.current = true;
+    if (owed.length === 0) { clearLocal(); return; }
+
+    /**
+     * One at a time, and this is not a style choice.
+     *
+     * Each write is a read-modify-write of one progress string on the server:
+     * it reads the current path, sets one character, writes the whole thing
+     * back. Fire six of those concurrently and they all read the same starting
+     * value, each writes its own character, and the last one wins — silently
+     * losing five modules at the exact moment somebody was promised their
+     * progress would be kept.
+     *
+     * The local copy is only dropped once every module has landed. A failure
+     * part way leaves it intact, so the next page load tries again rather than
+     * this being the one attempt somebody's week rested on.
+     */
+    void (async () => {
+      for (const { id, stars } of owed) {
+        const saved = await saveModule(id, stars);
+        if (!saved.ok) return;
+      }
+      clearLocal();
+    })();
+  }, [profile?.learn, saveModule]);
+
+  /**
+   * A module being walked: which one, and how far in.
+   *
+   * `at` indexes the module's lessons, and equals their count once the boss is
+   * up -- one counter for a sequence that ends in something of a different
+   * kind, rather than a second flag that could disagree with it.
+   *
+   * Lesson results are not held here. They go straight to `moduleRun` as each
+   * finishes, so closing the tab mid-module keeps what was done -- and the
+   * module's score is read back from there rather than from this sitting,
+   * which is what lets a module be finished across several days.
+   */
+  /**
+   * `run` exists purely so Again works. The lesson is keyed on module and
+   * index so each mounts fresh -- but a retry is the SAME module and index,
+   * so without a third term the key never changes, nothing remounts, and the
+   * end card just sits there. The counter is meaningless except as a way to
+   * make the key different.
+   */
+  const [walk, setWalk] = useState<{ module: ModuleId; at: number; run: number } | null>(null);
+
+  /**
+   * The module panel, before any lesson is running.
+   *
+   * A separate piece of state from `walk` rather than a sentinel inside it,
+   * because "looking at a module" and "part way through one" are genuinely
+   * different situations: backing out of the first should return to the
+   * ladder, and out of the second should return to the panel.
+   */
+  const [opened, setOpened] = useState<ModuleId | null>(null);
+
+  /**
+   * The moment after a boss falls.
+   *
+   * `granted` starts empty and is filled in when the save answers — the
+   * screen mounts on the win, and the reward reveals a beat later, which is
+   * the right order for a moment anyway: stars first, consequence second.
+   */
+  const [celebrate, setCelebrate] = useState<{
+    module: ModuleId; stars: number; wpm: number | null; granted: string[];
+  } | null>(null);
+
+  /**
+   * The hand tutorial, which is a screen but not a module.
+   *
+   * Its own flag rather than a value in `opened`, because it is not a module
+   * and giving it a `ModuleId` slot would be the first step towards it needing
+   * one in `MODULE_IDS`.
+   */
+  const [tutorial, setTutorial] = useState(false);
+
+  /**
+   * Browser Back, inside the learn flow.
+   *
+   * These screens are state rather than routes -- the URL stays `/` the whole
+   * way through -- so Back went to whatever page came before the menu and
+   * walked straight out of the app. On a duel that is arguably fine, because a
+   * duel is a thing you are doing. The path is a thing you are *browsing*:
+   * ladder, module, lesson. Back is the obvious gesture and it was the one
+   * gesture that threw everything away.
+   *
+   * So a history entry is pushed on the way in and re-pushed after each one is
+   * consumed, and Back steps down a level instead: lesson to module, module to
+   * ladder, ladder to menu. The last step spends the entry rather than
+   * replacing it, so a second Back leaves the page as it always did.
+   *
+   * Refs rather than dependencies: the listener must see where the player is
+   * *now*, and re-binding it on every depth change would push a fresh entry
+   * each time and bury the real history under our own.
+   */
+  const depth = useRef({ walk, opened, tutorial, celebrate });
+  useEffect(() => {
+    depth.current = { walk, opened, tutorial, celebrate };
+  }, [walk, opened, tutorial, celebrate]);
+
+  const inLearn = screen === 'learn';
+  useEffect(() => {
+    if (!inLearn) return;
+    window.history.pushState({ km: 'learn' }, '');
+
+    const onPop = () => {
+      const here = depth.current;
+      const trap = () => window.history.pushState({ km: 'learn' }, '');
+
+      if (here.celebrate) { setCelebrate(null); trap(); return; }
+      if (here.walk) { setWalk(null); setOpened(here.walk.module); trap(); return; }
+      if (here.tutorial) { setTutorial(false); trap(); return; }
+      if (here.opened) { setOpened(null); trap(); return; }
+      /* At the ladder: let this one go, and land back on the menu. */
+      setScreen('menu');
+    };
+
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [inLearn]);
+
+  /**
+   * Record a finished module, then go back to the ladder.
+   *
+   * The write is fire-and-forget on purpose: the star is the server's to keep
+   * and it keeps the best of what it is told, so a failed save costs a replay
+   * rather than progress. Blocking the return on a round trip would leave
+   * somebody staring at a spinner after the most rewarding moment the feature
+   * has.
+   */
+  /**
+   * The module's lessons as they stand, read back from the remembered run
+   * rather than from this sitting. Somebody who did two lessons yesterday and
+   * the third today has finished the module, and scoring only what happened
+   * since they opened the app would say they had not.
+   */
+  const lessonState = useCallback((id: ModuleId) => {
+    const lessons = contentFor(id)?.lessons.length ?? 0;
+    const run = runFor(id, lessons);
+    const passed = run.filter((result) => result && result.stars > 0);
+    const accuracy = passed.length
+      ? passed.reduce((sum, result) => sum + result!.accuracy, 0) / passed.length
+      : 0;
+    return { finishedAll: lessons > 0 && passed.length >= lessons, accuracy };
+  }, []);
+
+  /**
+   * Whether this module's boss may be fought: the second star's bar, 95%
+   * across the lessons. Local computation first (fresh, works for guests),
+   * the server's stars as backup (covers lessons done on another device,
+   * where the local run store is empty).
+   */
+  const bossOpen = useCallback((id: ModuleId) => {
+    const { finishedAll, accuracy } = lessonState(id);
+    return (finishedAll && accuracy >= MODULE_STAR_ACCURACY)
+      || starsFor(learn?.path, id) >= 2;
+  }, [lessonState, learn?.path]);
+
+  /**
+   * Write the module's star the moment the lessons earn it.
+   *
+   * This is the fix for a real stranding bug: stars used to be written only
+   * from the boss screen, so finishing every lesson and backing out from the
+   * end card recorded nothing — and under the ladder rule, where the boss is
+   * gated on the second star, that write path would never have been reached
+   * at all. The star lands when it is earned; the boss upgrades it later.
+   * Stars only climb, so the second write is free.
+   */
+  const recordLessonStars = useCallback((id: ModuleId) => {
+    const { finishedAll, accuracy } = lessonState(id);
+    const stars = moduleStars({ finishedAll, accuracy, bossBeaten: false });
+    if (stars <= 0) return;
+    if (profile) void saveModule(id, stars);
+    else recordLocal(id, stars);
+  }, [lessonState, profile, saveModule]);
+
+  const finishModule = useCallback((id: ModuleId, bossBeaten: boolean, wpm?: number) => {
+    const { finishedAll, accuracy } = lessonState(id);
+    const stars = moduleStars({ finishedAll, accuracy, bossBeaten });
+    if (stars > 0) {
+      /* An account keeps it; without one, this device does, until there is. */
+      if (profile) {
+        const save = saveModule(id, stars);
+        /* The reveal is whatever the server says it granted — filled into the
+           celebration when the answer lands, never guessed client-side. */
+        if (bossBeaten) {
+          void save.then((result) => {
+            if (result.ok && result.granted?.length) {
+              setCelebrate((current) => (current && current.module === id
+                ? { ...current, granted: result.granted! }
+                : current));
+            }
+          });
+        }
+      } else {
+        recordLocal(id, stars);
+      }
+    }
+    /* Beating the boss earns the moment; leaving early just returns. The
+       fanfare plays on the celebration screen itself, not here. */
+    if (bossBeaten) setCelebrate({ module: id, stars, wpm: wpm ?? null, granted: [] });
+    setWalk(null);
+  }, [saveModule, profile, lessonState]);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -900,6 +1195,167 @@ export default function Game() {
     );
   }
 
+  /**
+   * The path.
+   *
+   * Guarded on `learn` as well as the screen, so a stale screen state can
+   * never render a ladder for a server that has the feature switched off —
+   * the flag going dark takes the screen with it rather than leaving somebody
+   * stranded on a path nothing will record.
+   */
+  if (screen === 'learn' && learn) {
+    const content = walk && contentFor(walk.module);
+
+    /* A lesson, until they run out. */
+    if (walk && content && walk.at < content.lessons.length) {
+      const lesson = content.lessons[walk.at];
+      const last = walk.at + 1 >= content.lessons.length;
+      return (
+        <Lesson
+          /* Keyed so each lesson mounts fresh rather than inheriting the
+             cursor and the miss count of the one before it. */
+          key={`${walk.module}-${walk.at}-${walk.run}`}
+          title={lesson.title}
+          script={lesson.script}
+          /* Remembered as it happens, not at the end of the module. Somebody
+             who does one lesson and closes the tab has done one lesson. */
+          onDone={(result) => {
+            recordLesson(walk.module, walk.at, result);
+            /* The finishing star is written HERE, when the lessons earn it —
+               not from the boss screen, which the ladder rule may keep gated
+               for a while yet. */
+            recordLessonStars(walk.module);
+          }}
+          onAgain={() => setWalk({ ...walk, run: walk.run + 1 })}
+          onExit={() => { setWalk(null); setOpened(walk.module); }}
+          onNext={() => {
+            if (!last) { setWalk({ ...walk, at: walk.at + 1 }); return; }
+            /* Decided at click time, after the result is recorded: into the
+               boss if 95% is held, back to the sheet — which says exactly
+               what is missing — if it is not. */
+            if (bossOpen(walk.module)) setWalk({ ...walk, at: walk.at + 1 });
+            else { setWalk(null); setOpened(walk.module); }
+          }}
+          nextLabel={last
+            ? `THE ${MODULES.find((m) => m.id === walk.module)?.title.toUpperCase()} BOSS`
+            : 'NEXT LESSON'}
+        />
+      );
+    }
+
+    /*
+     * The boss, on the module's own alphabet.
+     *
+     * An ordinary bot duel in every other respect, which is what keeps it as
+     * uncompetitive as bot practice already is. Leaving without finishing
+     * scores the lessons and no third star, rather than nothing -- walking out
+     * of the victory lap must not cost the work that earned it.
+     */
+    if (walk && content) {
+      /* Belt and braces under the sheet's own gate: nobody reaches the boss
+         without the second star, whatever path the state took. */
+      if (!bossOpen(walk.module)) {
+        return (
+          <ModuleSheet
+            module={walk.module}
+            progress={learn.path}
+            onStart={(at) => setWalk({ module: walk.module, at, run: 0 })}
+            onBack={() => setWalk(null)}
+          />
+        );
+      }
+      const bank = bankFor(walk.module);
+      if (bank) {
+        return (
+          <Duel
+            key={`boss-${walk.module}`}
+            difficulty="rookie"
+            boss={bank}
+            onBossResult={(won, wpm) => {
+              /* A defeat stays on the duel's own card, rematch and all —
+                 losing the boss costs nothing and retrying is right there.
+                 Only leaving records the run without its third star. */
+              if (!won) return;
+              /* Let the killing blow land — the collapse, the swell — before
+                 the celebration takes the screen. Yanking at the instant of
+                 the win was the anticlimatic thing being fixed. */
+              window.setTimeout(() => finishModule(walk.module, true, wpm), 1300);
+            }}
+            onExit={() => finishModule(walk.module, false)}
+          />
+        );
+      }
+    }
+
+    /* How to hold your hands. Information, and it stores nothing. */
+    if (tutorial) {
+      return (
+        <Tutorial
+          onDone={() => {
+            setTutorial(false);
+            /* Straight into module 1, which is what they came for. */
+            if (contentFor(MODULES[0].id)) setOpened(MODULES[0].id);
+          }}
+          onExit={() => setTutorial(false)}
+        />
+      );
+    }
+
+    /* The moment after the boss: stars, the reward, and the door out. */
+    if (celebrate) {
+      const at = MODULES.findIndex((entry) => entry.id === celebrate.module);
+      const next = MODULES[at + 1]?.id;
+      return (
+        <ModuleComplete
+          module={celebrate.module}
+          stars={celebrate.stars}
+          wpm={celebrate.wpm}
+          granted={celebrate.granted}
+          catalogue={profile?.cosmetics?.catalogue}
+          signedIn={account.signedIn}
+          onContinue={() => {
+            setCelebrate(null);
+            /* Into the next module if it exists; the ladder if not. */
+            if (next && contentFor(next)) setOpened(next);
+          }}
+          onBack={() => setCelebrate(null)}
+        />
+      );
+    }
+
+    /* The module panel: what it is, and which lessons are done. */
+    if (opened && contentFor(opened)) {
+      return (
+        <ModuleSheet
+          module={opened}
+          progress={learn.path}
+          onStart={(at) => { setOpened(null); setWalk({ module: opened, at, run: 0 }); }}
+          onBack={() => setOpened(null)}
+        />
+      );
+    }
+
+    return (
+      <>
+        {/* The guide overlay lives in the menu's markup, which this branch
+            returns before ever reaching — so the link opened a panel nobody
+            could see. It renders here too, over the ladder that asked for it. */}
+        {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
+        <Ladder
+          progress={learn.path}
+          onStart={(id) => {
+            /* Only what has been written. The ladder disables the rest. */
+            if (!contentFor(id)) return;
+            setOpened(id);
+          }}
+          onTutorial={() => setTutorial(true)}
+          onExit={() => setScreen('menu')}
+          onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
+        />
+      </>
+    );
+  }
+
   if (screen === 'searching') {
     return (
       <main className={styles.screen}>
@@ -1034,7 +1490,7 @@ export default function Game() {
           // because only those results are server-verified enough to rank.
           <SignInLink from="play" className={`btn btn-primary ${styles.play} ${styles.loginBtn}`}>
             Sign in to play
-            <small className="btn-sub">Google or email · unlocks the leaderboard</small>
+            <small className="btn-sub">keeps your record, and puts you on the board</small>
           </SignInLink>
         )}
 
@@ -1050,6 +1506,38 @@ export default function Game() {
           * six bots stop being six buttons a player has to read past on the way
           * to anything else.
           */}
+        {/*
+          * Learn, directly under Play and carrying its full width.
+          *
+          * Same weight as Weekly because it is the same kind of offer — a
+          * whole way to spend a session, not a variant of the duel. It sits
+          * above Weekly because the person it is for has not got as far as
+          * caring what resets on Monday.
+          *
+          * THE COPY is the hard part. It is aimed at people who cannot yet
+          * touch type, and those are exactly the people who will not press
+          * anything that calls them beginners. So it describes the content
+          * and never the reader: "one row at a time" says who it is for to
+          * somebody who needs it, and reads as thoroughness to everybody
+          * else. No "basics", no "new players", no "start here".
+          *
+          * Shown only when the server sent a `learn` block, which it does
+          * only under LEARN_LIVE. The absence of the field is the off switch,
+          * so there is no second flag here to drift out of step.
+          */}
+        {learn && (
+          <div className={styles.modes} data-solo>
+            <button
+              className={`btn ${styles.mode} ${styles.full}`}
+              data-mode="learn"
+              onClick={() => { track({ name: 'guide_opened' }); setScreen('learn'); }}
+            >
+              Learn to type
+              <small className="btn-sub">the whole keyboard, one row at a time</small>
+            </button>
+          </div>
+        )}
+
         {/*
           * Weekly gets Play's own width, directly beneath it.
           *
@@ -1207,9 +1695,23 @@ export default function Game() {
             </button>
           )}
 
-          <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
-            New here? Read how to play
-          </button>
+          {/*
+            * Folded into Learn rather than competing with it.
+            *
+            * "New here? Read how to play" and a Learn button are two doors for
+            * one intention, and two doors for one intention means most people
+            * pick neither. Learn is the real answer to that question, so when
+            * it is on the menu this link comes off it — the guide is still
+            * reachable, one level in, from the ladder itself.
+            *
+            * It stays when the path is closed, because then it is the only
+            * answer there is.
+            */}
+          {!learn && (
+            <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
+              New here? Read how to play
+            </button>
+          )}
 
           {/*
             * Only on a screen too narrow for the panel beside the menu.

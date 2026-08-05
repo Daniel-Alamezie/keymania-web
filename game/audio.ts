@@ -799,6 +799,76 @@ class GameAudio {
    * and the arena drains, so the silence between the killing blow and the
    * banner is charged rather than empty. Winning rises, losing sinks.
    */
+  /**
+   * A lesson finished. Celebratory, and deliberately not the duel's.
+   *
+   * The end card used to play `finishSwell`, which is the sound of winning a
+   * ranked duel — brassy, and the wrong register for somebody who has just
+   * typed four lines of home row at their own pace. It also flattened both:
+   * one sound for a beginner's first exercise and for beating a rated opponent
+   * says neither is worth much.
+   *
+   * A major arpeggio instead, rising and clean. Scheduled on the audio clock
+   * rather than through `tone()`, which reads `currentTime` itself and so
+   * cannot stagger notes — an arpeggio played all at once is a chord, and a
+   * chord does not sound like an arrival.
+   */
+  lessonDone() {
+    /* C-E-G-C. The plainest happy shape there is, which is the point. */
+    this.arpeggio([523.25, 659.25, 783.99, 1046.5], 0.075, 0.34, 0.16);
+  }
+
+  /**
+   * A whole module finished, boss included. The same idea, bigger.
+   *
+   * Distinct from a lesson rather than merely louder: one note higher at the
+   * top, and a low root held underneath so it lands with some weight. A module
+   * is five screens and five minutes, and it should not sound like the quarter
+   * of it that a single lesson is.
+   */
+  moduleDone() {
+    this.arpeggio([523.25, 659.25, 783.99, 1046.5, 1318.5], 0.085, 0.5, 0.17);
+
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    /* The floor the arpeggio sits on. */
+    this.note(130.81, ctx.currentTime, 1.5, 0.26, 'sine');
+    this.note(261.63, ctx.currentTime + 0.09, 1.2, 0.16, 'sine');
+  }
+
+  /**
+   * One note, at a time of our choosing.
+   *
+   * Soft attack and a long release on purpose: a hard onset reads as a click,
+   * and four clicks in a row read as an error rather than a fanfare.
+   */
+  private note(freq: number, at: number, duration: number, gain: number, type: Wave = 'triangle') {
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, at);
+
+    env.gain.setValueAtTime(0.0001, at);
+    env.gain.exponentialRampToValueAtTime(gain, at + 0.03);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+
+    osc.connect(env).connect(this.master);
+    osc.start(at);
+    osc.stop(at + duration + 0.02);
+  }
+
+  /** Notes in sequence, staggered on the audio clock rather than by timers. */
+  private arpeggio(freqs: number[], step: number, duration: number, gain: number) {
+    const ctx = this.ensure();
+    if (!ctx || !this.master || !this.enabled) return;
+    const now = ctx.currentTime;
+    freqs.forEach((freq, i) => this.note(freq, now + i * step, duration, gain));
+  }
+
   finishSwell(won: boolean) {
     const ctx = this.ensure();
     if (!ctx || !this.master || !this.enabled) return;

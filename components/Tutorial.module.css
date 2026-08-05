@@ -1,0 +1,278 @@
+/*
+ * The hand tutorial. Calm on purpose — this is the first thing a beginner
+ * meets, and everything here is designed to say "nothing is being measured".
+ * No timer, no counter beyond the step, no accuracy, no way to fail.
+ */
+
+.screen {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md) var(--gap-sm) var(--gap-lg);
+}
+
+.head {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}
+
+.count {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The hands are the subject here, not a hint in the corner, so they get room. */
+.stage {
+  width: min(560px, 100%);
+  display: grid;
+  place-items: center;
+  padding: var(--gap-sm) 0;
+}
+
+.stage svg { width: min(420px, 86vw); }
+
+.card {
+  width: min(560px, 100%);
+  padding: var(--gap-md);
+  border: 2px solid var(--edge-soft);
+  background: var(--panel);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  max-width: 46ch;
+}
+
+.body strong { color: var(--gold); }
+
+/* The instruction, said quietly. It is a prompt, not a demand. */
+.prompt {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.skip {
+  background: none;
+  border: 0;
+  padding: var(--gap-xs);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------- the scoring, as a picture */
+
+/*
+ * The star ladder, drawn. Three rows: the stars, the three words that earn
+ * them, and a chip for what they open. Reads top to bottom as a staircase —
+ * each row one star brighter than the last — which is the rule itself, shown.
+ */
+.rules {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--gap-sm);
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: var(--gap-sm);
+  text-align: left;
+}
+
+.stepStars {
+  display: flex;
+  gap: 2px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.stepStars i {
+  font-style: normal;
+  color: var(--edge-soft);
+}
+
+.stepStars i[data-on] { color: var(--gold); }
+
+.stepWhat {
+  font-size: 11px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+
+.stepOpens { justify-self: end; }
+
+/* What the rung opens: the door, worn as a small gold chip. */
+.chip {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  border: 2px solid var(--gold-deep);
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------- act one: the two bumps */
+
+/*
+ * Two keys, drawn big enough to be the whole story. They mirror the real
+ * keyboard: down while the physical key is held, lit gold once found, and a
+ * slow beckon on whichever one is being asked for. The depth is a hard
+ * shadow rather than a gradient, because this is a keycap in a pixel game,
+ * not a render of one.
+ */
+.keys {
+  display: flex;
+  justify-content: center;
+  gap: clamp(20px, 7vw, 56px);
+  padding: var(--gap-lg) 0 calc(var(--gap-lg) + 8px);
+}
+
+.bigKey {
+  position: relative;
+  width: clamp(110px, 32vw, 190px);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(44px, 13vw, 80px);
+  color: var(--muted);
+  background: var(--panel);
+  border: 3px solid var(--edge);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.45);
+  transition: transform 70ms linear, box-shadow 70ms linear;
+}
+
+/* Held down, exactly while the real key is. The press IS the acknowledgement. */
+.bigKey[data-down] {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.bigKey[data-lit] {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+/* The one being asked for beckons — a hard two-step blink, not a soft pulse,
+   because everything in this game cuts rather than fades. */
+.bigKey[data-hint] {
+  animation: beckon 1.1s steps(2) infinite;
+}
+
+@keyframes beckon {
+  50% { border-color: var(--gold); }
+}
+
+/*
+ * The bump itself, drawn on the key at the same place your finger finds it.
+ * `currentColor`, so it lights up with the key — the detail the whole act is
+ * about should be the brightest thing on it once found.
+ */
+.bump {
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26%;
+  height: 6px;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bigKey { transition: none; }
+  .bigKey[data-hint] { animation: none; border-color: var(--gold); }
+}
+
+/* --------------------------------------------- act two: taking position */
+
+/*
+ * The home row as a row of keycaps, split where the hands split. Same
+ * language as the two big keys, smaller — this is act one's landmarks with
+ * the rest of the hand grown around them, so it must read as the same
+ * objects at a different zoom, not a new diagram.
+ */
+.keyRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(4px, 1.4vw, 10px);
+  padding: var(--gap-lg) var(--gap-sm);
+}
+
+.rowKey {
+  position: relative;
+  width: clamp(34px, 9vw, 64px);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(15px, 4vw, 26px);
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Lights as the roll reaches it, and stays lit: the hand assembling. */
+.rowKey[data-lit] {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+.rowKey[data-hint] {
+  animation: beckon 1.1s steps(2) infinite;
+}
+
+/* The gap between the hands, where the rest of the keyboard lives. */
+.splitGap {
+  width: clamp(16px, 5vw, 40px);
+}
+
+.bumpSmall {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30%;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowKey[data-hint] { animation: none; border-color: var(--gold); }
+}
