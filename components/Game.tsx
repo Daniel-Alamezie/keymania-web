@@ -30,7 +30,10 @@ import Lesson from './Lesson';
 import ModuleSheet from './ModuleSheet';
 import { bankFor, contentFor, moduleStars } from '@/game/curriculum';
 import { recordLesson, runFor } from '@/game/moduleRun';
-import { MODULES, type ModuleId } from '@/game/learnPath';
+import { MODULES, nextModuleId, type ModuleId } from '@/game/learnPath';
+import {
+  clearLocal, localSnapshot, recordLocal, serverLocalSnapshot, subscribeLocal, unsavedModules,
+} from '@/game/localPath';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
@@ -140,7 +143,58 @@ export default function Game() {
    * LEARN_LIVE. Read once here so the menu, the ladder and the fold-in of the
    * how-to-play link all agree about whether the feature exists.
    */
-  const learn = profile?.learn;
+  /**
+   * Whether the path is open, for somebody with no account.
+   *
+   * `getProfile` carries this for anybody signed in and is the authority, but
+   * it needs a token — and the path is deliberately open to signed-out
+   * visitors, because the players it exists for are the least likely to have
+   * made an account before seeing any value. So the unauthenticated
+   * `/api/features` answers the same question from the same `LEARN_LIVE`.
+   */
+  const [pathOpen, setPathOpen] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch('/api/features', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (live) setPathOpen(Boolean(data?.features?.learn)); })
+      .catch(() => { /* Offline. The path stays hidden rather than half-working. */ });
+    return () => { live = false; };
+  }, []);
+
+  /** Progress for a signed-out visitor, kept locally until there is an account. */
+  const guestPath = useSyncExternalStore(subscribeLocal, localSnapshot, serverLocalSnapshot);
+
+  /**
+   * The path, from whichever side owns it.
+   *
+   * Signed in, the server's record wins outright. Signed out, the local copy
+   * stands in with the same shape, so nothing downstream has to know which one
+   * it was handed.
+   */
+  const learn = profile?.learn
+    ?? (pathOpen && !profile
+      ? { path: guestPath, next: nextModuleId(guestPath) ?? null }
+      : undefined);
+
+  /**
+   * Carry a signed-out player's progress into their new account.
+   *
+   * The nudge to sign in is only honest if this exists: without it, "save your
+   * progress" would be the sentence that loses it. Only climbs — a module the
+   * account already holds at three stars is never pushed back down because
+   * this device saw one — and the local copy is dropped once it has been
+   * handed over, so it cannot resurrect later and overwrite better work.
+   */
+  const merged = useRef(false);
+  useEffect(() => {
+    if (!profile?.learn || merged.current) return;
+    const owed = unsavedModules(profile.learn.path);
+    merged.current = true;
+    if (owed.length === 0) { clearLocal(); return; }
+    Promise.all(owed.map(({ id, stars }) => saveModule(id, stars)))
+      .then(() => clearLocal());
+  }, [profile?.learn, saveModule]);
 
   /**
    * A module being walked: which one, and how far in.
@@ -193,9 +247,13 @@ export default function Game() {
     const stars = moduleStars({
       finishedAll: lessons > 0 && passed.length >= lessons, accuracy: mean, bossBeaten,
     });
-    if (stars > 0) void saveModule(id, stars);
+    if (stars > 0) {
+      /* An account keeps it; without one, this device does, until there is. */
+      if (profile) void saveModule(id, stars);
+      else recordLocal(id, stars);
+    }
     setWalk(null);
-  }, [saveModule]);
+  }, [saveModule, profile]);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
