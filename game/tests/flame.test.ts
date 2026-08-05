@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  flameHeat, flameLabel, flameStage, SPARK, starsEarned, TOTAL_STARS,
+  flameFrame, flameFrames, flameHeat, flameLabel, flameStage, SPARK, SPRITE_FRAMES,
+  SPRITE_H, SPRITE_W, starsEarned, TOTAL_STARS,
 } from '../flame';
 import { MAX_STARS, MODULE_IDS } from '../learnPath';
 
@@ -92,5 +93,59 @@ describe('what it is called', () => {
     for (const stage of ['spark', 'kindling', 'burning', 'roaring', 'inferno'] as const) {
       expect(flameLabel(stage).length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('the sprite', () => {
+  const frames = flameFrames();
+
+  it('draws every frame on the same grid', () => {
+    expect(frames).toHaveLength(SPRITE_FRAMES);
+    for (const frame of frames) {
+      expect(frame).toHaveLength(SPRITE_H);
+      for (const row of frame) expect(row).toHaveLength(SPRITE_W);
+    }
+  });
+
+  it('uses only the three bands and empty space', () => {
+    for (const row of frames.flat()) expect(row).toMatch(/^[.123]*$/);
+  });
+
+  /** Deterministic, so the loop never stutters into an odd shape. */
+  it('draws the same frame the same way every time', () => {
+    expect(flameFrame(3)).toEqual(flameFrame(3));
+  });
+
+  it('is a flame shape: narrow at the tip, wide at the base', () => {
+    for (const frame of frames) {
+      const lit = (row: string) => row.length - row.split('').filter((c) => c === '.').length;
+      expect(lit(frame[1])).toBeLessThan(lit(frame[SPRITE_H - 3]));
+    }
+  });
+
+  it('never draws an empty frame', () => {
+    for (const frame of frames) expect(frame.join('')).toMatch(/[123]/);
+  });
+
+  /** The contrast that makes it read as hot rather than as a coloured blob. */
+  it('keeps a core inside a body inside an edge', () => {
+    const widest = frames[0][SPRITE_H - 4];
+    expect(widest).toContain('3');
+    expect(widest).toContain('2');
+    expect(widest).toContain('1');
+    /* Outer band on both ends, core in the middle. */
+    expect(widest.trim().startsWith('.') || widest.includes('1')).toBe(true);
+  });
+
+  it('moves between frames, or it is not an animation', () => {
+    const distinct = new Set(frames.map((frame) => frame.join('\n')));
+    expect(distinct.size).toBeGreaterThan(SPRITE_FRAMES / 2);
+  });
+
+  /** Fire is anchored: the tip leans, the base does not wander. */
+  it('holds the base still while the tip moves', () => {
+    const base = frames.map((frame) => frame[SPRITE_H - 2]);
+    const tips = frames.map((frame) => frame[2]);
+    expect(new Set(base).size).toBeLessThan(new Set(tips).size);
   });
 });

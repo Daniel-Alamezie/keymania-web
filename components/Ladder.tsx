@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   completedCount, MAX_STARS, MODULES, nextModuleId, nodeState, starsFor,
   type LearnModule, type ModuleId, type NodeState,
@@ -82,19 +82,6 @@ const FLAG: Record<NodeState, string> = {
  */
 const SOON = 'SOON';
 
-/**
- * The ambient loop behind the ladder.
- *
- * Home-row letters drifting slowly upward and fading, on a long stagger so the
- * cycle never visibly repeats. Written in CSS rather than shipped as a video
- * or a sprite sheet because it has to sit behind a scrolling list on a phone:
- * an asset would cost a download and a decode on the one screen most likely to
- * be reached on a bad connection, to say something this says in a keyframe.
- *
- * Letters rather than embers, because this screen is not the arena. The rest
- * of the game burns; the path should feel patient.
- */
-const AMBIENT = [...'asdfjkl;eirug'];
 
 /**
  * How much work a module is, said before somebody commits to it.
@@ -202,18 +189,6 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
   return (
     <main className={styles.screen} ref={screen}>
       <PathFlame heat={heat} stage={stage} offset={scrolled} />
-
-      <div className={styles.ambient} aria-hidden="true">
-        {AMBIENT.map((glyph, i) => (
-          <span
-            key={glyph}
-            className={`${styles.drift} pixel-font`}
-            style={{ '--i': i, '--n': AMBIENT.length } as CSSProperties}
-          >
-            {glyph}
-          </span>
-        ))}
-      </div>
 
       <header className={styles.head}>
         <h1 className={`${styles.title} pixel-font`}>Learn to type</h1>

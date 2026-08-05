@@ -1,7 +1,9 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { flameLabel, type FlameStage } from '@/game/flame';
+import {
+  flameFrames, flameLabel, SPRITE_FRAMES, SPRITE_H, SPRITE_W, type FlameStage,
+} from '@/game/flame';
 import styles from './PathFlame.module.css';
 
 export interface PathFlameProps {
@@ -22,79 +24,20 @@ export interface PathFlameProps {
 /**
  * The fire behind the path, drawn as pixels.
  *
- * The first version of this was smooth SVG curves, and it was wrong for the
- * game: KeyMania is a pixel game — the keycaps, the badges, the blades and the
- * fighters are all cells on a grid — and an airbrushed flame behind them read
- * as a stock asset borrowed from somewhere else.
+ * KeyMania is a pixel game — the keycaps, badges, blades and fighters are all
+ * cells on a grid — so the flame is a bitmap rather than a smooth curve.
  *
- * So it is a bitmap. Three hand-authored frames on an 11×15 grid, three heat
- * bands, and **frame-swapped animation rather than continuous transform**.
- * That last part is what actually carries the feel: pixel art flickers by
- * cutting between drawn frames, and easing a shape smoothly between states is
- * the single thing that makes a pixel sprite look like vector art wearing a
- * costume. The cut is the aesthetic.
+ * The frames come from `flameFrames`, generated from a silhouette function
+ * rather than drawn by hand. Three authored frames read as a jitter; eight
+ * generated ones read as fire, and the shape stays rounded because the outline
+ * follows a curve and only becomes blocky where the grid samples it — which is
+ * what pixel art actually is.
  *
- * Authored as strings so the shape can be edited by looking at it. `1` is the
- * outer edge, `2` the body, `3` the core, `.` is nothing — three bands rather
- * than one because a flame reads as hot from the contrast between its edge and
- * its middle, and a single colour at any opacity reads as smoke.
+ * `1` is the outer edge, `2` the body, `3` the core. Three bands rather than
+ * one because a flame reads as hot from the contrast between its edge and its
+ * middle, and a single colour at any opacity reads as smoke.
  */
-const FRAMES = [
-  [
-    '.....1.....',
-    '....121....',
-    '....121....',
-    '...12221...',
-    '...12321...',
-    '..1223221..',
-    '..1233221..',
-    '.122333221.',
-    '.123333321.',
-    '12233333221',
-    '12333333321',
-    '12333333321',
-    '.123333321.',
-    '.112333211.',
-    '..1111111..',
-  ],
-  [
-    '....1......',
-    '...121.....',
-    '...121.....',
-    '...12221...',
-    '..1232221..',
-    '..1223221..',
-    '..1233221..',
-    '.122333221.',
-    '.123333321.',
-    '12233333221',
-    '12333333321',
-    '12333333321',
-    '.123333321.',
-    '.112333211.',
-    '..1111111..',
-  ],
-  [
-    '......1....',
-    '.....121...',
-    '.....121...',
-    '....12221..',
-    '....12321..',
-    '...1223221.',
-    '..12233221.',
-    '.122333221.',
-    '.123333321.',
-    '12233333221',
-    '12333333321',
-    '12333333321',
-    '.123333321.',
-    '.112333211.',
-    '..1111111..',
-  ],
-] as const;
-
-const WIDTH = FRAMES[0][0].length;
-const HEIGHT = FRAMES[0].length;
+const FRAMES = flameFrames();
 
 /** Which class paints each band. */
 const BAND: Record<string, string> = { 1: styles.outer, 2: styles.mid, 3: styles.core };
@@ -137,20 +80,27 @@ export default function PathFlame({ heat, stage, offset }: PathFlameProps) {
            so the flame drifts down as the list travels up, which is what
            reads as distance rather than as a second scrolling layer. */
         '--shift': `${offset * -0.28}px`,
+        /* The cycle length is derived, so adding frames never needs a CSS edit. */
+        '--frames': SPRITE_FRAMES,
+        '--slot': `${100 / SPRITE_FRAMES}%`,
       } as CSSProperties}
     >
       <div className={styles.glow} />
 
       <svg
         className={styles.flame}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${SPRITE_W} ${SPRITE_H}`}
         preserveAspectRatio="xMidYMid meet"
         /* No anti-aliasing. A pixel that has been smoothed is not a pixel. */
         shapeRendering="crispEdges"
       >
         <title>{flameLabel(stage)}</title>
         {DRAWN.map((frame, i) => (
-          <g key={i} className={styles.frame}>
+          <g
+            key={i}
+            className={styles.frame}
+            style={{ animationDelay: `${(i * 0.72) / SPRITE_FRAMES}s` } as CSSProperties}
+          >
             {frame.map((cell) => (
               <rect
                 key={`${cell.x}-${cell.y}`}

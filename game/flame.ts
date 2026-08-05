@@ -78,3 +78,80 @@ const WORDS: Record<FlameStage, string> = {
 };
 
 export const flameLabel = (stage: FlameStage): string => WORDS[stage];
+
+/* ------------------------------------------------------------ the sprite */
+
+/**
+ * The flame's shape, generated rather than hand-drawn.
+ *
+ * The first pixel version was three authored frames, and it read as static —
+ * three frames is a jitter, not a fire. Authoring twelve by hand would have
+ * fixed that and made the shape unmaintainable, so the silhouette comes from a
+ * curve instead and the pixels are quantised out of it.
+ *
+ * That buys two things the authored version could not have. **Rounded**,
+ * because the outline follows a smooth function and only becomes blocky at the
+ * grid, which is what pixel art actually is — a curve sampled coarsely, not a
+ * shape drawn out of squares. And **fluid**, because the number of frames is
+ * now a constant rather than an afternoon.
+ *
+ * Deterministic: frame `n` always produces the same cells. No randomness, so
+ * this is testable and the animation never stutters into an odd shape.
+ */
+export const SPRITE_W = 15;
+export const SPRITE_H = 22;
+/** Enough that the cycle reads as motion rather than as a flicker of three. */
+export const SPRITE_FRAMES = 8;
+
+/** How far the tip leans, in cells, at its widest. */
+const SWING = 1.9;
+
+/**
+ * Half the flame's width at a given depth, in cells.
+ *
+ * `u` is 0 at the tip and 1 at the base. Widest around two-thirds down and
+ * drawn back in slightly at the very bottom, which is what stops a flame
+ * reading as a triangle — fire narrows where it meets what it is burning.
+ */
+function halfWidth(u: number): number {
+  const max = (SPRITE_W - 1) / 2;
+  return max * Math.pow(u, 0.62) * (1 - 0.2 * Math.pow(u, 7));
+}
+
+/**
+ * One frame, as rows of `.`, `1`, `2`, `3`.
+ *
+ * Bands come from how far across the flame a cell sits rather than from its
+ * height, so the core is a column up the middle and the edge stays one cell
+ * thick — the contrast that makes it read as hot.
+ */
+export function flameFrame(frame: number): string[] {
+  const phase = (2 * Math.PI * frame) / SPRITE_FRAMES;
+  const rows: string[] = [];
+
+  for (let y = 0; y < SPRITE_H; y += 1) {
+    const u = y / (SPRITE_H - 1);
+    /* The tip moves most and the base not at all: fire is anchored. */
+    const lean = SWING * Math.pow(1 - u, 2.1) * Math.sin(phase + u * 3.1);
+    /* A slow pulse in overall height, so the whole shape breathes. */
+    const breath = 1 + 0.06 * Math.sin(phase * 2);
+    const centre = (SPRITE_W - 1) / 2 + lean;
+    const hw = halfWidth(u) * breath;
+
+    let row = '';
+    for (let x = 0; x < SPRITE_W; x += 1) {
+      const d = Math.abs(x - centre) / Math.max(hw, 0.0001);
+      if (hw < 0.45 || d > 1) { row += '.'; continue; }
+      if (d < 0.33) row += '3';
+      else if (d < 0.7) row += '2';
+      else row += '1';
+    }
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+/** Every frame of the loop. */
+export const flameFrames = (): string[][] =>
+  Array.from({ length: SPRITE_FRAMES }, (_, i) => flameFrame(i));

@@ -20,8 +20,8 @@
   top: 50%;
   left: 50%;
   transform: translate3d(-50%, calc(-50% + var(--shift, 0px)), 0);
-  width: min(72vw, 420px);
-  height: min(72vw, 420px);
+  width: min(86vw, 520px);
+  height: min(86vw, 520px);
   pointer-events: none;
   z-index: 0;
   display: grid;
@@ -48,39 +48,35 @@
 }
 
 /*
- * The sprite itself, scaled by heat.
+ * From an ember to a blaze, scaled by heat.
  *
- * Scaled in whole steps rather than continuously, so the pixel grid stays
- * square at every size instead of landing on half-pixels and blurring — which
- * is the same reason `image-rendering: pixelated` exists globally in this app.
+ * The range is deliberately wide -- 16% to 100% -- because the point is that
+ * the fire *grows*. A flame that only ever varies between "quite big" and "a
+ * bit bigger" is a progress bar; somebody arriving at nothing should see a
+ * lone coal and somebody who mastered the path should see it fill the screen.
  */
 .flame {
   position: relative;
-  width: calc(38% + 62% * var(--heat, 0.2));
-  height: calc(38% + 62% * var(--heat, 0.2));
+  width: calc(16% + 84% * var(--heat, 0.2));
+  height: calc(16% + 84% * var(--heat, 0.2));
   overflow: visible;
 }
 
-/*
- * Frame-swapped animation, which is the whole point.
- *
- * `steps(1)` and hard opacity cuts: pixel art flickers by cutting between
- * drawn frames, and easing between them is the single thing that makes a
- * sprite look like vector art wearing a costume. Roughly 7fps, which is fast
- * enough to read as fire and slow enough to read as drawn.
- */
 .frame {
   opacity: 0;
-  animation: cycle 0.42s steps(1) infinite;
+  /*
+   * Eight frames at ~11fps. `steps(1)` and hard opacity cuts, because pixel
+   * art flickers by cutting between drawn frames -- easing between them is the
+   * one thing that makes a sprite look like vector art in a costume. Each
+   * frame owns one slot of the cycle and the delays are set inline from the
+   * frame count, so adding frames never needs a CSS edit.
+   */
+  animation: cycle 0.72s steps(1) infinite;
 }
-
-.frame:nth-of-type(1) { animation-delay: 0s; }
-.frame:nth-of-type(2) { animation-delay: 0.14s; }
-.frame:nth-of-type(3) { animation-delay: 0.28s; }
 
 @keyframes cycle {
   0% { opacity: 1; }
-  33.33% { opacity: 0; }
+  12.5% { opacity: 0; }
   100% { opacity: 0; }
 }
 
@@ -113,5 +109,5 @@
   .wrap { transform: translate3d(-50%, -50%, 0); }
   .glow { animation: none; }
   .frame { animation: none; opacity: 0; }
-  .frame:nth-of-type(1) { opacity: 1; }
+  .frame:first-of-type { opacity: 1; }
 }

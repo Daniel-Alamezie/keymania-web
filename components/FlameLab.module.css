@@ -1,0 +1,85 @@
+/*
+ * The flame bench. Dev only, so it is plain — this is a measuring tool and
+ * anything decorative here would be competing with the thing being measured.
+ */
+
+.page {
+  height: 100dvh;
+  overflow-y: auto;
+  padding: var(--gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+.head { text-align: center; }
+
+.title { margin: 0; font-size: 20px; letter-spacing: 0.12em; color: var(--ink); }
+
+.note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
+/*
+ * The live sample. `PathFlame` is `position: fixed`, so it is given a
+ * containing block here — a transform on an ancestor is what makes a fixed
+ * child resolve against that ancestor instead of the viewport. Without it
+ * every flame on this page would stack in the middle of the screen.
+ */
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+}
+
+.stageInner {
+  position: relative;
+  transform: translateZ(0);
+  width: min(90vw, 520px);
+  height: min(60dvh, 480px);
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+.controls { width: min(90vw, 520px); text-align: center; }
+
+.slider { width: 100%; }
+
+.readout {
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--gap-md);
+}
+
+.cell { margin: 0; }
+
+.cellFlame {
+  position: relative;
+  transform: translateZ(0);
+  aspect-ratio: 3 / 4;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+.caption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.caption strong { color: var(--gold); font-size: 12px; }
+
+.dim { color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
