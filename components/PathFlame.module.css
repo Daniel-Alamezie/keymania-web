@@ -81,11 +81,17 @@
 }
 
 /*
- * The palette, per stage — the other half of "a bigger fire is a different
- * fire". Fire tells you its temperature by colour: a coal is dull red, a young
- * flame is orange, and a blaze runs yellow to white with the heart brightest.
- * Scaling one palette up would have made an inferno a large ember, which is
- * exactly what it must not look like.
+ * The palette, from the game's own three flames.
+ *
+ * `ember`, `azure` and `gold` are what the podium and every rating already
+ * use, so somebody who has seen a gold flame at the top of the leaderboard
+ * knows what a gold flame on their own path means without being told. A fourth
+ * colour language here would have made one picture mean two things a screen
+ * apart.
+ *
+ * Fire also tells you its temperature by colour, and the two agree: dull red
+ * is cool, blue is hotter, and the white-gold heart is hottest. The game's
+ * ranking language and the physics happen to point the same way.
  *
  * Flat fills throughout: a gradient inside a pixel is a mistake.
  */
@@ -93,27 +99,45 @@
 .mid { fill: #c04a12; }
 .core { fill: #e0761c; }
 
-/* A coal. Barely a flame at all, and deliberately dim. */
-.wrap[data-stage='spark'] .outer { fill: #5c1b0c; }
-.wrap[data-stage='spark'] .mid { fill: #8f2f0e; }
-.wrap[data-stage='spark'] .core { fill: #c25516; }
+/* Ember: a coal and a young flame. Dull, sitting back in the dark. */
+.wrap[data-kind='ember'] .outer { fill: #5c1b0c; }
+.wrap[data-kind='ember'] .mid { fill: #a8360f; }
+.wrap[data-kind='ember'] .core { fill: #d9701c; }
 
-.wrap[data-stage='kindling'] .outer { fill: #77230e; }
-.wrap[data-stage='kindling'] .mid { fill: #b8430f; }
-.wrap[data-stage='kindling'] .core { fill: #e2801f; }
+/* Azure: the fire has got hot enough to turn. */
+.wrap[data-kind='azure'] .outer { fill: #10386e; }
+.wrap[data-kind='azure'] .mid { fill: #1f6fc4; }
+.wrap[data-kind='azure'] .core { fill: #7fd4f5; }
 
-.wrap[data-stage='burning'] .outer { fill: #8a2a0d; }
-.wrap[data-stage='burning'] .mid { fill: #d1600f; }
-.wrap[data-stage='burning'] .core { fill: #f2a52a; }
+/* Gold: a mastered path, and the only white-hot heart on the ladder. */
+.wrap[data-kind='gold'] .outer { fill: #a3651a; }
+.wrap[data-kind='gold'] .mid { fill: var(--gold-deep, #c99a2a); }
+.wrap[data-kind='gold'] .core { fill: #fff4cd; }
 
-.wrap[data-stage='roaring'] .outer { fill: #a03410; }
-.wrap[data-stage='roaring'] .mid { fill: #e07c14; }
-.wrap[data-stage='roaring'] .core { fill: var(--gold, #f5c451); }
+/*
+ * The embers. One cell or two, rising and drifting, on a long stagger so the
+ * shower never visibly repeats. They inherit the fire's core colour, because
+ * a spark is a piece of the fire that left.
+ */
+.spark {
+  fill: #e0761c;
+  opacity: 0;
+  animation: ember 2.8s ease-out infinite;
+}
 
-/* White-hot heart, and the only stage that gets one. */
-.wrap[data-stage='inferno'] .outer { fill: #b83c12; }
-.wrap[data-stage='inferno'] .mid { fill: #f0a022; }
-.wrap[data-stage='inferno'] .core { fill: #fff2c4; }
+.wrap[data-kind='ember'] .spark { fill: #d9701c; }
+.wrap[data-kind='azure'] .spark { fill: #7fd4f5; }
+.wrap[data-kind='gold'] .spark { fill: #fff4cd; }
+
+@keyframes ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: 0.9; }
+  70% { opacity: 0.55; }
+  100% {
+    transform: translate(calc(var(--drift, 0) * 1px), calc(var(--rise, -10) * 1px));
+    opacity: 0;
+  }
+}
 
 /*
  * Opacity climbs with heat so the fire also gets *denser*, not only larger —
@@ -142,6 +166,7 @@
 @media (prefers-reduced-motion: reduce) {
   .wrap { transform: translate3d(-50%, -50%, 0); }
   .glow { animation: none; }
+  .spark { animation: none; opacity: 0; }
   .frame { animation: none; opacity: 0; }
   .frame:first-of-type { opacity: 1; }
 }

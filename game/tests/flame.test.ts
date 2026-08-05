@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  flameFrame, flameFrames, flameHeat, flameLabel, flameStage, SPARK, SPRITE_FRAMES,
-  SHAPES, SPRITE_H, SPRITE_W, starsEarned, TOTAL_STARS,
+  flameFrame, flameFrames, flameHeat, flameKind, flameLabel, flameStage, SHAPES,
+  SPARK, sparksFor, SPRITE_FRAMES, SPRITE_H, SPRITE_W, starsEarned, TOTAL_STARS,
 } from '../flame';
+import { MAX_STARS, MODULE_IDS } from '../learnPath';
 
 const STAGES = ['spark', 'kindling', 'burning', 'roaring', 'inferno'] as const;
-import { MAX_STARS, MODULE_IDS } from '../learnPath';
 
 const everything = '3'.repeat(MODULE_IDS.length);
 
@@ -214,5 +214,62 @@ describe('the stages are different fires', () => {
     const frame = flameFrame(0, 'spark');
     const filled = frame.findIndex((row) => /[123]/.test(row));
     expect(filled).toBeGreaterThan(SPRITE_H / 2);
+  });
+});
+
+describe('colour', () => {
+  /**
+   * The game already says something specific with flame colour. A fourth
+   * language on the path would mean one picture meaning two things a screen
+   * apart.
+   */
+  it('climbs the same ember to azure to gold the leaderboard uses', () => {
+    expect(flameKind('spark')).toBe('ember');
+    expect(flameKind('kindling')).toBe('ember');
+    expect(flameKind('burning')).toBe('azure');
+    expect(flameKind('roaring')).toBe('azure');
+    expect(flameKind('inferno')).toBe('gold');
+  });
+
+  it('reserves gold for a fully mastered path', () => {
+    const golds = STAGES.filter((stage) => flameKind(stage) === 'gold');
+    expect(golds).toEqual(['inferno']);
+  });
+});
+
+describe('sparks', () => {
+  /** A coal does not throw sparks, and their arrival is itself a reward. */
+  it('gives none to the small fires', () => {
+    expect(sparksFor('spark')).toHaveLength(0);
+    expect(sparksFor('kindling')).toHaveLength(0);
+  });
+
+  it('starts at burning and grows from there', () => {
+    let previous = 0;
+    for (const stage of ['burning', 'roaring', 'inferno'] as const) {
+      const count = sparksFor(stage).length;
+      expect(count).toBeGreaterThan(previous);
+      previous = count;
+    }
+  });
+
+  it('is deterministic, so every render draws the same fire', () => {
+    expect(sparksFor('inferno')).toEqual(sparksFor('inferno'));
+  });
+
+  it('keeps every spark on the sprite grid', () => {
+    for (const spark of sparksFor('inferno')) {
+      expect(spark.x).toBeGreaterThanOrEqual(0);
+      expect(spark.x).toBeLessThanOrEqual(SPRITE_W);
+      expect(spark.rise).toBeGreaterThan(0);
+      expect(spark.delay).toBeGreaterThanOrEqual(0);
+      expect(spark.delay).toBeLessThan(1);
+    }
+  });
+
+  /** Spread rather than clustered, without needing a seed. */
+  it('does not stack them all in one column', () => {
+    const xs = sparksFor('inferno').map((s) => Math.round(s.x));
+    expect(new Set(xs).size).toBeGreaterThan(3);
   });
 });

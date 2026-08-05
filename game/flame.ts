@@ -201,3 +201,69 @@ export function flameFrame(frame: number, stage: FlameStage = 'burning'): string
 /** Every frame of a stage's loop. */
 export const flameFrames = (stage: FlameStage = 'burning'): string[][] =>
   Array.from({ length: SPRITE_FRAMES }, (_, i) => flameFrame(i, stage));
+
+/* ------------------------------------------------------- colour and sparks */
+
+/**
+ * Which of the game's three flames this stage burns as.
+ *
+ * Reuses `FlameKind` from the leaderboard rather than inventing a palette.
+ * The game already says something specific with flame colour — ember, azure,
+ * gold, on the podium and beside every rating — and a fourth colour language
+ * on the learning path would mean the same picture meaning two different
+ * things one screen apart.
+ *
+ * So the path climbs the same ladder the board does. Somebody who has seen a
+ * gold flame beside the top of the leaderboard already knows what a gold flame
+ * on their own path means, and nobody had to explain it.
+ */
+export type FlameKind = 'ember' | 'azure' | 'gold';
+
+export const flameKind = (stage: FlameStage): FlameKind => {
+  if (stage === 'inferno') return 'gold';
+  if (stage === 'burning' || stage === 'roaring') return 'azure';
+  return 'ember';
+};
+
+export interface Spark {
+  /** Column on the sprite grid. */
+  x: number;
+  /** How far up it travels, in grid cells. */
+  rise: number;
+  /** Sideways drift over its life, in cells. */
+  drift: number;
+  /** 0 to 1, its offset within the shared loop. */
+  delay: number;
+  /** 1 or 2 cells square. */
+  size: number;
+}
+
+/**
+ * Embers thrown off the top of the fire.
+ *
+ * **Only for the bigger flames**, and that is the point rather than an
+ * optimisation: a coal does not throw sparks. Their arrival at `burning` is a
+ * reward in itself — something new appears on the screen that was not there
+ * before, which is worth more than the same fire being slightly larger.
+ *
+ * Deterministic from an index, so they are testable and identical on every
+ * render. Spread by a coprime step rather than randomly, which keeps them from
+ * clustering without needing a seed.
+ */
+export function sparksFor(stage: FlameStage): Spark[] {
+  const count = { spark: 0, kindling: 0, burning: 3, roaring: 6, inferno: 10 }[stage];
+  const shape = SHAPES[stage];
+
+  return Array.from({ length: count }, (_, i) => {
+    /* 7 and 11 are coprime with any small count, so these never line up. */
+    const across = ((i * 7) % 11) / 10;
+    const spread = SPRITE_W * 0.34 * shape.girth;
+    return {
+      x: (SPRITE_W - 1) / 2 + (across - 0.5) * 2 * spread,
+      rise: SPRITE_H * (0.34 + 0.4 * (((i * 11) % 7) / 6)),
+      drift: (across - 0.5) * 5.5,
+      delay: ((i * 7) % count) / count,
+      size: i % 3 === 0 ? 2 : 1,
+    };
+  });
+}

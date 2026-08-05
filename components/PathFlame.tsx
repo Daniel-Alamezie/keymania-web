@@ -2,7 +2,8 @@
 
 import { useMemo, type CSSProperties } from 'react';
 import {
-  flameFrames, flameLabel, SPRITE_FRAMES, SPRITE_H, SPRITE_W, type FlameStage,
+  flameFrames, flameKind, flameLabel, sparksFor, SPRITE_FRAMES, SPRITE_H, SPRITE_W,
+  type FlameStage,
 } from '@/game/flame';
 import styles from './PathFlame.module.css';
 
@@ -77,12 +78,15 @@ export default function PathFlame({ heat, stage, offset, contained }: PathFlameP
   /* Regenerated only when the stage changes, which is a handful of times in a
      player's whole life with the feature. */
   const drawn = useMemo(() => flameFrames(stage).map(cells), [stage]);
+  const sparks = useMemo(() => sparksFor(stage), [stage]);
 
   return (
     <div
       className={`${styles.wrap}${contained ? ` ${styles.contained}` : ''}`}
       aria-hidden="true"
       data-stage={stage}
+      /* The game's own flame colours, so the path and the board agree. */
+      data-kind={flameKind(stage)}
       style={{
         '--heat': heat,
         /* Against the scroll and at a fraction of it: the parallax. Negative
@@ -121,6 +125,27 @@ export default function PathFlame({ heat, stage, offset, contained }: PathFlameP
               />
             ))}
           </g>
+        ))}
+        {/*
+          * Embers thrown off the fire, and only by the bigger ones — a coal
+          * does not spark. Their arrival at `burning` is a reward in itself:
+          * something new appears that was not there before, which lands
+          * harder than the same fire being slightly larger.
+          */}
+        {sparks.map((spark, i) => (
+          <rect
+            key={i}
+            className={styles.spark}
+            x={spark.x}
+            y={SPRITE_H - 4}
+            width={spark.size}
+            height={spark.size}
+            style={{
+              '--rise': `${-spark.rise}`,
+              '--drift': `${spark.drift}`,
+              animationDelay: `${spark.delay * 2.8}s`,
+            } as CSSProperties}
+          />
         ))}
       </svg>
     </div>
