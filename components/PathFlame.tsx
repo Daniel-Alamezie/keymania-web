@@ -20,24 +20,111 @@ export interface PathFlameProps {
 }
 
 /**
- * The fire behind the path.
+ * The fire behind the path, drawn as pixels.
  *
- * Grows with the stars earned, and it is the whole reason the ladder has a
- * background at all: twelve rows of a list is an inventory, and an inventory
- * is not something anybody feels like returning to. The game already talks
- * about stoking the forge and throws embers when a blade lands, so a path that
- * visibly burns hotter as it is walked is the encouragement said in the
- * language the rest of the game already speaks.
+ * The first version of this was smooth SVG curves, and it was wrong for the
+ * game: KeyMania is a pixel game — the keycaps, the badges, the blades and the
+ * fighters are all cells on a grid — and an airbrushed flame behind them read
+ * as a stock asset borrowed from somewhere else.
  *
- * **Drawn rather than downloaded.** Three overlaid SVG shapes and two
- * keyframes, so it costs nothing on the connection and scales to any screen
- * without a second asset. A looping video would be heavier than the entire
- * rest of this feature.
+ * So it is a bitmap. Three hand-authored frames on an 11×15 grid, three heat
+ * bands, and **frame-swapped animation rather than continuous transform**.
+ * That last part is what actually carries the feel: pixel art flickers by
+ * cutting between drawn frames, and easing a shape smoothly between states is
+ * the single thing that makes a pixel sprite look like vector art wearing a
+ * costume. The cut is the aesthetic.
  *
- * **It is decoration, and behaves like it.** `aria-hidden`, no pointer events,
- * and the stage is announced once in text by the caller rather than being
- * mimed at a screen reader through an animated shape.
+ * Authored as strings so the shape can be edited by looking at it. `1` is the
+ * outer edge, `2` the body, `3` the core, `.` is nothing — three bands rather
+ * than one because a flame reads as hot from the contrast between its edge and
+ * its middle, and a single colour at any opacity reads as smoke.
  */
+const FRAMES = [
+  [
+    '.....1.....',
+    '....121....',
+    '....121....',
+    '...12221...',
+    '...12321...',
+    '..1223221..',
+    '..1233221..',
+    '.122333221.',
+    '.123333321.',
+    '12233333221',
+    '12333333321',
+    '12333333321',
+    '.123333321.',
+    '.112333211.',
+    '..1111111..',
+  ],
+  [
+    '....1......',
+    '...121.....',
+    '...121.....',
+    '...12221...',
+    '..1232221..',
+    '..1223221..',
+    '..1233221..',
+    '.122333221.',
+    '.123333321.',
+    '12233333221',
+    '12333333321',
+    '12333333321',
+    '.123333321.',
+    '.112333211.',
+    '..1111111..',
+  ],
+  [
+    '......1....',
+    '.....121...',
+    '.....121...',
+    '....12221..',
+    '....12321..',
+    '...1223221.',
+    '..12233221.',
+    '.122333221.',
+    '.123333321.',
+    '12233333221',
+    '12333333321',
+    '12333333321',
+    '.123333321.',
+    '.112333211.',
+    '..1111111..',
+  ],
+] as const;
+
+const WIDTH = FRAMES[0][0].length;
+const HEIGHT = FRAMES[0].length;
+
+/** Which class paints each band. */
+const BAND: Record<string, string> = { 1: styles.outer, 2: styles.mid, 3: styles.core };
+
+/**
+ * One frame as a run of rects.
+ *
+ * Runs rather than one rect per cell: a row of eight identical cells becomes
+ * one wide rect, which cuts the node count of the whole sprite by roughly
+ * two-thirds. It is the same picture — every edge still lands on a grid line —
+ * and it matters because this thing lives behind a scrolling list.
+ */
+function cells(frame: readonly string[]) {
+  const out: { x: number; y: number; w: number; band: string }[] = [];
+  frame.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const band = row[x];
+      if (band === '.') { x += 1; continue; }
+      let w = 1;
+      while (x + w < row.length && row[x + w] === band) w += 1;
+      out.push({ x, y, w, band });
+      x += w;
+    }
+  });
+  return out;
+}
+
+const DRAWN = FRAMES.map(cells);
+
 export default function PathFlame({ heat, stage, offset }: PathFlameProps) {
   return (
     <div
@@ -52,27 +139,30 @@ export default function PathFlame({ heat, stage, offset }: PathFlameProps) {
         '--shift': `${offset * -0.28}px`,
       } as CSSProperties}
     >
-      {/* The glow, which is most of the effect at low heat and all of the
-          warmth at high heat. */}
       <div className={styles.glow} />
 
-      <svg className={styles.flame} viewBox="0 0 100 140" preserveAspectRatio="xMidYMax meet">
+      <svg
+        className={styles.flame}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        preserveAspectRatio="xMidYMid meet"
+        /* No anti-aliasing. A pixel that has been smoothed is not a pixel. */
+        shapeRendering="crispEdges"
+      >
         <title>{flameLabel(stage)}</title>
-        {/* Outer body, inner body, core. Three shapes rather than one, because
-            a flame reads as hot from the contrast between its edge and its
-            middle — a single colour at any opacity reads as smoke. */}
-        <path
-          className={styles.outer}
-          d="M50 4c14 26 34 38 34 66 0 26-16 44-34 44S16 96 16 70C16 42 36 30 50 4z"
-        />
-        <path
-          className={styles.inner}
-          d="M50 34c9 17 21 25 21 43 0 17-10 28-21 28s-21-11-21-28c0-18 12-26 21-43z"
-        />
-        <path
-          className={styles.core}
-          d="M50 66c4 8 10 12 10 21 0 8-5 13-10 13s-10-5-10-13c0-9 6-13 10-21z"
-        />
+        {DRAWN.map((frame, i) => (
+          <g key={i} className={styles.frame}>
+            {frame.map((cell) => (
+              <rect
+                key={`${cell.x}-${cell.y}`}
+                className={BAND[cell.band]}
+                x={cell.x}
+                y={cell.y}
+                width={cell.w}
+                height={1}
+              />
+            ))}
+          </g>
+        ))}
       </svg>
     </div>
   );

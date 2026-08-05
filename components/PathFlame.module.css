@@ -1,5 +1,5 @@
 /*
- * The fire behind the path.
+ * The fire behind the path, as pixels.
  *
  * Everything sizes off `--heat` (0 to 1) so growth is one variable rather than
  * a set of stages with hard edges — a flame that jumped between five fixed
@@ -8,103 +8,110 @@
 
 .wrap {
   position: fixed;
-  left: 50%;
-  bottom: 0;
   /*
-   * The parallax. `--shift` is a fraction of the list's scroll, applied
-   * against it, which is what puts this behind the glass rather than on it.
-   * Translation only — nothing here reflows, so the browser can keep the whole
-   * layer on the compositor and a scroll on a cheap phone stays smooth.
+   * Centred, not sitting on the floor.
+   *
+   * It was anchored to the bottom first, where it read as scenery behind the
+   * list rather than as the thing the screen is about. In the middle it is the
+   * first thing seen, and the list reads as sitting in front of it — which is
+   * the right way round: the fire is the encouragement, and encouragement that
+   * has to be scrolled to is not encouragement.
    */
-  transform: translate3d(-50%, calc(var(--shift, 0px) * -1), 0);
-  width: min(78vw, 460px);
-  /* Grows from roughly a third of its full height at a spark. */
-  height: calc((28dvh + 34dvh * var(--heat, 0.2)));
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, calc(-50% + var(--shift, 0px)), 0);
+  width: min(72vw, 420px);
+  height: min(72vw, 420px);
   pointer-events: none;
   z-index: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   will-change: transform;
 }
 
 /*
  * The warmth. A wide, soft radial that is most of the effect while the flame
  * is small — a lone spark on a dark screen looks like a dead pixel without it.
+ * The one deliberately un-pixelated thing here, because light is not a sprite.
  */
 .glow {
   position: absolute;
-  bottom: -18%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 150%;
+  width: 165%;
   aspect-ratio: 1 / 1;
   background: radial-gradient(
-    circle at 50% 62%,
-    rgba(255, 176, 60, calc(0.16 + 0.20 * var(--heat, 0.2))) 0%,
-    rgba(214, 96, 30, calc(0.10 + 0.14 * var(--heat, 0.2))) 32%,
-    transparent 68%
+    circle at 50% 52%,
+    rgba(255, 176, 60, calc(0.13 + 0.19 * var(--heat, 0.2))) 0%,
+    rgba(214, 96, 30, calc(0.08 + 0.13 * var(--heat, 0.2))) 34%,
+    transparent 70%
   );
   animation: breathe 5.5s ease-in-out infinite;
 }
 
+/*
+ * The sprite itself, scaled by heat.
+ *
+ * Scaled in whole steps rather than continuously, so the pixel grid stays
+ * square at every size instead of landing on half-pixels and blurring — which
+ * is the same reason `image-rendering: pixelated` exists globally in this app.
+ */
 .flame {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: calc(38% + 62% * var(--heat, 0.2));
+  height: calc(38% + 62% * var(--heat, 0.2));
   overflow: visible;
-  /* The flicker: two offset cycles so the shape never repeats visibly. */
-  animation: flicker 2.6s ease-in-out infinite;
-  transform-origin: 50% 100%;
-}
-
-.outer {
-  fill: var(--opponent-deep, #a8391b);
-  opacity: calc(0.20 + 0.16 * var(--heat, 0.2));
-}
-
-.inner {
-  fill: var(--gold-deep, #c8791f);
-  opacity: calc(0.22 + 0.20 * var(--heat, 0.2));
-  animation: flicker 1.9s ease-in-out infinite reverse;
-  transform-origin: 50% 100%;
-}
-
-.core {
-  fill: var(--gold, #f5c451);
-  opacity: calc(0.26 + 0.26 * var(--heat, 0.2));
-  animation: flicker 1.3s ease-in-out infinite;
-  transform-origin: 50% 100%;
 }
 
 /*
- * A mastered path is allowed to be louder than the rest. It is the only state
- * that is genuinely finished, and it is the one place a little excess is the
- * correct amount.
+ * Frame-swapped animation, which is the whole point.
+ *
+ * `steps(1)` and hard opacity cuts: pixel art flickers by cutting between
+ * drawn frames, and easing between them is the single thing that makes a
+ * sprite look like vector art wearing a costume. Roughly 7fps, which is fast
+ * enough to read as fire and slow enough to read as drawn.
  */
-.wrap[data-stage='inferno'] .core { opacity: 0.62; }
+.frame {
+  opacity: 0;
+  animation: cycle 0.42s steps(1) infinite;
+}
+
+.frame:nth-of-type(1) { animation-delay: 0s; }
+.frame:nth-of-type(2) { animation-delay: 0.14s; }
+.frame:nth-of-type(3) { animation-delay: 0.28s; }
+
+@keyframes cycle {
+  0% { opacity: 1; }
+  33.33% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* The three heat bands. Flat fills — a gradient inside a pixel is a mistake. */
+.outer { fill: var(--opponent-deep, #a8391b); opacity: calc(0.30 + 0.24 * var(--heat, 0.2)); }
+.mid { fill: var(--gold-deep, #c8791f); opacity: calc(0.34 + 0.28 * var(--heat, 0.2)); }
+.core { fill: var(--gold, #f5c451); opacity: calc(0.38 + 0.34 * var(--heat, 0.2)); }
+
+/*
+ * A mastered path is allowed to be louder. It is the only genuinely finished
+ * state, and the one place a little excess is the correct amount.
+ */
+.wrap[data-stage='inferno'] .core { opacity: 0.88; }
+.wrap[data-stage='inferno'] .mid { opacity: 0.72; }
 .wrap[data-stage='inferno'] .glow { animation-duration: 3.4s; }
 
-@keyframes flicker {
-  0%, 100% { transform: scaleX(1) scaleY(1); }
-  25% { transform: scaleX(0.955) scaleY(1.045); }
-  50% { transform: scaleX(1.035) scaleY(0.97); }
-  75% { transform: scaleX(0.975) scaleY(1.02); }
-}
-
 @keyframes breathe {
-  0%, 100% { opacity: 0.82; transform: translateX(-50%) scale(1); }
-  50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+  0%, 100% { opacity: 0.84; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
 }
 
 /*
- * Motion off: the fire stays, still. Removing it entirely would take the
- * encouragement with it, and the size — which is the actual signal — does not
- * depend on movement at all. Parallax goes, because that one genuinely is
- * motion coupled to scrolling and is the part most likely to make somebody
- * feel ill.
+ * Motion off: the fire stays, still, on its first frame. Removing it entirely
+ * would take the encouragement with it, and the size — which is the actual
+ * signal — does not depend on movement. Parallax goes, because that one is
+ * genuinely motion coupled to scrolling and is the part most likely to make
+ * somebody feel ill.
  */
 @media (prefers-reduced-motion: reduce) {
-  .wrap { transform: translate3d(-50%, 0, 0); }
-  .flame, .inner, .core, .glow { animation: none; }
+  .wrap { transform: translate3d(-50%, -50%, 0); }
+  .glow { animation: none; }
+  .frame { animation: none; opacity: 0; }
+  .frame:nth-of-type(1) { opacity: 1; }
 }
