@@ -98,11 +98,14 @@ describe('unlocking', () => {
   });
 
   /**
-   * One star, not three. Gating progress on mastery turns the path into a wall
-   * for exactly the people it was built for.
+   * The ladder rule (2026-08-05): all three stars open the next module —
+   * finished, 95% clean, boss beaten. What keeps this from being a wall is
+   * the per-module boss calibration, not leniency here.
    */
-  it('opens the next module on a single star', () => {
-    expect(isUnlocked('1', 'home-row-full')).toBe(true);
+  it('opens the next module only on all three stars', () => {
+    expect(isUnlocked('3', 'home-row-full')).toBe(true);
+    expect(isUnlocked('2', 'home-row-full')).toBe(false);
+    expect(isUnlocked('1', 'home-row-full')).toBe(false);
     expect(isUnlocked('0', 'home-row-full')).toBe(false);
   });
 
@@ -112,11 +115,15 @@ describe('unlocking', () => {
 
   it('sends a new player to the first module and a returning one to their frontier', () => {
     expect(nextModuleId(undefined)).toBe('home-row');
-    expect(nextModuleId('31')).toBe('top-common');
+    /* A module at one or two stars IS the frontier now — nothing past it is
+       open, so it is where the work is. */
+    expect(nextModuleId('31')).toBe('home-row-full');
+    expect(nextModuleId('33')).toBe('top-common');
   });
 
-  it('has nowhere left to send somebody who has passed everything', () => {
-    expect(nextModuleId('1'.repeat(MODULE_IDS.length))).toBeUndefined();
+  it('has nowhere left to send somebody only once everything is mastered', () => {
+    expect(nextModuleId('3'.repeat(MODULE_IDS.length))).toBeUndefined();
+    expect(nextModuleId('1'.repeat(MODULE_IDS.length))).toBe('home-row');
   });
 });
 
@@ -125,14 +132,19 @@ describe('unlocking', () => {
  * three states and no more.
  */
 describe('node state', () => {
-  it('marks a passed module done, whatever it was passed at', () => {
-    expect(nodeState('1', 'home-row')).toBe('done');
+  it('marks a module done only when it is fully done', () => {
     expect(nodeState('3', 'home-row')).toBe('done');
+    /* One or two stars is the frontier, not the past: the ladder rule holds
+       everything behind it shut until the third star lands. */
+    expect(nodeState('1', 'home-row')).toBe('next');
+    expect(nodeState('2', 'home-row')).toBe('next');
   });
 
   it('marks the frontier as next', () => {
-    expect(nodeState('1', 'home-row-full')).toBe('next');
+    expect(nodeState('3', 'home-row-full')).toBe('next');
     expect(nodeState(undefined, 'home-row')).toBe('next');
+    /* And a half-done predecessor keeps its successor locked. */
+    expect(nodeState('1', 'home-row-full')).toBe('locked');
   });
 
   it('marks everything beyond the frontier locked', () => {

@@ -113,21 +113,24 @@ export function starsFor(progress: string | undefined, id: ModuleId): number {
 /**
  * Whether a module can be started.
  *
- * One star opens the next, not three. Mirrors the API, which is the authority —
- * this exists so the ladder can draw twelve nodes without twelve round trips,
- * not so the client can decide. Anything it got wrong would be corrected the
- * moment a result was recorded.
+ * The ladder rule (2026-08-05): the module before it must hold ALL three
+ * stars — finished, 95% clean, boss beaten. Mirrors the API, which is the
+ * authority; this exists so the ladder can draw twelve nodes without twelve
+ * round trips, not so the client can decide.
  */
 export function isUnlocked(progress: string | undefined, id: ModuleId): boolean {
   const at = INDEX.get(id);
   if (at === undefined) return false;
   if (at === 0) return true;
-  return starsFor(progress, MODULE_IDS[at - 1]) > 0;
+  return starsFor(progress, MODULE_IDS[at - 1]) === MAX_STARS;
 }
 
-/** Where to send somebody: the first module they have not passed. */
+/**
+ * Where to send somebody: the first module still short of three stars.
+ * A module at one or two stars is the frontier — nothing past it is open.
+ */
 export const nextModuleId = (progress: string | undefined): ModuleId | undefined =>
-  MODULE_IDS.find((id) => starsFor(progress, id) === 0);
+  MODULE_IDS.find((id) => starsFor(progress, id) < MAX_STARS);
 
 /**
  * What a node on the ladder looks like.
@@ -140,7 +143,9 @@ export const nextModuleId = (progress: string | undefined): ModuleId | undefined
 export type NodeState = 'done' | 'next' | 'locked';
 
 export function nodeState(progress: string | undefined, id: ModuleId): NodeState {
-  if (starsFor(progress, id) > 0) return 'done';
+  /* Done means DONE now: all three stars. A module at one or two is 'next' —
+     it is the frontier, because nothing past it opens until it is finished. */
+  if (starsFor(progress, id) === MAX_STARS) return 'done';
   return isUnlocked(progress, id) ? 'next' : 'locked';
 }
 

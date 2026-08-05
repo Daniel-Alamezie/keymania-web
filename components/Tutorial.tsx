@@ -146,6 +146,13 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
               The lessons will keep showing you which finger to use, so you do
               not have to remember all of this now.
             </p>
+            <p className={styles.body}>
+              The path keeps score in stars. <strong>Finish every lesson</strong>
+              {' '}in a module for the first. <strong>Stay above 95%</strong> for
+              the second — that opens the boss. <strong>Beat the boss</strong>
+              {' '}for the third, and the third opens the next module. Stars only
+              ever go up, so replaying costs nothing.
+            </p>
             <button className="btn btn-primary" onClick={onDone}>Start module 1</button>
             <button className="btn btn-ghost" onClick={onExit}>Back to the path</button>
           </>

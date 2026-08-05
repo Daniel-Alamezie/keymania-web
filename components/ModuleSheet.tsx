@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MAX_STARS, moduleById, starsFor, type ModuleId } from '@/game/learnPath';
 import { flameHeat, flameStage } from '@/game/flame';
 import PathFlame from './PathFlame';
-import { contentFor } from '@/game/curriculum';
+import { contentFor, MODULE_STAR_ACCURACY } from '@/game/curriculum';
 import { lessonsDone, resumeAt, runFor } from '@/game/moduleRun';
 import styles from './ModuleSheet.module.css';
 
@@ -84,6 +84,19 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
   const moduleStars = starsFor(progress, module);
   const started = done > 0;
 
+  /**
+   * The boss's gate: the second star's bar. Local accuracy first, the
+   * server's stars as backup for lessons done on another device.
+   */
+  const passedRuns = run.filter((result) => result && result.stars > 0);
+  const accuracy = passedRuns.length
+    ? passedRuns.reduce((sum, result) => sum + result!.accuracy, 0) / passedRuns.length
+    : 0;
+  const bossOpen = (done >= lessons.length && accuracy >= MODULE_STAR_ACCURACY)
+    || moduleStars >= 2;
+  /** Where the primary button should point: the boss, once it is the work. */
+  const bossNext = bossOpen && moduleStars < MAX_STARS && done >= lessons.length;
+
   return (
     <main className={styles.screen} ref={screen}>
       <PathFlame
@@ -104,8 +117,8 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
             the two currencies are never read as one running total. */}
         <Stars earned={moduleStars} />
         <p className={styles.rule}>
-          One star for finishing. Another for staying above 95%.
-          A third for beating the boss.
+          One star for finishing. 95% makes two, and opens the boss.
+          Beat the boss for the third — and the third opens the next module.
         </p>
       </div>
 
@@ -148,7 +161,8 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
         <li>
           <button
             className={`${styles.row} ${styles.boss}`}
-            data-state={done >= lessons.length ? 'next' : 'todo'}
+            data-state={moduleStars >= MAX_STARS ? 'done' : bossOpen ? 'next' : 'todo'}
+            disabled={!bossOpen}
             onClick={() => onStart(lessons.length)}
           >
             <span className={`${styles.pip} pixel-font`} aria-hidden="true">⚔</span>
@@ -159,18 +173,23 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
               </span>
             </span>
             <span className={`${styles.flag} pixel-font`}>
-              {moduleStars >= MAX_STARS ? 'BEATEN' : 'THIRD STAR'}
+              {moduleStars >= MAX_STARS ? 'BEATEN' : bossOpen ? 'THIRD STAR' : '95% OPENS THIS'}
             </span>
           </button>
         </li>
       </ol>
 
-      <button className="btn btn-primary" onClick={() => onStart(at)}>
-        {/* A finished module has nothing to resume; replaying is the offer,
-            and stars only climb, so it costs nothing. */}
-        {done >= lessons.length
-          ? 'Practise again'
-          : started ? `Resume — lesson ${at + 1}` : 'Start'}
+      <button
+        className="btn btn-primary"
+        onClick={() => onStart(bossNext ? lessons.length : at)}
+      >
+        {/* The button points at the work: the boss once the lessons have
+            earned it, replay once everything is done, resume otherwise. */}
+        {bossNext
+          ? 'Fight the boss'
+          : done >= lessons.length
+            ? 'Practise again'
+            : started ? `Resume — lesson ${at + 1}` : 'Start'}
       </button>
     </main>
   );

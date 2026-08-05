@@ -38,6 +38,17 @@ export interface ModuleContent {
   lessons: Lesson[];
   /** The words this module's boss may use. Its alphabet comes from `taughtBy`. */
   bossWords: string[];
+  /**
+   * How fast this module's boss types.
+   *
+   * Calibrated to somebody who JUST learned this module, not to the bot
+   * ladder's tiers — and this number is what makes the mandatory boss fair.
+   * Beating the boss is now the door to the next module, so a boss pinned to
+   * Rookie's 34 wpm would be a wall twice the height of the people climbing
+   * it. It climbs with the curriculum instead, so every boss is a real fight
+   * for the person who just earned the right to it.
+   */
+  bossWpm: number;
 }
 
 /**
@@ -167,8 +178,8 @@ const HOME_ROW_FULL_BOSS = [
  * nothing while the curriculum is still being written.
  */
 export const CURRICULUM: Partial<Record<ModuleId, ModuleContent>> = {
-  'home-row': { lessons: HOME_ROW_LESSONS, bossWords: HOME_ROW_BOSS },
-  'home-row-full': { lessons: HOME_ROW_FULL_LESSONS, bossWords: HOME_ROW_FULL_BOSS },
+  'home-row': { lessons: HOME_ROW_LESSONS, bossWords: HOME_ROW_BOSS, bossWpm: 17 },
+  'home-row-full': { lessons: HOME_ROW_FULL_LESSONS, bossWords: HOME_ROW_FULL_BOSS, bossWpm: 19 },
 };
 
 /** A module's content, or undefined if it has not been written yet. */
@@ -187,34 +198,32 @@ export const hasContent = (id: ModuleId): boolean => Boolean(CURRICULUM[id]);
  */
 export function bankFor(id: ModuleId): BossBank | undefined {
   const content = contentFor(id);
-  return content && { alphabet: taughtBy(id), words: content.bossWords };
+  return content && { alphabet: taughtBy(id), words: content.bossWords, wpm: content.bossWpm };
 }
 
 /** The accuracy across a module's lessons that earns its second star. */
 export const MODULE_STAR_ACCURACY = 0.95;
 
 /**
- * What a module is passed at.
+ * What a module is passed at: a ladder, each rung opening the next.
  *
- * The three stars are three different claims, which is why they are not three
- * thresholds on one number:
+ *  - **One: you finished it.** Every lesson typed to the end, at any accuracy.
+ *  - **Two: you were clean about it.** 95% across the module's lessons — and
+ *    the second star is what OPENS THE BOSS. This is the change (2026-08-05)
+ *    that makes accuracy the price of the fun part rather than decoration:
+ *    somebody bashing through at 60% was being rewarded with the fight, which
+ *    trained exactly the habit the path exists to break.
+ *  - **Three: you beat the boss.** And the third star opens the next module.
  *
- *  - **One: you finished it.** Every lesson typed to the end, at any accuracy
- *    at all. This is what opens the next module, and it has to be reachable by
- *    somebody typing at fifteen words a minute with clumsy hands or the path
- *    walls off the people it was built for.
- *  - **Two: you were clean about it.** 95% across the module's lessons.
- *  - **Three: you beat the boss.** The proof, and the reason this is a game
- *    rather than a tutor — the lesson teaches and the boss demonstrates, and
- *    the demonstration is worth more than another decimal place of accuracy.
- *
- * Losing to the boss costs nothing, because stars only ever climb. Somebody
- * who comes back and wins simply has three where they had two.
+ * Strictly a ladder in code as well as in rules: no boss star without the
+ * accuracy star, because the boss cannot be reached without it. Losing to the
+ * boss still costs nothing — stars only climb, and the rematch is right there.
  */
 export function moduleStars(
   { finishedAll, accuracy, bossBeaten }:
   { finishedAll: boolean; accuracy: number; bossBeaten: boolean },
 ): number {
   if (!finishedAll) return 0;
-  return 1 + (accuracy >= MODULE_STAR_ACCURACY ? 1 : 0) + (bossBeaten ? 1 : 0);
+  if (accuracy < MODULE_STAR_ACCURACY) return 1;
+  return bossBeaten ? 3 : 2;
 }

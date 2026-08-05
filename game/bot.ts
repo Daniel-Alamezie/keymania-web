@@ -28,8 +28,16 @@ export function startBot(
    * "extraordinary".
    */
   nextSentence: () => string = randomSentence,
+  /**
+   * Override the tier's speed, for a module boss. Calibrated per module in
+   * the curriculum — a mandatory boss at Rookie's 34 wpm would be twice the
+   * speed of the beginners it now gates. Error rate and jitter stay the
+   * tier's own: a slow boss should still fumble like a person.
+   */
+  wpm?: number,
 ): BotHandle {
-  const profile = BOT_PROFILES[difficulty];
+  const base = BOT_PROFILES[difficulty];
+  const profile = wpm ? { ...base, wpm } : base;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 

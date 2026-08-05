@@ -79,6 +79,33 @@ describe('every authored module', () => {
   });
 });
 
+/**
+ * The boss's pace is content, calibrated per module. It gates the next
+ * module now, so an uncalibrated boss is not a difficulty knob — it is a
+ * wall in front of exactly the people the path was built for.
+ */
+describe('boss calibration', () => {
+  it.each(authored)('%s has a boss pace a fresh learner can beat', (id) => {
+    const wpm = contentFor(id)!.bossWpm;
+    expect(wpm).toBeGreaterThan(0);
+    /* Below Rookie's 34, always: these gate beginners, not competitors. */
+    expect(wpm).toBeLessThan(34);
+  });
+
+  it('climbs with the curriculum rather than jumping', () => {
+    let previous = 0;
+    for (const id of authored) {
+      const wpm = contentFor(id)!.bossWpm;
+      expect(wpm).toBeGreaterThanOrEqual(previous);
+      previous = wpm;
+    }
+  });
+
+  it('rides the bank into the duel', () => {
+    expect(bankFor('home-row')!.wpm).toBe(contentFor('home-row')!.bossWpm);
+  });
+});
+
 describe('module 1 specifically', () => {
   it('opens on position rather than on words', () => {
     const first = contentFor('home-row')!.lessons[0];
@@ -124,9 +151,14 @@ describe('what a module is passed at', () => {
     expect(moduleStars({ finishedAll: true, accuracy: 0.96, bossBeaten: true })).toBe(3);
   });
 
-  it('lets a sloppy typist who beats the boss outscore a clean one who did not', () => {
-    expect(moduleStars({ finishedAll: true, accuracy: 0.5, bossBeaten: true }))
-      .toBe(moduleStars({ finishedAll: true, accuracy: 0.99, bossBeaten: false }));
+  /**
+   * A strict ladder now: no boss star without the accuracy star. The boss is
+   * gated behind 95%, so this combination cannot be reached honestly — and
+   * scoring it as three would reward whatever dishonest route produced it.
+   */
+  it('never grants the boss star without the accuracy star', () => {
+    expect(moduleStars({ finishedAll: true, accuracy: 0.5, bossBeaten: true })).toBe(1);
+    expect(moduleStars({ finishedAll: true, accuracy: 0.96, bossBeaten: true })).toBe(3);
   });
 
   it('never exceeds what the API will store', () => {

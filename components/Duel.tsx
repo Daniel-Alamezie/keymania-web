@@ -656,9 +656,13 @@ export default function Duel({
       state.difficulty,
       (event) => dispatch({ type: 'botWord', ...event }),
       botSentence,
+      /* A module boss types at the curriculum's calibrated pace, not the
+         tier's: it now gates the next module, and Rookie's 34 wpm is twice
+         the speed of the beginners it would be gating. */
+      boss?.wpm,
     );
     return () => bot.stop();
-  }, [isMulti, state.phase, state.difficulty, botSentence]);
+  }, [isMulti, state.phase, state.difficulty, botSentence, boss?.wpm]);
 
   /**
    * The live speed readout.

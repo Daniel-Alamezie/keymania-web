@@ -256,7 +256,13 @@ export default function Ladder({
             const state = nodeState(progress, module.id);
             const stars = starsFor(progress, module.id);
             const written = hasContent(module.id);
-            const flag = state !== 'locked' && !written ? SOON : FLAG[state];
+            /* A frontier module with stars is work in progress, and the flag
+               should say so: KEEP GOING is a different instruction from
+               START HERE, and under the ladder rule partial modules hold the
+               whole path shut. */
+            const flag = state !== 'locked' && !written
+              ? SOON
+              : state === 'next' && stars > 0 ? 'KEEP GOING' : FLAG[state];
             return (
               <button
                 key={module.id}
@@ -279,7 +285,10 @@ export default function Ladder({
                   <span className={styles.cost}>{costOf(module.id)}</span>
                 </span>
                 <span className={styles.tail}>
-                  {state === 'done' && <Stars earned={stars} />}
+                  {/* Stars show wherever they exist: under the ladder rule a
+                      two-star module is the frontier, and hiding its stars
+                      would hide exactly what is missing. */}
+                  {stars > 0 && <Stars earned={stars} />}
                   <span className={`${styles.flag} pixel-font`}>{flag}</span>
                 </span>
               </button>

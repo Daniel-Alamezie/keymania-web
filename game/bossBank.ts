@@ -33,6 +33,8 @@ export interface BossBank {
   alphabet: string;
   /** Candidate words. Anything not spellable from `alphabet` is dropped. */
   words: string[];
+  /** The boss's typing speed. Absent means the bot tier's own pace. */
+  wpm?: number;
 }
 
 /** Whether a word can be typed using only the keys taught so far. */

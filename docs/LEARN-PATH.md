@@ -97,23 +97,36 @@ Replaying a mastered module and doing badly costs nothing. Somebody practising
 is doing the exact thing the feature exists to encourage, and taking a star back
 would teach them to stop once they were ahead. The record is a best, not a last.
 
-### Advancing needs one star, not three
+### The stars are a ladder (reversed 2026-08-05)
 
-Mastery is what stars two and three are for. Gating progress on perfection turns
-a learning tool into a wall for precisely the people it was built for.
+The original rule was "advancing needs one star, not three" — walkable by
+anybody, mastery optional. **That was deliberately reversed** after module 1
+was played: the stars are now a ladder, each rung opening the next.
 
-### The three stars are three different claims
+1. **You finished it** — every lesson typed to the end, at any accuracy.
+   Written the moment the last lesson completes, not from the boss screen
+   (which fixed a stranding bug where backing out before the boss recorded
+   nothing).
+2. **You were clean about it** — 95% across the module. **The second star
+   opens the boss.** Bashing through at 60% used to be rewarded with the fun
+   part anyway, which trained exactly the habit the path exists to break;
+   now accuracy is the price of the fight.
+3. **You beat the boss** — and **the third star opens the next module**.
+   Typing is cumulative, and one star per module let somebody skim into a
+   wall they could not diagnose five modules later.
 
-Not three thresholds on one number:
+Losing to the boss still costs nothing — stars only climb, rematch is right
+there.
 
-1. **You finished it** — every lesson typed to the end, at any accuracy at all.
-   This is what opens the next module.
-2. **You were clean about it** — 95% across the module, not any single lesson.
-   Sailing through two and struggling on the third is not being clean about it.
-3. **You beat the boss** — the proof. Worth more than another decimal place of
-   accuracy, and the reason this is a game rather than a tutor.
+**What keeps the ladder from being the perfection-wall the original rule
+feared is boss calibration, not leniency.** Each module carries its own
+`bossWpm`, set for somebody who *just learned that module* — module 1 fights
+at 17 wpm, not Rookie's 34, which would be twice the speed of the beginners
+it now gates. The pace climbs with the curriculum, and a test pins every
+boss below Rookie: these gate learners, not competitors.
 
-Losing to the boss costs nothing.
+The rules are stated once, plainly, on the hand tutorial's closing card —
+where somebody meets the path's scoring before any of it applies to them.
 
 ### Lessons are untimed
 

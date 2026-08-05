@@ -30,9 +30,11 @@ import Lesson from './Lesson';
 import ModuleSheet from './ModuleSheet';
 import ModuleComplete from './ModuleComplete';
 import Tutorial from './Tutorial';
-import { bankFor, contentFor, moduleStars } from '@/game/curriculum';
+import {
+  bankFor, contentFor, MODULE_STAR_ACCURACY, moduleStars,
+} from '@/game/curriculum';
 import { recordLesson, runFor } from '@/game/moduleRun';
-import { MODULES, nextModuleId, type ModuleId } from '@/game/learnPath';
+import { MODULES, nextModuleId, starsFor, type ModuleId } from '@/game/learnPath';
 import {
   clearLocal, localSnapshot, recordLocal, serverLocalSnapshot, subscribeLocal, unsavedModules,
 } from '@/game/localPath';
@@ -322,24 +324,55 @@ export default function Game() {
    * somebody staring at a spinner after the most rewarding moment the feature
    * has.
    */
-  const finishModule = useCallback((id: ModuleId, bossBeaten: boolean, wpm?: number) => {
+  /**
+   * The module's lessons as they stand, read back from the remembered run
+   * rather than from this sitting. Somebody who did two lessons yesterday and
+   * the third today has finished the module, and scoring only what happened
+   * since they opened the app would say they had not.
+   */
+  const lessonState = useCallback((id: ModuleId) => {
     const lessons = contentFor(id)?.lessons.length ?? 0;
-    /**
-     * Read back from the remembered run rather than from this sitting.
-     *
-     * Somebody who did two lessons yesterday and the third today has finished
-     * the module, and scoring only what happened since they opened the app
-     * would say they had not. The store keeps the better of each attempt, so
-     * this is also the kindest reading of a module ground out over a week.
-     */
     const run = runFor(id, lessons);
     const passed = run.filter((result) => result && result.stars > 0);
-    const mean = passed.length
+    const accuracy = passed.length
       ? passed.reduce((sum, result) => sum + result!.accuracy, 0) / passed.length
       : 0;
-    const stars = moduleStars({
-      finishedAll: lessons > 0 && passed.length >= lessons, accuracy: mean, bossBeaten,
-    });
+    return { finishedAll: lessons > 0 && passed.length >= lessons, accuracy };
+  }, []);
+
+  /**
+   * Whether this module's boss may be fought: the second star's bar, 95%
+   * across the lessons. Local computation first (fresh, works for guests),
+   * the server's stars as backup (covers lessons done on another device,
+   * where the local run store is empty).
+   */
+  const bossOpen = useCallback((id: ModuleId) => {
+    const { finishedAll, accuracy } = lessonState(id);
+    return (finishedAll && accuracy >= MODULE_STAR_ACCURACY)
+      || starsFor(learn?.path, id) >= 2;
+  }, [lessonState, learn?.path]);
+
+  /**
+   * Write the module's star the moment the lessons earn it.
+   *
+   * This is the fix for a real stranding bug: stars used to be written only
+   * from the boss screen, so finishing every lesson and backing out from the
+   * end card recorded nothing — and under the ladder rule, where the boss is
+   * gated on the second star, that write path would never have been reached
+   * at all. The star lands when it is earned; the boss upgrades it later.
+   * Stars only climb, so the second write is free.
+   */
+  const recordLessonStars = useCallback((id: ModuleId) => {
+    const { finishedAll, accuracy } = lessonState(id);
+    const stars = moduleStars({ finishedAll, accuracy, bossBeaten: false });
+    if (stars <= 0) return;
+    if (profile) void saveModule(id, stars);
+    else recordLocal(id, stars);
+  }, [lessonState, profile, saveModule]);
+
+  const finishModule = useCallback((id: ModuleId, bossBeaten: boolean, wpm?: number) => {
+    const { finishedAll, accuracy } = lessonState(id);
+    const stars = moduleStars({ finishedAll, accuracy, bossBeaten });
     if (stars > 0) {
       /* An account keeps it; without one, this device does, until there is. */
       if (profile) {
@@ -363,7 +396,7 @@ export default function Game() {
        fanfare plays on the celebration screen itself, not here. */
     if (bossBeaten) setCelebrate({ module: id, stars, wpm: wpm ?? null, granted: [] });
     setWalk(null);
-  }, [saveModule, profile]);
+  }, [saveModule, profile, lessonState]);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -1161,10 +1194,23 @@ export default function Game() {
           script={lesson.script}
           /* Remembered as it happens, not at the end of the module. Somebody
              who does one lesson and closes the tab has done one lesson. */
-          onDone={(result) => recordLesson(walk.module, walk.at, result)}
+          onDone={(result) => {
+            recordLesson(walk.module, walk.at, result);
+            /* The finishing star is written HERE, when the lessons earn it —
+               not from the boss screen, which the ladder rule may keep gated
+               for a while yet. */
+            recordLessonStars(walk.module);
+          }}
           onAgain={() => setWalk({ ...walk, run: walk.run + 1 })}
           onExit={() => { setWalk(null); setOpened(walk.module); }}
-          onNext={() => setWalk({ ...walk, at: walk.at + 1 })}
+          onNext={() => {
+            if (!last) { setWalk({ ...walk, at: walk.at + 1 }); return; }
+            /* Decided at click time, after the result is recorded: into the
+               boss if 95% is held, back to the sheet — which says exactly
+               what is missing — if it is not. */
+            if (bossOpen(walk.module)) setWalk({ ...walk, at: walk.at + 1 });
+            else { setWalk(null); setOpened(walk.module); }
+          }}
           nextLabel={last
             ? `THE ${MODULES.find((m) => m.id === walk.module)?.title.toUpperCase()} BOSS`
             : 'NEXT LESSON'}
@@ -1181,6 +1227,18 @@ export default function Game() {
      * of the victory lap must not cost the work that earned it.
      */
     if (walk && content) {
+      /* Belt and braces under the sheet's own gate: nobody reaches the boss
+         without the second star, whatever path the state took. */
+      if (!bossOpen(walk.module)) {
+        return (
+          <ModuleSheet
+            module={walk.module}
+            progress={learn.path}
+            onStart={(at) => setWalk({ module: walk.module, at, run: 0 })}
+            onBack={() => setWalk(null)}
+          />
+        );
+      }
       const bank = bankFor(walk.module);
       if (bank) {
         return (
