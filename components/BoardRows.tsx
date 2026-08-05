@@ -281,8 +281,25 @@ export default function BoardRows({ entries, board, asStranger, compact }: {
               * ambiguity rather than a tooltip having to.
               */}
             <span className={styles.rankSub}>{sub}</span>
+            {/*
+              * The figure, and what it is a figure of.
+              *
+              * A row on the Fastest board read "100% 202": two bare numbers,
+              * the ranking one indistinguishable from the other unless you
+              * already knew which board you were on. The unit settles it in
+              * three characters.
+              *
+              * Inside the same element as the number so the two never wrap
+              * apart, and `aria-label` still carries the long form — a screen
+              * reader gets "words per minute", not "wpm".
+              */}
             <span className={`${styles.rankScore} pixel-font`} aria-label={meta.scoreLabel}>
               {score}
+              {/* Hidden in the rail. That column has been narrowed three times
+                  to keep names readable, and the unit is the one thing here
+                  that is affordable on the full board and not beside the menu
+                  — where the tab overhead already says which board this is. */}
+              {!compact && <small className={styles.rankUnit}>{meta.scoreUnit}</small>}
             </span>
           </li>
         );

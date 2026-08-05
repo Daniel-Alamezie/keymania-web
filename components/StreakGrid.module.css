@@ -104,6 +104,32 @@
   color: var(--faint);
   text-align: right;
   align-items: center;
+
+  /*
+   * Pinned to the left edge of the scrollport, not carried along by it.
+   *
+   * The gutter is an ordinary grid item inside `.scroller`, so it used to slide
+   * away with the squares the moment anybody scrolled — and the grid opens
+   * scrolled fully right, on today, which meant the labels were gone before the
+   * calendar was ever looked at. A day-of-week axis that is only visible at one
+   * scroll position is not an axis.
+   *
+   * `left: 0` pins it against the scrollport rather than the content, which is
+   * what makes this work inside a horizontally scrolling parent.
+   */
+  position: sticky;
+  left: 0;
+  /* Above the squares, which now pass underneath it. */
+  z-index: 2;
+  /*
+   * Opaque, and this is not decoration. A transparent sticky gutter lets the
+   * squares scroll visibly *through* the letters, which reads as a rendering
+   * fault rather than as a fixed column. The colour is the panel this sits on.
+   */
+  background: var(--panel);
+  /* A little air on the right so a square never touches a letter as it slides
+     beneath — the two would read as one smudged glyph at 8px. */
+  padding-right: 3px;
 }
 
 .day { line-height: 1; }

@@ -11,6 +11,8 @@ import { useAccount } from '@/game/useAccount';
 import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
 import { formatPlayTime } from '@/models/profile';
 import { markCosmeticsSeen, useUnseenCosmetics } from '@/game/seenCosmetics';
+import { markChallengesSeen } from '@/game/seenChallenges';
+import { takeProfileTab } from '@/game/profileIntent';
 import { ratingFlame, START_RATING } from '@/models/rating';
 import { Flame } from './RankFlame';
 import CharacterPicker from './CharacterPicker';
@@ -36,6 +38,27 @@ export default function ProfileDashboard() {
    * mean a router push on every click for no gain.
    */
   const [tab, setTab] = useState<'profile' | 'challenges' | 'characters' | 'look'>('profile');
+
+  /**
+   * A parked tab, from the challenge toast — the one thing that delivers
+   * somebody *to* a tab rather than to the page.
+   *
+   * In an effect, not the initialiser, though the initialiser reads better:
+   * this page is prerendered showing the profile tab, and sessionStorage does
+   * not exist on the server, so an initialiser that read it would hydrate a
+   * different tab than the HTML shows. The effect runs after hydration and
+   * switches — one frame on the default tab, which nobody can see, against a
+   * hydration mismatch, which is the trade this codebase always makes.
+   */
+  useEffect(() => {
+    const parked = takeProfileTab();
+    // A one-shot navigation intent: one extra render, on arrival, only when a
+    // toast parked a tab. The rule guards against cascading renders; the
+    // alternative here is reading sessionStorage in the initialiser, which
+    // hydrates a different tab than the server drew.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (parked) setTab(parked);
+  }, []);
 
   // Its own route, so it never mounts Game and would otherwise be the one
   // silent screen in the app.
@@ -77,6 +100,19 @@ export default function ProfileDashboard() {
     // with every store snapshot and would re-run this on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, seenKey]);
+
+  /**
+   * The same rule for challenges: opening the tab is what counts as being
+   * told. This is the organic path — a player who finds the list themselves
+   * must not be greeted by a toast announcing what they have already read.
+   */
+  const challengeIds = profile?.challenges?.map((c) => c.id) ?? [];
+  const challengeKey = challengeIds.join(',');
+  useEffect(() => {
+    if (tab === 'challenges' && challengeIds.length) markChallengesSeen(challengeIds);
+    // Keyed on the joined ids, same as the cosmetics effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, challengeKey]);
 
   /**
    * `!profile`, not just `loading`.
@@ -382,11 +418,15 @@ export default function ProfileDashboard() {
             <section className={styles.section}>
               <h2 className={`${styles.heading} pixel-font`}>Challenges</h2>
               <p className={styles.muted}>
-                Each one earns a character. Progress is worked out from your record,
-                so anything you have already done counts — including duels you played
-                before the challenge existed.
+                Each one earns something to keep: a character, a badge, a name
+                colour. Progress is worked out from your record, so anything you
+                have already done counts, including duels you played before the
+                challenge existed.
               </p>
-              <ChallengeList challenges={profile.challenges ?? []} />
+              <ChallengeList
+                challenges={profile.challenges ?? []}
+                catalogue={profile.cosmetics?.catalogue}
+              />
             </section>
           )}
 

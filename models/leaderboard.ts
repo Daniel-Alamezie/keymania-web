@@ -143,6 +143,20 @@ export const BOARD_META: Record<BoardKind, {
   heading: string;
   /** What the big number in a row is, spelled out for assistive tech. */
   scoreLabel: string;
+  /**
+   * The same thing in one or two characters, printed beside the number.
+   *
+   * Separate from `scoreLabel` because they answer to different readers. That
+   * one is read aloud and can afford "words per minute"; this is set beside a
+   * gold figure in a row that has already fought for its width three times, and
+   * anything longer than a word would come straight off the name.
+   *
+   * Every board carries one. A row on the Fastest board read "100% 202" — two
+   * bare numbers, and no way to tell which was the ranking without knowing
+   * already. Units on one board and not the others would read as an oversight
+   * rather than a decision, so they all have one.
+   */
+  scoreUnit: string;
   footnote: string;
   /**
    * What an empty board says, and how to stop it being empty.
@@ -159,6 +173,7 @@ export const BOARD_META: Record<BoardKind, {
     tab: 'Standings',
     heading: 'Standings',
     scoreLabel: 'rating',
+    scoreUnit: 'rating',
     footnote: 'Rating moves every time you duel a person. Bots never count.',
     empty: 'Nobody has been ranked yet. Beat another player and the board is yours.',
   },
@@ -166,6 +181,7 @@ export const BOARD_META: Record<BoardKind, {
     tab: 'Fastest',
     heading: 'Fastest duels',
     scoreLabel: 'words per minute',
+    scoreUnit: 'wpm',
     footnote: 'Best sustained speed across one duel, timed by the server.',
     empty: 'No duels timed yet. Finish one and the top spot is yours.',
   },
@@ -173,6 +189,7 @@ export const BOARD_META: Record<BoardKind, {
     tab: 'Survival',
     heading: 'Longest runs',
     scoreLabel: 'words survived',
+    scoreUnit: 'words',
     /**
      * The speed is named here on purpose.
      *
@@ -189,6 +206,7 @@ export const BOARD_META: Record<BoardKind, {
     tab: 'Weekly',
     heading: 'This week',
     scoreLabel: 'words in thirty seconds',
+    scoreUnit: 'words',
     /**
      * The one board where every row typed the same words, which is the whole
      * sales pitch, so the footnote is the place to make it.

@@ -81,6 +81,38 @@ describe('BOARD_META', () => {
     }
   });
 
+  /**
+   * The unit printed beside the number, and why it is checked separately from
+   * `scoreLabel`.
+   *
+   * The Fastest board showed a bare `147`, which is only obviously a speed to
+   * somebody who already knows which tab they are on — and the boards look
+   * alike, so a rating and a word count read as the same kind of number. The
+   * `wpm` beside it is the fix, and this pins it rather than the general rule,
+   * because it is the specific thing that was reported.
+   */
+  it('names the unit beside every score, and says wpm on the speed board', () => {
+    for (const kind of BOARDS) {
+      expect(BOARD_META[kind].scoreUnit.length).toBeGreaterThan(0);
+    }
+    expect(BOARD_META.speed.scoreUnit).toBe('wpm');
+  });
+
+  /**
+   * Short, because it is set in a row that has already been narrowed three
+   * times to keep the names readable. `scoreLabel` is the one allowed to be
+   * long — it is read aloud, not drawn — so a unit that has crept up to the
+   * label's length is a sign the two have been confused for each other.
+   */
+  it('keeps the unit short enough to sit beside the number', () => {
+    for (const kind of BOARDS) {
+      const meta = BOARD_META[kind];
+      expect(meta.scoreUnit.length).toBeLessThanOrEqual(6);
+      expect(meta.scoreUnit).not.toContain(' ');
+      expect(meta.scoreUnit.length).toBeLessThanOrEqual(meta.scoreLabel.length);
+    }
+  });
+
   it('gives every board a distinct tab, so the strip is readable', () => {
     const tabs = BOARDS.map((kind) => BOARD_META[kind].tab);
     expect(new Set(tabs).size).toBe(BOARDS.length);
