@@ -330,3 +330,85 @@
  */
 .node[data-soon] { opacity: 0.6; cursor: not-allowed; }
 .node[data-soon] .flag { color: var(--muted); }
+
+/* ------------------------------------------------------------- the ambient */
+
+/*
+ * A slow loop behind everything, so the screen feels alive rather than
+ * printed. Home-row letters rising and fading on a long stagger, which never
+ * visibly repeats and costs one keyframe rather than a downloaded asset.
+ *
+ * Pinned rather than absolute: the ladder scrolls and the ambience should not
+ * scroll with it, or it stops being background and becomes content.
+ */
+.ambient {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.drift {
+  position: absolute;
+  bottom: -12vh;
+  /* Spread across the width by index, with a prime-ish step so the columns do
+     not line up into a visible grid. */
+  left: calc(((var(--i) * 37) % 100) * 1%);
+  font-size: clamp(28px, 7vw, 64px);
+  color: var(--gold);
+  opacity: 0;
+  animation: rise 26s linear infinite;
+  animation-delay: calc(var(--i) * (26s / var(--n)) * -1);
+}
+
+@keyframes rise {
+  0% { transform: translateY(0) scale(0.9); opacity: 0; }
+  15% { opacity: 0.06; }
+  70% { opacity: 0.04; }
+  100% { transform: translateY(-115vh) scale(1.15); opacity: 0; }
+}
+
+/* Everything real sits above the ambience. */
+.head, .views, .path, .keyboard, .legend, .focus, .done, .guide, .jump {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Motion is decoration here and nothing depends on it, so it goes entirely
+ * rather than being slowed. The letters stay, faintly, so the screen does not
+ * lose its texture for the people who turned motion off.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .drift {
+    animation: none;
+    opacity: 0.04;
+    bottom: auto;
+    top: calc(((var(--i) * 29) % 90) * 1%);
+  }
+}
+
+/*
+ * The way back to your own position.
+ *
+ * Floating, because it is only wanted while adrift, and pinned to the bottom
+ * where a thumb already is. It appears only when the current node has actually
+ * scrolled out of view -- a permanent button would be clutter answering a
+ * question nobody had.
+ */
+.jump {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--gap-md) + env(safe-area-inset-bottom, 0px));
+  padding: 10px 16px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  background: var(--gold);
+  color: var(--bg-deep);
+  border: 2px solid var(--gold);
+  box-shadow: var(--shadow-lift);
+  cursor: pointer;
+  z-index: 2;
+}

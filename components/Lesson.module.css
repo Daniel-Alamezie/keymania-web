@@ -67,3 +67,35 @@
   letter-spacing: 0.14em;
   color: var(--gold);
 }
+
+/*
+ * The finger hint: which key is wanted, and whose job it is.
+ *
+ * Sits under the gauge rather than over the stream, so it is glanceable
+ * without competing with the words being typed. Loud enough to be read at a
+ * glance and quiet enough not to become the thing somebody stares at — the
+ * goal is to stop needing it.
+ */
+.finger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.nextKey {
+  min-width: 30px;
+  padding: 4px 7px;
+  text-align: center;
+  border: 2px solid var(--gold);
+  background: var(--bg-deep);
+  color: var(--gold);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.hand {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}

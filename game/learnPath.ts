@@ -80,11 +80,11 @@ export const MODULES: readonly LearnModule[] = [
   { id: 'top-edges', title: 'The far corners', teaches: 'w o q p', keys: 'woqp' },
   { id: 'bottom-common', title: 'Down a row', teaches: 'c n v m', keys: 'cnvm' },
   { id: 'bottom-row', title: 'The bottom row', teaches: 'b x z , .', keys: 'bxz,.' },
-  { id: 'capitals', title: 'Capitals', teaches: 'both shift keys', keys: '' },
-  { id: 'numbers', title: 'Numbers', teaches: '0 to 9', keys: '0123456789' },
-  { id: 'punctuation', title: 'Punctuation', teaches: "' \" ? ! : -", keys: "'\"?!:-" },
-  { id: 'awkward', title: 'Awkward runs', teaches: 'same-hand stretches', keys: '' },
-  { id: 'rhythm', title: 'Rhythm and endurance', teaches: 'keeping it steady', keys: '' },
+  { id: 'capitals', title: 'Capitals and shift', teaches: 'reaching without breaking rhythm', keys: '' },
+  { id: 'numbers', title: 'Numbers', teaches: 'the row nobody practises', keys: '0123456789' },
+  { id: 'punctuation', title: 'Punctuation', teaches: 'apostrophes, semicolons, quotes', keys: "'\"?!:-" },
+  { id: 'awkward', title: 'Awkward runs', teaches: 'minimum, committee, same-hand strings', keys: '' },
+  { id: 'rhythm', title: 'Rhythm and endurance', teaches: 'evenness over bursts', keys: '' },
 ] as const;
 
 const INDEX = new Map<string, number>(MODULE_IDS.map((id, at) => [id, at]));

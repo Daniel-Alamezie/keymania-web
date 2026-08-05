@@ -8,6 +8,7 @@ import {
   type LessonState,
 } from '@/game/lessonReducer';
 import { useConfirmKey } from '@/game/useConfirmKey';
+import { fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
 import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
@@ -170,6 +171,10 @@ export default function Lesson({
 
   const percent = Math.round(accuracy * 100);
 
+  /** The key wanted next, and the finger that owns it. */
+  const next = state.sentence[state.cursor];
+  const hint = next ? fingerLabel(next) : undefined;
+
   return (
     <main
       ref={screenRef}
@@ -220,6 +225,29 @@ export default function Lesson({
             />
           </div>
           <span className={lesson.accuracy}>{percent}% accurate</span>
+
+          {/*
+            * Which finger, for the key being asked for right now.
+            *
+            * The reason the whole mode exists. Somebody can hunt-and-peck
+            * their way through every module here, three-star the lot, and
+            * have learned nothing except to hunt faster -- the letters are
+            * the excuse and the finger discipline is the lesson. A browser
+            * cannot see hands, so this cannot be enforced; it can only be
+            * kept in front of somebody continuously, which is what this is.
+            *
+            * It updates per keystroke rather than per word on purpose. A
+            * hint that only appears when you are stuck is a hint you consult
+            * after already having reached with the wrong finger.
+            */}
+          {!over && next && (
+            <span className={lesson.finger}>
+              <kbd className={`${lesson.nextKey} pixel-font`}>
+                {next === ' ' ? 'space' : next}
+              </kbd>
+              {hint && <span className={lesson.hand}>{hint}</span>}
+            </span>
+          )}
         </div>
       </ArenaScene>
 
