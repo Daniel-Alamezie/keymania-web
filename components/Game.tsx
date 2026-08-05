@@ -191,8 +191,28 @@ export default function Game() {
     const owed = unsavedModules(profile.learn.path);
     merged.current = true;
     if (owed.length === 0) { clearLocal(); return; }
-    Promise.all(owed.map(({ id, stars }) => saveModule(id, stars)))
-      .then(() => clearLocal());
+
+    /**
+     * One at a time, and this is not a style choice.
+     *
+     * Each write is a read-modify-write of one progress string on the server:
+     * it reads the current path, sets one character, writes the whole thing
+     * back. Fire six of those concurrently and they all read the same starting
+     * value, each writes its own character, and the last one wins — silently
+     * losing five modules at the exact moment somebody was promised their
+     * progress would be kept.
+     *
+     * The local copy is only dropped once every module has landed. A failure
+     * part way leaves it intact, so the next page load tries again rather than
+     * this being the one attempt somebody's week rested on.
+     */
+    void (async () => {
+      for (const { id, stars } of owed) {
+        const saved = await saveModule(id, stars);
+        if (!saved.ok) return;
+      }
+      clearLocal();
+    })();
   }, [profile?.learn, saveModule]);
 
   /**
