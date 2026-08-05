@@ -5,6 +5,7 @@ import {
   completedCount, MAX_STARS, MODULES, nextModuleId, nodeState, starsFor,
   type LearnModule, type ModuleId, type NodeState,
 } from '@/game/learnPath';
+import { hasContent } from '@/game/curriculum';
 import styles from './Ladder.module.css';
 
 export interface LadderProps {
@@ -68,6 +69,17 @@ const FLAG: Record<NodeState, string> = {
   locked: 'LOCKED',
 };
 
+/**
+ * A module that is open but has not been written yet.
+ *
+ * Distinct from locked, because the two mean opposite things to the player:
+ * locked is "earn your way here", unwritten is "this is not ready and no
+ * amount of typing will change that". Showing an unwritten module as locked
+ * would send somebody grinding for a door that does not exist, and showing it
+ * as startable would open onto nothing. It says SOON and refuses the tap.
+ */
+const SOON = 'SOON';
+
 export default function Ladder({ progress, onStart, onExit, onGuide }: LadderProps) {
   const [view, setView] = useState<View>('path');
 
@@ -87,8 +99,10 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
     return MODULES.find((module) => module.id === id);
   }, [picked, frontier]);
 
+  const startable = (id: ModuleId) => nodeState(progress, id) !== 'locked' && hasContent(id);
+
   const start = (id: ModuleId) => {
-    if (nodeState(progress, id) === 'locked') return;
+    if (!startable(id)) return;
     onStart(id);
   };
 
@@ -120,14 +134,17 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
           {MODULES.map((module, at) => {
             const state = nodeState(progress, module.id);
             const stars = starsFor(progress, module.id);
+            const written = hasContent(module.id);
+            const flag = state !== 'locked' && !written ? SOON : FLAG[state];
             return (
               <button
                 key={module.id}
                 className={styles.node}
                 data-state={state}
-                disabled={state === 'locked'}
+                data-soon={(state !== 'locked' && !written) || undefined}
+                disabled={!startable(module.id)}
                 onClick={() => start(module.id)}
-                aria-label={`${module.title}. ${FLAG[state]}.${
+                aria-label={`${module.title}. ${flag}.${
                   state === 'done' ? ` ${stars} of ${MAX_STARS} stars.` : ''
                 }`}
               >
@@ -140,7 +157,7 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
                 </span>
                 <span className={styles.tail}>
                   {state === 'done' && <Stars earned={stars} />}
-                  <span className={`${styles.flag} pixel-font`}>{FLAG[state]}</span>
+                  <span className={`${styles.flag} pixel-font`}>{flag}</span>
                 </span>
               </button>
             );
@@ -192,10 +209,12 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
               <p className={styles.focusTeaches}>{focus.teaches}</p>
               <button
                 className="btn btn-primary"
-                disabled={nodeState(progress, focus.id) === 'locked'}
+                disabled={!startable(focus.id)}
                 onClick={() => start(focus.id)}
               >
-                {nodeState(progress, focus.id) === 'done' ? 'Practise again' : 'Start'}
+                {!hasContent(focus.id) && nodeState(progress, focus.id) !== 'locked'
+                  ? 'Not written yet'
+                  : nodeState(progress, focus.id) === 'done' ? 'Practise again' : 'Start'}
               </button>
             </div>
           )}

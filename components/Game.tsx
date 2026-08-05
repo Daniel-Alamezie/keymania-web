@@ -26,6 +26,9 @@ import Searching from './Searching';
 import Survival from './Survival';
 import Weekly from './Weekly';
 import Ladder from './Ladder';
+import Lesson from './Lesson';
+import { bankFor, contentFor, moduleStars } from '@/game/curriculum';
+import { MODULES, type ModuleId } from '@/game/learnPath';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
@@ -123,7 +126,7 @@ export default function Game() {
    * protecting with a round trip.
    */
   const local = useProfile();
-  const { profile } = useServerProfile();
+  const { profile, saveModule } = useServerProfile();
   const myBest = profile
     ? bestSpeed(profile.ranked.bestWpm, profile.practice.bestWpm)
     : bestSpeed(0, local.bestWpm);
@@ -136,6 +139,40 @@ export default function Game() {
    * how-to-play link all agree about whether the feature exists.
    */
   const learn = profile?.learn;
+
+  /**
+   * A module being walked: which one, and how far in.
+   *
+   * `at` indexes the module's lessons, and equals their count once the boss is
+   * up -- one counter for a sequence that ends in something of a different
+   * kind, rather than a second flag that could disagree with it.
+   *
+   * The accuracy of each finished lesson is kept because the module's second
+   * star is about the module rather than any one lesson. A player who sails
+   * through two and struggles on the third has not been clean about it, and
+   * scoring only the last would say they had.
+   */
+  const [walk, setWalk] = useState<
+  { module: ModuleId; at: number; accuracies: number[] } | null
+  >(null);
+
+  /**
+   * Record a finished module, then go back to the ladder.
+   *
+   * The write is fire-and-forget on purpose: the star is the server's to keep
+   * and it keeps the best of what it is told, so a failed save costs a replay
+   * rather than progress. Blocking the return on a round trip would leave
+   * somebody staring at a spinner after the most rewarding moment the feature
+   * has.
+   */
+  const finishModule = useCallback((id: ModuleId, accuracies: number[], bossBeaten: boolean) => {
+    const mean = accuracies.length
+      ? accuracies.reduce((sum, a) => sum + a, 0) / accuracies.length
+      : 0;
+    const stars = moduleStars({ finishedAll: accuracies.length > 0, accuracy: mean, bossBeaten });
+    if (stars > 0) void saveModule(id, stars);
+    setWalk(null);
+  }, [saveModule]);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -918,17 +955,65 @@ export default function Game() {
    * stranded on a path nothing will record.
    */
   if (screen === 'learn' && learn) {
+    const content = walk && contentFor(walk.module);
+
+    /* A lesson, until they run out. */
+    if (walk && content && walk.at < content.lessons.length) {
+      const lesson = content.lessons[walk.at];
+      return (
+        <Lesson
+          /* Keyed so each lesson mounts fresh rather than inheriting the
+             cursor and the miss count of the one before it. */
+          key={`${walk.module}-${walk.at}`}
+          title={lesson.title}
+          script={lesson.script}
+          onDone={({ accuracy }) => setWalk({
+            ...walk, at: walk.at + 1, accuracies: [...walk.accuracies, accuracy],
+          })}
+          onAgain={() => setWalk({ ...walk })}
+          onExit={() => setWalk(null)}
+          onNext={() => setWalk({ ...walk, at: walk.at + 1 })}
+          nextLabel={
+            walk.at + 1 < content.lessons.length
+              ? 'NEXT LESSON'
+              : `THE ${MODULES.find((m) => m.id === walk.module)?.title.toUpperCase()} BOSS`
+          }
+        />
+      );
+    }
+
+    /*
+     * The boss, on the module's own alphabet.
+     *
+     * An ordinary bot duel in every other respect, which is what keeps it as
+     * uncompetitive as bot practice already is. Leaving without finishing
+     * scores the lessons and no third star, rather than nothing -- walking out
+     * of the victory lap must not cost the work that earned it.
+     */
+    if (walk && content) {
+      const bank = bankFor(walk.module);
+      if (bank) {
+        return (
+          <Duel
+            key={`boss-${walk.module}`}
+            difficulty="rookie"
+            boss={bank}
+            onBossResult={(won) => finishModule(walk.module, walk.accuracies, won)}
+            onExit={() => finishModule(walk.module, walk.accuracies, false)}
+          />
+        );
+      }
+    }
+
     return (
       <Ladder
         progress={learn.path}
-        /**
-         * TODO(task 87): starting a module needs the module to exist. The
-         * lessons, the boss bank and the write-back are task 87, and until
-         * then this deliberately does nothing rather than pretending. The
-         * whole screen is unreachable without LEARN_LIVE, which is off
-         * everywhere, so nobody meets the gap.
-         */
-        onStart={() => {}}
+        onStart={(id) => {
+          /* Only what has been written. The ladder disables the rest. */
+          if (!contentFor(id)) return;
+          track({ name: 'guide_opened' });
+          setWalk({ module: id, at: 0, accuracies: [] });
+        }}
         onExit={() => setScreen('menu')}
         onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
       />

@@ -131,6 +131,14 @@ interface DuelProps {
    * `multiplayer` absent.
    */
   boss?: BossBank;
+  /**
+   * How a boss fight ended, for the module that sent the player into it.
+   *
+   * Only meaningful with `boss` set. The duel already folds itself into the
+   * practice record the same way any bot duel does -- this is not that, it is
+   * the one bit the learning path needs and cannot get anywhere else.
+   */
+  onBossResult?: (won: boolean) => void;
   onExit: () => void;
 }
 
@@ -186,7 +194,9 @@ const FINISH_HOLD_MS = 1900;
  */
 const PULSE_EVERY_MS = 2000;
 
-export default function Duel({ difficulty, multiplayer, linkDown, boss, onExit }: DuelProps) {
+export default function Duel({
+  difficulty, multiplayer, linkDown, boss, onBossResult, onExit,
+}: DuelProps) {
   /**
    * Who you fight as, straight from the profile store.
    *
@@ -674,6 +684,9 @@ export default function Duel({ difficulty, multiplayer, linkDown, boss, onExit }
     // The low swell under the collapse. The fanfare waits for the banner —
     // playing both at once turns the whole beat into noise.
     audio.finishSwell(state.winner === state.mySlot);
+
+    /* The module's answer, before the record-keeping: a boss decides a star. */
+    if (boss) onBossResult?.(state.winner === state.mySlot);
 
     const stats = stateRef.current.stats;
     if (stats.endedAt) {

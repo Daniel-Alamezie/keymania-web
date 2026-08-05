@@ -323,3 +323,10 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/*
+ * Open, but not written yet. Dimmer than a live node and brighter than a
+ * locked one, because it is neither: no amount of typing will open it.
+ */
+.node[data-soon] { opacity: 0.6; cursor: not-allowed; }
+.node[data-soon] .flag { color: var(--muted); }
