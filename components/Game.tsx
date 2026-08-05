@@ -27,7 +27,9 @@ import Survival from './Survival';
 import Weekly from './Weekly';
 import Ladder from './Ladder';
 import Lesson from './Lesson';
+import ModuleSheet from './ModuleSheet';
 import { bankFor, contentFor, moduleStars } from '@/game/curriculum';
+import { recordLesson, runFor } from '@/game/moduleRun';
 import { MODULES, type ModuleId } from '@/game/learnPath';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
@@ -147,14 +149,22 @@ export default function Game() {
    * up -- one counter for a sequence that ends in something of a different
    * kind, rather than a second flag that could disagree with it.
    *
-   * The accuracy of each finished lesson is kept because the module's second
-   * star is about the module rather than any one lesson. A player who sails
-   * through two and struggles on the third has not been clean about it, and
-   * scoring only the last would say they had.
+   * Lesson results are not held here. They go straight to `moduleRun` as each
+   * finishes, so closing the tab mid-module keeps what was done -- and the
+   * module's score is read back from there rather than from this sitting,
+   * which is what lets a module be finished across several days.
    */
-  const [walk, setWalk] = useState<
-  { module: ModuleId; at: number; accuracies: number[] } | null
-  >(null);
+  const [walk, setWalk] = useState<{ module: ModuleId; at: number } | null>(null);
+
+  /**
+   * The module panel, before any lesson is running.
+   *
+   * A separate piece of state from `walk` rather than a sentinel inside it,
+   * because "looking at a module" and "part way through one" are genuinely
+   * different situations: backing out of the first should return to the
+   * ladder, and out of the second should return to the panel.
+   */
+  const [opened, setOpened] = useState<ModuleId | null>(null);
 
   /**
    * Record a finished module, then go back to the ladder.
@@ -165,11 +175,24 @@ export default function Game() {
    * somebody staring at a spinner after the most rewarding moment the feature
    * has.
    */
-  const finishModule = useCallback((id: ModuleId, accuracies: number[], bossBeaten: boolean) => {
-    const mean = accuracies.length
-      ? accuracies.reduce((sum, a) => sum + a, 0) / accuracies.length
+  const finishModule = useCallback((id: ModuleId, bossBeaten: boolean) => {
+    const lessons = contentFor(id)?.lessons.length ?? 0;
+    /**
+     * Read back from the remembered run rather than from this sitting.
+     *
+     * Somebody who did two lessons yesterday and the third today has finished
+     * the module, and scoring only what happened since they opened the app
+     * would say they had not. The store keeps the better of each attempt, so
+     * this is also the kindest reading of a module ground out over a week.
+     */
+    const run = runFor(id, lessons);
+    const passed = run.filter((result) => result && result.stars > 0);
+    const mean = passed.length
+      ? passed.reduce((sum, result) => sum + result!.accuracy, 0) / passed.length
       : 0;
-    const stars = moduleStars({ finishedAll: accuracies.length > 0, accuracy: mean, bossBeaten });
+    const stars = moduleStars({
+      finishedAll: lessons > 0 && passed.length >= lessons, accuracy: mean, bossBeaten,
+    });
     if (stars > 0) void saveModule(id, stars);
     setWalk(null);
   }, [saveModule]);
@@ -960,6 +983,7 @@ export default function Game() {
     /* A lesson, until they run out. */
     if (walk && content && walk.at < content.lessons.length) {
       const lesson = content.lessons[walk.at];
+      const last = walk.at + 1 >= content.lessons.length;
       return (
         <Lesson
           /* Keyed so each lesson mounts fresh rather than inheriting the
@@ -967,17 +991,15 @@ export default function Game() {
           key={`${walk.module}-${walk.at}`}
           title={lesson.title}
           script={lesson.script}
-          onDone={({ accuracy }) => setWalk({
-            ...walk, at: walk.at + 1, accuracies: [...walk.accuracies, accuracy],
-          })}
+          /* Remembered as it happens, not at the end of the module. Somebody
+             who does one lesson and closes the tab has done one lesson. */
+          onDone={(result) => recordLesson(walk.module, walk.at, result)}
           onAgain={() => setWalk({ ...walk })}
-          onExit={() => setWalk(null)}
+          onExit={() => { setWalk(null); setOpened(walk.module); }}
           onNext={() => setWalk({ ...walk, at: walk.at + 1 })}
-          nextLabel={
-            walk.at + 1 < content.lessons.length
-              ? 'NEXT LESSON'
-              : `THE ${MODULES.find((m) => m.id === walk.module)?.title.toUpperCase()} BOSS`
-          }
+          nextLabel={last
+            ? `THE ${MODULES.find((m) => m.id === walk.module)?.title.toUpperCase()} BOSS`
+            : 'NEXT LESSON'}
         />
       );
     }
@@ -998,11 +1020,23 @@ export default function Game() {
             key={`boss-${walk.module}`}
             difficulty="rookie"
             boss={bank}
-            onBossResult={(won) => finishModule(walk.module, walk.accuracies, won)}
-            onExit={() => finishModule(walk.module, walk.accuracies, false)}
+            onBossResult={(won) => finishModule(walk.module, won)}
+            onExit={() => finishModule(walk.module, false)}
           />
         );
       }
+    }
+
+    /* The module panel: what it is, and which lessons are done. */
+    if (opened && contentFor(opened)) {
+      return (
+        <ModuleSheet
+          module={opened}
+          progress={learn.path}
+          onStart={(at) => { setOpened(null); setWalk({ module: opened, at }); }}
+          onBack={() => setOpened(null)}
+        />
+      );
     }
 
     return (
@@ -1012,7 +1046,7 @@ export default function Game() {
           /* Only what has been written. The ladder disables the rest. */
           if (!contentFor(id)) return;
           track({ name: 'guide_opened' });
-          setWalk({ module: id, at: 0, accuracies: [] });
+          setOpened(id);
         }}
         onExit={() => setScreen('menu')}
         onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}

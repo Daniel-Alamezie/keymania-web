@@ -1,0 +1,154 @@
+/*
+ * The module panel: what this module is, and which of its lessons are done.
+ *
+ * Its own scroll container for the same reason the ladder is one — `html,
+ * body` are locked `overflow: hidden` app-wide so a duel cannot rubber-band,
+ * and a screen that relies on page scroll here simply clips.
+ */
+
+.screen {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md) var(--gap-sm) calc(var(--gap-lg) * 2);
+}
+
+.head {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}
+
+.count {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  width: min(560px, 100%);
+  padding: var(--gap-md);
+  border: 2px solid var(--edge-soft);
+  background: var(--panel);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.teaches {
+  margin: 6px 0 var(--gap-sm);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* What the three stars actually mean, said once where they are shown. */
+.rule {
+  margin: var(--gap-sm) 0 0;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+.stars {
+  display: inline-flex;
+  gap: 3px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--edge-soft);
+}
+
+.star[data-earned] { color: var(--gold); }
+
+.list {
+  width: min(560px, 100%);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.row {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm);
+  text-align: left;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/*
+ * Three states again, and the same rule as the ladder: never colour alone.
+ * A lesson already passed stays fully tappable — replaying is the thing this
+ * feature exists to encourage, and stars only climb, so it costs nothing.
+ */
+.row[data-state='done'] { border-color: var(--gold-deep); }
+
+.row[data-state='next'] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold) inset;
+}
+
+.row[data-state='todo'] { opacity: 0.75; }
+
+.pip {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.row[data-state='done'] .pip { border-color: var(--gold-deep); color: var(--gold); }
+.row[data-state='next'] .pip { border-color: var(--gold); background: var(--gold); color: var(--bg-deep); }
+
+.body { flex: 1; min-width: 0; }
+
+.name {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.note {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.flag {
+  flex: 0 0 auto;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.row[data-state='next'] .flag { color: var(--gold); }
+
+/* The boss is part of the module and not one of its lessons. */
+.boss { border-style: dashed; }
