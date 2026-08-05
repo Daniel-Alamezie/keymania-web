@@ -8,13 +8,29 @@
  * a desktop layout squeezed down.
  */
 
+/*
+ * Its own scroll container, and it has to be.
+ *
+ * `html, body` are `height: 100%; overflow: hidden` app-wide, which is right:
+ * a duel must not rubber-band under a thumb mid-word. So the page cannot
+ * scroll, and a `min-height` here simply overflowed into a clipped region --
+ * twelve modules existed and only the first few could ever be seen.
+ *
+ * Scrolling is fixed locally rather than by unlocking the body, because every
+ * other screen depends on that lock. `overscroll-behavior: contain` stops a
+ * flick at the end of the list turning into a pull-to-refresh on the page
+ * behind it.
+ */
 .screen {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--gap-md);
-  padding: var(--gap-md) var(--gap-sm) calc(var(--gap-lg) * 2);
+  padding: var(--gap-md) var(--gap-sm) calc(var(--gap-lg) * 3);
 }
 
 .head {
@@ -159,6 +175,14 @@
   font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--ink);
+}
+
+/* How much work a module is, before somebody commits to it. */
+.cost {
+  margin: 3px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
 }
 
 .teaches {

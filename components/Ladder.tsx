@@ -5,7 +5,7 @@ import {
   completedCount, MAX_STARS, MODULES, nextModuleId, nodeState, starsFor,
   type LearnModule, type ModuleId, type NodeState,
 } from '@/game/learnPath';
-import { hasContent } from '@/game/curriculum';
+import { contentFor, hasContent } from '@/game/curriculum';
 import styles from './Ladder.module.css';
 
 export interface LadderProps {
@@ -93,6 +93,25 @@ const SOON = 'SOON';
  * of the game burns; the path should feel patient.
  */
 const AMBIENT = [...'asdfjkl;eirug'];
+
+/**
+ * How much work a module is, said before somebody commits to it.
+ *
+ * The shape is the same for every module by design -- three short lessons and
+ * a boss, about five minutes on a first pass -- so an unwritten one can state
+ * it honestly from the plan rather than staying silent. A written one counts
+ * its own lessons instead, because that is the number that is actually true
+ * and the plan is only a promise until it is.
+ *
+ * Worth saying at all because "twelve modules" is a number somebody reads as
+ * either trivial or enormous depending on what they assume a module costs.
+ * Five minutes is the answer that makes starting easy.
+ */
+function costOf(id: ModuleId): string {
+  const content = contentFor(id);
+  const lessons = content ? content.lessons.length : 3;
+  return `${lessons} lessons + boss · about 5 min`;
+}
 
 export default function Ladder({ progress, onStart, onExit, onGuide }: LadderProps) {
   const [view, setView] = useState<View>('path');
@@ -209,6 +228,7 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
                 <span className={styles.body}>
                   <span className={`${styles.name} pixel-font`}>{module.title}</span>
                   <span className={styles.teaches}>{module.teaches}</span>
+                  <span className={styles.cost}>{costOf(module.id)}</span>
                 </span>
                 <span className={styles.tail}>
                   {state === 'done' && <Stars earned={stars} />}
@@ -261,7 +281,11 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
           {focus && (
             <div className={styles.focus}>
               <p className={`${styles.focusName} pixel-font`}>{focus.title}</p>
-              <p className={styles.focusTeaches}>{focus.teaches}</p>
+              <p className={styles.focusTeaches}>
+                {focus.teaches}
+                <br />
+                {costOf(focus.id)}
+              </p>
               <button
                 className="btn btn-primary"
                 disabled={!startable(focus.id)}
