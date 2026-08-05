@@ -34,6 +34,9 @@ import { MODULES, nextModuleId, type ModuleId } from '@/game/learnPath';
 import {
   clearLocal, localSnapshot, recordLocal, serverLocalSnapshot, subscribeLocal, unsavedModules,
 } from '@/game/localPath';
+import {
+  featuresServerSnapshot, featuresSnapshot, subscribeFeatures,
+} from '@/game/features';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
@@ -152,15 +155,11 @@ export default function Game() {
    * made an account before seeing any value. So the unauthenticated
    * `/api/features` answers the same question from the same `LEARN_LIVE`.
    */
-  const [pathOpen, setPathOpen] = useState(false);
-  useEffect(() => {
-    let live = true;
-    fetch('/api/features', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (live) setPathOpen(Boolean(data?.features?.learn)); })
-      .catch(() => { /* Offline. The path stays hidden rather than half-working. */ });
-    return () => { live = false; };
-  }, []);
+  const { learn: pathOpen } = useSyncExternalStore(
+    subscribeFeatures,
+    featuresSnapshot,
+    featuresServerSnapshot,
+  );
 
   /** Progress for a signed-out visitor, kept locally until there is an account. */
   const guestPath = useSyncExternalStore(subscribeLocal, localSnapshot, serverLocalSnapshot);
