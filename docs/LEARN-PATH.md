@@ -271,11 +271,16 @@ Baron, and the dated weekly champion titles all became earnable and wearable in
 the same commit. A test in `cosmetics.test.ts` existed precisely to force that
 to be said out loud, and it did its job.
 
-**Not built: the three badges.** Keysmith (module 6), The Path (module 12) and
-the white flame (36 stars) have no art. The white flame is the awkward one — it
-is specified as *animated*, with a shine and embers, and every existing badge is
-a static PNG from the generator in `tools/`. That may need a different rendering
-path rather than only new art.
+**All three badges built** (2026-08-05): Keysmith, The Path — a staircase
+climbed with a flag planted, the game's ladder metaphor made literal — and the
+White Flame, all animated APNGs from `scripts/badges_podium.py`, which already
+did shine-and-sparkle and gained an embers extension for the flame.
+
+One sequencing note the ladder rule created: reaching module 12 now requires
+modules 1–11 at three stars, so The Path lands when module 12's lessons finish
+and the mastery pair (Forged + White Flame) lands minutes later when its boss
+falls. Two beats at the summit rather than one, which is the right shape for
+the end of a long walk.
 
 **Not built, and not blocked: the bot line.** See above. It is a statement on a
 results screen rather than a grant, so nothing stops it.

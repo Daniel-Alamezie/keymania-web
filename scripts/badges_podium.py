@@ -356,6 +356,41 @@ WHITE_FLAME = [
     "........................",
 ]
 
+# The Path: module 12, the whole route walked.
+#
+# A staircase climbed and a flag planted -- the game's own ladder metaphor
+# made literal. The ladder screen is a climb, the rules card is a staircase
+# of stars, so the badge for finishing it is the staircase itself with the
+# summit flagged. Three treads rather than twelve: at fourteen pixels the
+# silhouette is the design, and a winding trail or a dozen steps turns to
+# mud. The pennant is the medals' ribbon red, flying back over the climb.
+THE_PATH = [
+    "........................",
+    "........................",
+    "..........rrrrrrr#@.....",
+    "............rrrrr#@.....",
+    "..............rrr#@.....",
+    ".................#@.....",
+    ".................#@.....",
+    ".................#@.....",
+    ".................#@.....",
+    "..............######@@..",
+    "..............######@@..",
+    "..............######@@..",
+    "........############@@..",
+    "........############@@..",
+    "........############@@..",
+    "..##################@@..",
+    "..##################@@..",
+    "..@@@@@@@@@@@@@@@@@@@@..",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+]
+
 PALETTES = {
     "crown": {"#": GOLD, "@": GOLD_DEEP},
     "silver": {"#": SILVER, "@": SILVER_DEEP, "r": RED, "R": RED_DEEP},
@@ -371,6 +406,7 @@ PALETTES = {
     # 'w' here is the heart, not an edge highlight: it must NOT be the lit
     # colour, or the sweep would erase the one thing that makes it a flame.
     "white-flame": {"#": PALE, "@": BLUE_DEEP, "w": WHITE},
+    "the-path": {"#": GOLD, "@": GOLD_DEEP, "r": RED, "R": RED_DEEP},
 }
 
 # What the shine crosses, per badge: the lit face of whatever it is made of.
@@ -387,6 +423,7 @@ LIGHT = {
     # The pale mid-band: the sweep whitens the skin while the heart,
     # already white, holds still - which is how a fire catches light.
     "white-flame": PALE,
+    "the-path": GOLD,
 }
 
 # Which way the light travels. The sweep normally advances along x+y
@@ -407,6 +444,7 @@ SPARKLE = {
     "backpack": (13, 12),     # the right-hand buckle: where the sweep's light exits
     "keysmith": (7, 4),       # the upper-left of the bow, same sky as the rest
     "white-flame": (11, 6),   # just under the tip, where a flame is brightest
+    "the-path": (17, 3),      # the pole top, beside the pennant
 }
 
 # Ribbed edges are the silver medal's signature in the inspiration, and one
@@ -524,7 +562,7 @@ def main() -> None:
     for name, rows in (("crown", CROWN), ("silver", SILVER_MEDAL), ("bronze", BRONZE_MEDAL),
                        ("first-blood", FIRST_BLOOD), ("streak", STREAK),
                        ("backpack", BACKPACK), ("keysmith", KEYSMITH),
-                       ("white-flame", WHITE_FLAME)):
+                       ("white-flame", WHITE_FLAME), ("the-path", THE_PATH)):
         frames, held = build(name, rows)
         path = OUT / f"{name}.png"
         frames[0].save(
