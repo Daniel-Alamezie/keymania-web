@@ -25,6 +25,7 @@ import FeedbackBox from './FeedbackBox';
 import Searching from './Searching';
 import Survival from './Survival';
 import Weekly from './Weekly';
+import Ladder from './Ladder';
 import AccountBar from './AccountBar';
 import SoundToggle, { useSoundHotkey, useUiSounds } from './SoundToggle';
 import Settings from './Settings';
@@ -42,7 +43,7 @@ import { duelToken } from '@/game/duelToken';
 import { previewMatch } from '@/game/previewMatch';
 import styles from './Game.module.css';
 
-type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'weekly';
+type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'weekly' | 'learn';
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -127,6 +128,14 @@ export default function Game() {
     ? bestSpeed(profile.ranked.bestWpm, profile.practice.bestWpm)
     : bestSpeed(0, local.bestWpm);
   const suggestion = suggestedBot(myBest);
+  /**
+   * The learning path, or nothing at all.
+   *
+   * Present only when the server chose to send it, which it does only under
+   * LEARN_LIVE. Read once here so the menu, the ladder and the fold-in of the
+   * how-to-play link all agree about whether the feature exists.
+   */
+  const learn = profile?.learn;
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -900,6 +909,32 @@ export default function Game() {
     );
   }
 
+  /**
+   * The path.
+   *
+   * Guarded on `learn` as well as the screen, so a stale screen state can
+   * never render a ladder for a server that has the feature switched off —
+   * the flag going dark takes the screen with it rather than leaving somebody
+   * stranded on a path nothing will record.
+   */
+  if (screen === 'learn' && learn) {
+    return (
+      <Ladder
+        progress={learn.path}
+        /**
+         * TODO(task 87): starting a module needs the module to exist. The
+         * lessons, the boss bank and the write-back are task 87, and until
+         * then this deliberately does nothing rather than pretending. The
+         * whole screen is unreachable without LEARN_LIVE, which is off
+         * everywhere, so nobody meets the gap.
+         */
+        onStart={() => {}}
+        onExit={() => setScreen('menu')}
+        onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
+      />
+    );
+  }
+
   if (screen === 'searching') {
     return (
       <main className={styles.screen}>
@@ -1050,6 +1085,38 @@ export default function Game() {
           * six bots stop being six buttons a player has to read past on the way
           * to anything else.
           */}
+        {/*
+          * Learn, directly under Play and carrying its full width.
+          *
+          * Same weight as Weekly because it is the same kind of offer — a
+          * whole way to spend a session, not a variant of the duel. It sits
+          * above Weekly because the person it is for has not got as far as
+          * caring what resets on Monday.
+          *
+          * THE COPY is the hard part. It is aimed at people who cannot yet
+          * touch type, and those are exactly the people who will not press
+          * anything that calls them beginners. So it describes the content
+          * and never the reader: "one row at a time" says who it is for to
+          * somebody who needs it, and reads as thoroughness to everybody
+          * else. No "basics", no "new players", no "start here".
+          *
+          * Shown only when the server sent a `learn` block, which it does
+          * only under LEARN_LIVE. The absence of the field is the off switch,
+          * so there is no second flag here to drift out of step.
+          */}
+        {learn && (
+          <div className={styles.modes} data-solo>
+            <button
+              className={`btn ${styles.mode} ${styles.full}`}
+              data-mode="learn"
+              onClick={() => { track({ name: 'guide_opened' }); setScreen('learn'); }}
+            >
+              Learn to type
+              <small className="btn-sub">the whole keyboard, one row at a time</small>
+            </button>
+          </div>
+        )}
+
         {/*
           * Weekly gets Play's own width, directly beneath it.
           *
@@ -1207,9 +1274,23 @@ export default function Game() {
             </button>
           )}
 
-          <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
-            New here? Read how to play
-          </button>
+          {/*
+            * Folded into Learn rather than competing with it.
+            *
+            * "New here? Read how to play" and a Learn button are two doors for
+            * one intention, and two doors for one intention means most people
+            * pick neither. Learn is the real answer to that question, so when
+            * it is on the menu this link comes off it — the guide is still
+            * reachable, one level in, from the ladder itself.
+            *
+            * It stays when the path is closed, because then it is the only
+            * answer there is.
+            */}
+          {!learn && (
+            <button className={styles.guideLink} onClick={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}>
+              New here? Read how to play
+            </button>
+          )}
 
           {/*
             * Only on a screen too narrow for the panel beside the menu.

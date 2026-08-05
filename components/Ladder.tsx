@@ -12,6 +12,15 @@ export interface LadderProps {
   progress: string | undefined;
   onStart: (id: ModuleId) => void;
   onExit: () => void;
+  /**
+   * The how-to-play guide, which the menu no longer links to directly.
+   *
+   * It lives here because Learn is the real answer to "new here?", and two
+   * doors for one intention means most people pick neither. One level in, from
+   * the screen somebody reached by asking that question, it is where the
+   * remaining questions about the game itself belong.
+   */
+  onGuide: () => void;
 }
 
 /**
@@ -59,7 +68,7 @@ const FLAG: Record<NodeState, string> = {
   locked: 'LOCKED',
 };
 
-export default function Ladder({ progress, onStart, onExit }: LadderProps) {
+export default function Ladder({ progress, onStart, onExit, onGuide }: LadderProps) {
   const [view, setView] = useState<View>('path');
 
   const frontier = nextModuleId(progress);
@@ -192,6 +201,10 @@ export default function Ladder({ progress, onStart, onExit }: LadderProps) {
           )}
         </>
       )}
+
+      <button className={styles.guide} onClick={onGuide}>
+        How the game itself works
+      </button>
 
       {!frontier && (
         <div className={styles.done}>

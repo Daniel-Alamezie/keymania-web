@@ -307,3 +307,19 @@
   background: var(--panel);
   text-align: center;
 }
+
+/*
+ * The how-to-play guide, one level in from the menu that used to link to it.
+ * Quiet, because somebody on this screen has already chosen the answer to
+ * "new here?" — this is for the questions the path does not cover.
+ */
+.guide {
+  background: none;
+  border: 0;
+  padding: var(--gap-xs);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
