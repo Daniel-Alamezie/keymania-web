@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { MAX_STARS, moduleById, starsFor, type ModuleId } from '@/game/learnPath';
+import { flameHeat, flameStage } from '@/game/flame';
+import PathFlame from './PathFlame';
 import { contentFor } from '@/game/curriculum';
 import { lessonsDone, resumeAt, runFor } from '@/game/moduleRun';
 import styles from './ModuleSheet.module.css';
@@ -41,6 +44,35 @@ const Stars = ({ earned, of = MAX_STARS }: { earned: number; of?: number }) => (
  * lesson detail and keeps the module's star, which is the right way round.
  */
 export default function ModuleSheet({ module, progress, onStart, onBack }: ModuleSheetProps) {
+  /**
+   * The same fire as the ladder, burning at the same size.
+   *
+   * Tracking the whole path rather than this one module, which is the point:
+   * tapping into a module is going one level in, not starting again, and a
+   * flame that shrank to one module's worth on the way would read as progress
+   * being taken away. It is the same fire, seen from closer.
+   *
+   * Hooks sit above the early return below, because they cannot be conditional.
+   */
+  const screen = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(0);
+
+  useEffect(() => {
+    const node = screen.current;
+    if (!node) return;
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        setScrolled(node.scrollTop);
+      });
+    };
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return () => node.removeEventListener('scroll', onScroll);
+  }, []);
+
   const meta = moduleById(module);
   const content = contentFor(module);
   if (!meta || !content) return null;
@@ -53,7 +85,13 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
   const started = done > 0;
 
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} ref={screen}>
+      <PathFlame
+        heat={flameHeat(progress)}
+        stage={flameStage(progress)}
+        offset={scrolled}
+      />
+
       <header className={styles.head}>
         <button className="btn btn-ghost" onClick={onBack}>← Path</button>
         <span className={styles.count}>{done} / {lessons.length} lessons</span>

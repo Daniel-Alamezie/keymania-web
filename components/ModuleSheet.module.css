@@ -152,3 +152,13 @@
 
 /* The boss is part of the module and not one of its lessons. */
 .boss { border-style: dashed; }
+
+/*
+ * Everything real sits above the fire behind it — the same layering the ladder
+ * uses, so the flame stays a backdrop on both screens rather than washing over
+ * the content on one of them.
+ */
+.head, .card, .list, .screen > button {
+  position: relative;
+  z-index: 1;
+}
