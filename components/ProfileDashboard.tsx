@@ -38,7 +38,35 @@ export default function ProfileDashboard() {
    * expects the back button to walk through, and putting it in the route would
    * mean a router push on every click for no gain.
    */
-  const [tab, setTab] = useState<'profile' | 'challenges' | 'characters' | 'look'>('profile');
+  /**
+   * The tab lives in the URL, so a reload keeps you where you were.
+   *
+   * It was component state, so refreshing while reading Appearance or
+   * Challenges dropped you back on Profile — and the tab is the whole
+   * navigation of this page, which makes losing it the same as losing the
+   * page. Read once on mount rather than subscribed: nothing else changes
+   * this parameter, and re-reading it every render would fight real clicks.
+   */
+  const [tab, setTab] = useState<'profile' | 'challenges' | 'characters' | 'look'>(() => {
+    if (typeof window === 'undefined') return 'profile';
+    const wanted = new URL(window.location.href).searchParams.get('tab');
+    return wanted === 'challenges' || wanted === 'characters' || wanted === 'look'
+      ? wanted
+      : 'profile';
+  });
+
+  /**
+   * `replaceState`, not push: the tabs are one page's contents rather than
+   * four destinations, and stacking them would make Back walk sideways
+   * through a panel instead of leaving it.
+   */
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if ((url.searchParams.get('tab') ?? 'profile') === tab) return;
+    if (tab === 'profile') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', tab);
+    window.history.replaceState(window.history.state, '', url);
+  }, [tab]);
 
   /**
    * A parked tab, from the challenge toast — the one thing that delivers

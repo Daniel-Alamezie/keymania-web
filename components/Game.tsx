@@ -127,7 +127,47 @@ export default function Game() {
   useSoundHotkey();
   useUiSounds();
   const { status, subscribe, connect, disconnect, send, configured } = useDuelSocket();
-  const [screen, setScreen] = useState<Screen>('menu');
+  /**
+   * Restored from the URL rather than in an effect.
+   *
+   * Safe because the profile store's server snapshot is EMPTY: through SSR
+   * and hydration `learn` is undefined, so the ladder's guard fails and this
+   * renders the menu exactly as the server did. Only after hydration, when
+   * the cached profile lands, does the ladder appear — no mismatch, and no
+   * setState cascading out of an effect.
+   */
+  const [screen, setScreen] = useState<Screen>(() => {
+    if (typeof window === 'undefined') return 'menu';
+    return new URL(window.location.href).searchParams.get('learn') === '1'
+      ? 'learn'
+      : 'menu';
+  });
+
+  /**
+   * The learn screen survives a refresh, because it is somewhere you go
+   * rather than something you do.
+   *
+   * These screens are React state and the URL never changed, so reloading on
+   * the ladder dropped somebody back at the menu with their place lost. A
+   * duel refreshing to the menu is a bug worth fixing separately; the path
+   * refreshing to the menu is just a page that forgot where it was.
+   *
+   * `replaceState` rather than a route: this is one page with a screen
+   * inside it, and pushing a real navigation would put the menu in the back
+   * stack twice over and fight the in-path Back handling below.
+   */
+  const LEARN_PARAM = 'learn';
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const marked = url.searchParams.get(LEARN_PARAM) === '1';
+    if (screen === 'learn' && !marked) {
+      url.searchParams.set(LEARN_PARAM, '1');
+      window.history.replaceState(window.history.state, '', url);
+    } else if (screen !== 'learn' && marked) {
+      url.searchParams.delete(LEARN_PARAM);
+      window.history.replaceState(window.history.state, '', url);
+    }
+  }, [screen]);
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
   /** Which bot has been chosen and is mid-ignition, if any. */
   const [igniting, setIgniting] = useState<Difficulty | null>(null);
@@ -200,12 +240,15 @@ export default function Game() {
    * stands in with the same shape, so nothing downstream has to know which one
    * it was handed.
    */
-  const learn = coarse
-    ? undefined
-    : profile?.learn
-      ?? (pathHere && !profile
-        ? { path: guestPath, next: nextModuleId(guestPath) ?? null }
-        : undefined);
+  const learn = useMemo(
+    () => (coarse
+      ? undefined
+      : profile?.learn
+        ?? (pathHere && !profile
+          ? { path: guestPath, next: nextModuleId(guestPath) ?? null }
+          : undefined)),
+    [coarse, profile, pathHere, guestPath],
+  );
 
   /**
    * Carry a signed-out player's progress into their new account.
