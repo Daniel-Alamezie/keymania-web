@@ -7,7 +7,10 @@ import { useHeartbeat } from '@/game/presence';
 import { useBusy } from '@/game/busy';
 import { clearWaiting, useWaiting } from '@/game/waiting';
 import { offerRoom } from '@/game/joinIntent';
+import { useChallenges } from '@/game/serverProfile';
+import { useNewChallenges } from '@/game/seenChallenges';
 import type { AcceptResponse, InviteError, PendingInvite } from '@/models/invites';
+import ChallengeToast from './ChallengeToast';
 import InviteToast from './InviteToast';
 import WaitingPill from './WaitingPill';
 import styles from './InviteToast.module.css';
@@ -106,20 +109,36 @@ export default function InviteHost() {
   }, [waiting]);
 
   /**
+   * Challenges this browser has not announced yet.
+   *
+   * Read here because this component already owns the corner announcements
+   * live in — a second fixed dock would stack two corners on each other,
+   * which is the collision the dock comment below the toast warns about.
+   * The store hands back its own stable array, so this costs nothing when
+   * there is no news.
+   */
+  const challenges = useChallenges();
+  const fresh = useNewChallenges(challenges);
+
+  /**
    * Nothing during a duel.
    *
    * The server already stops sending invites to a busy player, so this is the
    * second of two guards — and the one that still holds for something that
    * arrived a moment before the match began. The pill goes too: a player who
    * started a duel while an ask was out has answered the question themselves.
+   * The challenge notice waits with them: news can be told after the match,
+   * and mid-duel is the one moment nothing may compete for the eye.
    */
   if (busy) return null;
-  if (invites.length === 0 && !waiting) return null;
+  if (invites.length === 0 && !waiting && fresh.length === 0) return null;
 
   return (
     <div className={styles.dock} aria-live="polite">
       <InviteToast invites={invites} onAccept={accept} onDismiss={dismiss} />
       {waiting && <WaitingPill waiting={waiting} onCancel={cancel} />}
+      {/* Below the invites: a person asking outranks the game announcing. */}
+      {fresh.length > 0 && <ChallengeToast challenges={challenges} fresh={fresh} />}
     </div>
   );
 }

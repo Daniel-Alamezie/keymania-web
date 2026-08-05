@@ -1,0 +1,23 @@
+/*
+ * The challenge announcement, wearing the invite toast's card.
+ *
+ * The shell classes come from InviteToast.module.css — same dock, same slide,
+ * same close control — so the two announcements read as one voice. Only what
+ * differs lives here.
+ */
+
+/*
+ * Edged in the player's own blue rather than the invite's gold. The two cards
+ * share a corner and a shape, and colour is what says which is which before a
+ * word is read: gold is another person asking, blue is the game talking about
+ * you. Same convention as everywhere else on screen.
+ */
+.challenge {
+  border-color: var(--player-deep);
+}
+
+.tease {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}

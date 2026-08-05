@@ -105,7 +105,11 @@ export default function RecordPanel() {
         // The three you are nearest to. The panel is narrow, and "one more
         // win" is what pulls somebody back into a duel — the full list belongs
         // on the profile, where there is room to read it.
-        <ChallengeList challenges={profile.challenges ?? []} limit={3} />
+        <ChallengeList
+          challenges={profile.challenges ?? []}
+          limit={3}
+          catalogue={profile.cosmetics?.catalogue}
+        />
       ) : tally.duels === 0 ? (
         <Empty />
       ) : (

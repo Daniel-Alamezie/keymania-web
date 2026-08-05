@@ -1,6 +1,7 @@
 'use client';
 
 import { characterById } from '@/models/character';
+import type { Cosmetic } from '@/models/cosmetics';
 import type { ChallengeProgress } from '@/models/profile';
 import styles from './ChallengeList.module.css';
 
@@ -16,7 +17,7 @@ import styles from './ChallengeList.module.css';
  * cross. "2 of 3" is a reason to play one more duel; "not yet" is a reason to
  * stop reading.
  */
-export default function ChallengeList({ challenges, limit, signedIn = true }: {
+export default function ChallengeList({ challenges, limit, signedIn = true, catalogue }: {
   challenges: ChallengeProgress[];
   /** Show only the nearest N. Omit for all of them. */
   limit?: number;
@@ -26,6 +27,16 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
    * means nobody discovers there is one.
    */
   signedIn?: boolean;
+  /**
+   * The cosmetics catalogue off the profile, for naming cosmetic rewards.
+   *
+   * Without it a cosmetic-reward challenge drew no reward chip at all — the
+   * row asked for five days of streaks and never said what it paid, which is
+   * a challenge with the pull removed. Optional because the locked preview
+   * has no profile to read one from, and an unknown id degrades the same
+   * way: title only, rather than a broken chip.
+   */
+  catalogue?: Cosmetic[];
 }) {
   /**
    * Nearest first, finished ones last.
@@ -91,9 +102,14 @@ export default function ChallengeList({ challenges, limit, signedIn = true }: {
       <ul className={styles.list}>
         {shown.map((challenge) => {
           const pct = Math.round((challenge.progress / challenge.goal) * 100);
-          const reward = challenge.reward.kind === 'character'
-            ? characterById(challenge.reward.character).name
-            : null;
+          // Destructured so the union narrows: through `challenge.reward.…`
+          // the compiler treats each access as potentially a different value.
+          const { reward: pays } = challenge;
+          const reward = pays.kind === 'character'
+            ? characterById(pays.character).name
+            // Resolved against the catalogue, which owns what an id means —
+            // the same seam publicCosmetics guards on the server side.
+            : catalogue?.find((c) => c.id === pays.cosmetic)?.label ?? null;
 
           return (
             <li key={challenge.id} className={styles.item} data-done={challenge.done || undefined}>

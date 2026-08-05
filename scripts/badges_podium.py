@@ -41,6 +41,11 @@ SILVER = (198, 205, 224, 255)
 SILVER_DEEP = (132, 140, 163, 255)
 BRONZE = (198, 128, 74, 255)
 BRONZE_DEEP = (140, 86, 46, 255)
+# --player and --player-deep: the game's blue. On the backpack it is the point
+# rather than a decoration — the badge says "you kept turning up", so it wears
+# the colour that means *you* everywhere else in the game.
+BLUE = (56, 189, 248, 255)
+BLUE_DEEP = (11, 111, 164, 255)
 RED = (239, 68, 68, 255)        # --bad: the ribbon's lit face
 RED_DEEP = (168, 43, 24, 255)   # badges.py RED: the ribbon's shade
 WHITE = (255, 250, 232, 255)
@@ -228,6 +233,47 @@ STREAK = [
     "........................",
 ]
 
+# The streak badge: a traveller's backpack, for coming back five days running.
+#
+# The one badge here whose lit face is not metal, and the colour is the reason
+# it can get away with that: the body wears --player blue, the colour that
+# means "you" on every health plate and button in the game, because the thing
+# being rewarded is you having turned up. Bronze is this palette's orange — the
+# same leather as the Wanderer's satchel — so the flap and pockets read as kit
+# rather than as a new colour, and the gold buckle gives the sparkle somewhere
+# to live, exactly where a glint belongs on a well-kept strap.
+#
+# Drawn from a player-supplied reference (blue pack, orange flap and pocket,
+# gold hardware) translated into the game's palette rather than copied: the
+# reference's vivid orange would sit beside the boards like a sticker from
+# somebody else's game — the lesson every badge in this file was drawn under.
+BACKPACK = [
+    "........................",
+    "..........####..........",
+    ".........##..##.........",
+    "......ffffffffffff......",
+    ".....ffffffffffffff.....",
+    ".....ffffffffffffff.....",
+    ".....FffffffffffffF.....",
+    ".....FFFFFFFFFFFFFF.....",
+    ".....www###########.....",
+    ".....w############@.....",
+    "...ffw############@ff...",
+    "...ffw############@ff...",
+    "...ffw##ffffffff##@ff...",
+    "...ffw##fffggfff##@ff...",
+    "...FFw##ffffffff##@FF...",
+    ".....w##ffffffff##@.....",
+    ".....w##ffffffff##@.....",
+    ".....w##FFFFFFFF##@.....",
+    ".....w############@.....",
+    ".....@@@@@@@@@@@@@@.....",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+]
+
 PALETTES = {
     "crown": {"#": GOLD, "@": GOLD_DEEP},
     "silver": {"#": SILVER, "@": SILVER_DEEP, "r": RED, "R": RED_DEEP},
@@ -235,6 +281,10 @@ PALETTES = {
     "first-blood": {"#": SILVER, "@": SILVER_DEEP,
                     "g": GOLD, "G": GOLD_DEEP, "b": BRONZE, "B": BRONZE_DEEP},
     "streak": {"#": GOLD, "@": GOLD_DEEP, "w": WHITE},
+    # 'w' is the pale top-left edge, same as the bolt's: light from the same
+    # sky, so the two badges sit together on one profile without arguing.
+    "backpack": {"#": BLUE, "@": BLUE_DEEP, "w": WHITE,
+                 "f": BRONZE, "F": BRONZE_DEEP, "g": GOLD},
 }
 
 # What the shine crosses, per badge: the lit face of whatever it is made of.
@@ -244,6 +294,9 @@ LIGHT = {
     "bronze": BRONZE,
     "first-blood": SILVER,
     "streak": GOLD,
+    # The blue body, not the leather: the light crosses the canvas and the
+    # pockets keep their colour, so the pack glints without changing shape.
+    "backpack": BLUE,
 }
 
 # Which way the light travels. The sweep normally advances along x+y
@@ -261,6 +314,7 @@ SPARKLE = {
     "bronze": (7, 9),
     "first-blood": (15, 5),   # just shy of the tip, where an edge catches light
     "streak": (9, 3),         # the upper limb, beside the pale edge
+    "backpack": (11, 13),     # the gold buckle: where a glint belongs on a strap
 }
 
 # Ribbed edges are the silver medal's signature in the inspiration, and one
@@ -355,7 +409,8 @@ def build(name: str, rows: list[str]) -> tuple[list[Image.Image], list[int]]:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for name, rows in (("crown", CROWN), ("silver", SILVER_MEDAL), ("bronze", BRONZE_MEDAL),
-                       ("first-blood", FIRST_BLOOD), ("streak", STREAK)):
+                       ("first-blood", FIRST_BLOOD), ("streak", STREAK),
+                       ("backpack", BACKPACK)):
         frames, held = build(name, rows)
         path = OUT / f"{name}.png"
         frames[0].save(
