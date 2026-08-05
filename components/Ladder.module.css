@@ -1,0 +1,309 @@
+/*
+ * The path screen: twelve modules, and one question to answer at a glance —
+ * where am I.
+ *
+ * Built narrow-first. This is the surface a beginner is most likely to arrive
+ * on, and a beginner arriving on a phone is the single most likely visitor the
+ * whole feature has. Everything below sizes from the viewport rather than from
+ * a desktop layout squeezed down.
+ */
+
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md) var(--gap-sm) calc(var(--gap-lg) * 2);
+}
+
+.head {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+.progress {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The two ways of reading the same path. See the note in Ladder.tsx. */
+.views {
+  display: flex;
+  gap: 2px;
+  border: 2px solid var(--edge-soft);
+}
+
+.viewBtn {
+  padding: 6px 12px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.viewBtn[data-on] {
+  background: var(--gold);
+  color: var(--bg-deep);
+}
+
+/* ---------------------------------------------------------------- the path */
+
+.path {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  position: relative;
+}
+
+/*
+ * A gentle alternating offset rather than a straight column.
+ *
+ * The zigzag is what makes a list read as a route — it is the shape the
+ * Duolingo and chess.com references share, and the reason both are legible
+ * without a legend. Kept small, and dropped entirely on narrow screens where
+ * the indent costs more width than the metaphor is worth.
+ */
+.node:nth-child(odd) { align-self: flex-start; }
+.node:nth-child(even) { align-self: flex-end; }
+
+.node {
+  width: min(420px, 100%);
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm);
+  text-align: left;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  color: var(--ink);
+  cursor: pointer;
+  /* The tap target, before anything decorative. */
+  min-height: 64px;
+}
+
+@media (max-width: 520px) {
+  .node,
+  .node:nth-child(odd),
+  .node:nth-child(even) {
+    width: 100%;
+    align-self: stretch;
+  }
+}
+
+/*
+ * Three states, and they must be unmistakable at a glance. A ladder where a
+ * player cannot instantly find "where am I" has failed at its only job, so the
+ * distinction is carried by border, fill, brightness AND an explicit word —
+ * never by colour alone, which would vanish for anyone who cannot separate
+ * gold from grey.
+ */
+.node[data-state='done'] {
+  border-color: var(--gold-deep);
+}
+
+.node[data-state='next'] {
+  border-color: var(--gold);
+  background: var(--panel);
+  box-shadow: var(--shadow-lift), 0 0 0 2px var(--gold) inset;
+}
+
+.node[data-state='locked'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.pip {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.node[data-state='done'] .pip {
+  border-color: var(--gold-deep);
+  color: var(--gold);
+}
+
+.node[data-state='next'] .pip {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--bg-deep);
+}
+
+.body { flex: 1; min-width: 0; }
+
+.name {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.teaches {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tail {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--edge-soft);
+}
+
+.star[data-earned] { color: var(--gold); }
+
+/* The word that makes the state readable without relying on the colour. */
+.flag {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.node[data-state='next'] .flag { color: var(--gold); }
+
+/* ------------------------------------------------------------ the keyboard */
+
+.keyboard {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.krow {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+/*
+ * Keys size from the viewport so the whole board fits a narrow screen without
+ * scrolling sideways. A keyboard you have to pan across is not a map.
+ */
+.key {
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  max-width: 46px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+  color: var(--faint);
+  font-size: clamp(9px, 2.6vw, 13px);
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0;
+}
+
+.key[data-state='done'] {
+  border-color: var(--gold-deep);
+  background: var(--gold-deep);
+  color: var(--ink);
+}
+
+.key[data-state='next'] {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--bg-deep);
+}
+
+.key[data-state='locked'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.legend {
+  width: min(560px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  justify-content: center;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+}
+
+.chip[data-state='done'] { background: var(--gold-deep); border-color: var(--gold-deep); }
+.chip[data-state='next'] { background: var(--gold); border-color: var(--gold); }
+
+/* What the keyboard cannot say on its own: which module a lit group belongs to. */
+.focus {
+  width: min(560px, 100%);
+  padding: var(--gap-sm);
+  border: 2px solid var(--gold);
+  background: var(--panel);
+  text-align: center;
+}
+
+.focusName {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.focusTeaches {
+  margin: 4px 0 var(--gap-sm);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.done {
+  width: min(560px, 100%);
+  padding: var(--gap-md);
+  border: 2px solid var(--gold);
+  background: var(--panel);
+  text-align: center;
+}
