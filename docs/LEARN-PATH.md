@@ -244,14 +244,36 @@ into the game — which is the entire reason the path exists. It needs no art, n
 catalogue entry and no API change, and it is **not blocked on #38**, because it
 is a statement on a results screen rather than a granted reward.
 
-#### Blocked on the unlock moment
+#### What is live, and what is not
 
-`MODULE_UNLOCKS` in the API is deliberately empty. The mechanism is in place, so
-filling it in is a one-line edit per milestone — but **rewards are granted
-silently today**, and every one of the six above would be written to the record
-and never seen. Backlog task #38, the unlock moment on the results screen, has
-to land first. A feature built entirely on the feeling of earning something
-cannot ship while earning it is invisible.
+**Granted and served** (dev, as of 2026-08-05): Spark, Grounded, Ten Fingers and
+Forged. `MODULE_UNLOCKS` names the first three; Forged hangs off its own
+`MASTERY_UNLOCK` hook, because three-starring the path is not a module and
+attaching it to `rhythm` would hand it to somebody who scraped one star on the
+last module with eleven left half-done.
+
+`TITLES_LIVE` was flipped to make the titles servable. That launched the whole
+deferred titles wave, not just the path's share — Duellist, Swift, Unbroken,
+Baron, and the dated weekly champion titles all became earnable and wearable in
+the same commit. A test in `cosmetics.test.ts` existed precisely to force that
+to be said out loud, and it did its job.
+
+**Not built: the three badges.** Keysmith (module 6), The Path (module 12) and
+the white flame (36 stars) have no art. The white flame is the awkward one — it
+is specified as *animated*, with a shine and embers, and every existing badge is
+a static PNG from the generator in `tools/`. That may need a different rendering
+path rather than only new art.
+
+**Not built, and not blocked: the bot line.** See above. It is a statement on a
+results screen rather than a grant, so nothing stops it.
+
+#### Still granted silently
+
+The rewards land on the record and **nobody is told**. Backlog task #38, the
+unlock moment on the results screen, is unbuilt. A feature resting entirely on
+the feeling of earning something is, today, earning things invisibly — the
+grants are real, the moment is not. This remains the single most important
+outstanding piece, and it is worth more than the three missing badges.
 
 ### Nothing existing is gated behind the path
 
