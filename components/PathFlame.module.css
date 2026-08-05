@@ -1,0 +1,110 @@
+/*
+ * The fire behind the path.
+ *
+ * Everything sizes off `--heat` (0 to 1) so growth is one variable rather than
+ * a set of stages with hard edges — a flame that jumped between five fixed
+ * sizes would read as a progress bar wearing a costume.
+ */
+
+.wrap {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  /*
+   * The parallax. `--shift` is a fraction of the list's scroll, applied
+   * against it, which is what puts this behind the glass rather than on it.
+   * Translation only — nothing here reflows, so the browser can keep the whole
+   * layer on the compositor and a scroll on a cheap phone stays smooth.
+   */
+  transform: translate3d(-50%, calc(var(--shift, 0px) * -1), 0);
+  width: min(78vw, 460px);
+  /* Grows from roughly a third of its full height at a spark. */
+  height: calc((28dvh + 34dvh * var(--heat, 0.2)));
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  will-change: transform;
+}
+
+/*
+ * The warmth. A wide, soft radial that is most of the effect while the flame
+ * is small — a lone spark on a dark screen looks like a dead pixel without it.
+ */
+.glow {
+  position: absolute;
+  bottom: -18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150%;
+  aspect-ratio: 1 / 1;
+  background: radial-gradient(
+    circle at 50% 62%,
+    rgba(255, 176, 60, calc(0.16 + 0.20 * var(--heat, 0.2))) 0%,
+    rgba(214, 96, 30, calc(0.10 + 0.14 * var(--heat, 0.2))) 32%,
+    transparent 68%
+  );
+  animation: breathe 5.5s ease-in-out infinite;
+}
+
+.flame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* The flicker: two offset cycles so the shape never repeats visibly. */
+  animation: flicker 2.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+.outer {
+  fill: var(--opponent-deep, #a8391b);
+  opacity: calc(0.20 + 0.16 * var(--heat, 0.2));
+}
+
+.inner {
+  fill: var(--gold-deep, #c8791f);
+  opacity: calc(0.22 + 0.20 * var(--heat, 0.2));
+  animation: flicker 1.9s ease-in-out infinite reverse;
+  transform-origin: 50% 100%;
+}
+
+.core {
+  fill: var(--gold, #f5c451);
+  opacity: calc(0.26 + 0.26 * var(--heat, 0.2));
+  animation: flicker 1.3s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+/*
+ * A mastered path is allowed to be louder than the rest. It is the only state
+ * that is genuinely finished, and it is the one place a little excess is the
+ * correct amount.
+ */
+.wrap[data-stage='inferno'] .core { opacity: 0.62; }
+.wrap[data-stage='inferno'] .glow { animation-duration: 3.4s; }
+
+@keyframes flicker {
+  0%, 100% { transform: scaleX(1) scaleY(1); }
+  25% { transform: scaleX(0.955) scaleY(1.045); }
+  50% { transform: scaleX(1.035) scaleY(0.97); }
+  75% { transform: scaleX(0.975) scaleY(1.02); }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.82; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+}
+
+/*
+ * Motion off: the fire stays, still. Removing it entirely would take the
+ * encouragement with it, and the size — which is the actual signal — does not
+ * depend on movement at all. Parallax goes, because that one genuinely is
+ * motion coupled to scrolling and is the part most likely to make somebody
+ * feel ill.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .wrap { transform: translate3d(-50%, 0, 0); }
+  .flame, .inner, .core, .glow { animation: none; }
+}

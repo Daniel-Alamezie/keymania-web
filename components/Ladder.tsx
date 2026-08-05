@@ -6,6 +6,8 @@ import {
   type LearnModule, type ModuleId, type NodeState,
 } from '@/game/learnPath';
 import { contentFor, hasContent } from '@/game/curriculum';
+import { flameHeat, flameLabel, flameStage } from '@/game/flame';
+import PathFlame from './PathFlame';
 import styles from './Ladder.module.css';
 
 export interface LadderProps {
@@ -146,6 +148,36 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
   const here = useRef<HTMLButtonElement>(null);
   const [adrift, setAdrift] = useState(false);
 
+  /**
+   * The fire, and how far the list has travelled under it.
+   *
+   * One listener, on the element that actually scrolls, feeding the flame's
+   * parallax. `requestAnimationFrame` coalesces it: scroll fires far faster
+   * than paint on a trackpad, and setting state per event would re-render the
+   * whole ladder dozens of times a second to move one background layer.
+   */
+  const screen = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(0);
+
+  useEffect(() => {
+    const node = screen.current;
+    if (!node) return;
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        setScrolled(node.scrollTop);
+      });
+    };
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return () => node.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const heat = flameHeat(progress);
+  const stage = flameStage(progress);
+
   useEffect(() => {
     const node = here.current;
     if (!node) return;
@@ -168,7 +200,9 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
   };
 
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} ref={screen}>
+      <PathFlame heat={heat} stage={stage} offset={scrolled} />
+
       <div className={styles.ambient} aria-hidden="true">
         {AMBIENT.map((glyph, i) => (
           <span
@@ -183,7 +217,11 @@ export default function Ladder({ progress, onStart, onExit, onGuide }: LadderPro
 
       <header className={styles.head}>
         <h1 className={`${styles.title} pixel-font`}>Learn to type</h1>
-        <span className={styles.progress}>{passed} / {MODULES.length}</span>
+        {/* The flame's name in words: the shape is decoration and cannot be
+            read, so the encouragement is said once here where it can be. */}
+        <span className={styles.progress}>
+          {passed} / {MODULES.length} · {flameLabel(stage)}
+        </span>
         <button className="btn btn-ghost" onClick={onExit}>Back</button>
       </header>
 
