@@ -186,9 +186,72 @@ Deliberately uneven: module 2 is where novelty wears off, 6 is the long middle,
 and 9 is numbers — the hardest and most abandoned. Evenly spaced rewards would
 miss all three.
 
-One that costs nothing and lands harder than any cosmetic: measure them against
-the bots. *"You can now beat Rookie"* is checkable, earned, and it is the
-sentence that moves somebody off the path and into the game.
+**Every existing cosmetic in the game is earned by competing.** Duellist needs a
+ranked win, Swift needs 80 wpm, Mint needs ten ranked wins. So a player who
+cannot yet touch type owns nothing and cannot earn anything — and they are
+exactly who the path is for. That makes these the first cosmetics many of these
+players will ever hold, which is the argument for granting *real* catalogue
+items rather than path-only trinkets that quietly mark somebody as a beginner.
+
+| After | Why here | Reward | Kind |
+|---|---|---|---|
+| Module 1 — Home row | The loop must visibly pay before anyone has invested anything | **Spark** | name colour |
+| Module 2 — Home row complete | Where novelty wears off | **Grounded** | title |
+| Module 6 — Bottom row, common | The long middle | **Keysmith** | badge |
+| Module 9 — Numbers | Hardest and most abandoned | **Ten Fingers** | title |
+| Module 12 — Rhythm | The path is walked | **The Path** | badge |
+| All 36 stars | Many hours, over weeks | **Forged** + the white flame | title **and** badge |
+
+**The kinds alternate on purpose** — colour, title, badge, title, badge. A second
+name colour at module 2 would read as "the same thing again" at precisely the
+point where novelty dying is the problem being solved.
+
+#### The 36-star flame is earned, and may be worn
+
+The only milestone granting two things, because it is the only one that costs
+many hours spread over weeks rather than an evening.
+
+The badge is a **white animated flame, with a shine and embers coming off it**.
+It is a genuine cosmetic: stored, granted by the server, and shown beside a name
+where other people can see it.
+
+**This does not conflict with the leaderboard's flame, and the distinction is
+the whole point.** The board's ember/azure/gold marks a *rating* — grind through
+ranked duels. This marks a *mastered path* — a different grind, honestly earned,
+and it says something the board's flame cannot: not "this player is rated
+highly" but "this player learned the whole keyboard properly". Two grinds, two
+marks, neither devaluing the other.
+
+It is white rather than gold precisely so nobody reads it as the board's top
+tier. See [the ambient flame](#the-ladder-and-the-keyboard-beside-it) for the
+separate, ungranted fire that burns behind the ladder — that one is decoration
+and is never worn.
+
+> **Art needed.** The badge is a new sprite and has no art yet. It must match
+> the pixel style of the existing badges, which are produced by the Python
+> generator in `tools/`.
+
+#### The line that costs nothing
+
+Alongside the cosmetics, and worth more than any of them: **measure them against
+the bots**. The boss fight is a real timed duel, so it produces a wpm, and
+`botLadder.ts` already holds the thresholds — Rookie 34, Rival 55, Master 80.
+
+> *"42 wpm. That clears Rookie. Try a duel."*
+
+Checkable, earned, and it is the sentence that moves somebody off the path and
+into the game — which is the entire reason the path exists. It needs no art, no
+catalogue entry and no API change, and it is **not blocked on #38**, because it
+is a statement on a results screen rather than a granted reward.
+
+#### Blocked on the unlock moment
+
+`MODULE_UNLOCKS` in the API is deliberately empty. The mechanism is in place, so
+filling it in is a one-line edit per milestone — but **rewards are granted
+silently today**, and every one of the six above would be written to the record
+and never seen. Backlog task #38, the unlock moment on the results screen, has
+to land first. A feature built entirely on the feeling of earning something
+cannot ship while earning it is invisible.
 
 ### Nothing existing is gated behind the path
 
@@ -215,18 +278,56 @@ fill, brightness **and an explicit word** — never colour alone.
 refuses the tap. Showing it as locked would send somebody grinding for a door
 that does not exist.
 
-The frontier node is scrolled to on arrival, and a floating button offers the
+The ladder is its own scroll container, because `html, body` are locked
+`overflow: hidden` app-wide so a duel cannot rubber-band under a thumb. The
+frontier node is scrolled to on arrival, and a floating button offers the
 way back for anybody who has scrolled off to see how much is left — which they
 should, because seeing the size of the thing is the other half of what a path is
 for.
 
-The background runs a slow ambient loop of home-row letters rising and fading,
-written in CSS rather than shipped as a video or sprite sheet: it sits behind a
-scrolling list on the screen most likely to be reached on a bad connection, and
-an asset would cost a download and a decode to say what a keyframe says. Letters
-rather than embers, because this screen is not the arena — the rest of the game
-burns, the path should feel patient. It is removed entirely under
-`prefers-reduced-motion`.
+### The fire behind the path
+
+The ladder and the module panel share a background flame that grows as the path
+is walked. Twelve rows of a list is an inventory, and an inventory is not
+something anybody feels like returning to.
+
+**Measured in stars, not modules.** Twelve modules would give twelve steps and
+eleven would be invisible — something that moves once every five minutes is a
+progress bar, not encouragement. Thirty-six stars means the fire answers a
+three-star run on a module already passed, which is exactly what the star
+economy exists to reward.
+
+**It never starts at nothing.** A screen that lights up only once you have
+achieved something rewards the people who least need it and greets everybody
+else with a void. There is always a spark; the growth is the encouragement.
+Growth is front-loaded, because nothing-to-one-star is the moment somebody
+decides whether this was worth opening.
+
+**A bigger fire is a different fire, not a zoomed one.** Each of the five stages
+has its own silhouette *and* palette — an ember is squat and all skin, an
+inferno is tall, ragged and mostly white heart. Embers spark off the bigger
+fires only, starting at `burning`: a coal does not throw sparks, and their
+arrival is itself a reward, because something new appears that was not there
+before.
+
+**Its colours are deliberately not the leaderboard's.** The path runs fire's own
+temperature scale — coal, amber, azure, white — and leaves ember/azure/gold to
+the board. See [the 36-star flame](#the-36-star-flame-is-earned-and-may-be-worn)
+for the one flame on the path that *is* granted and worn.
+
+Everything is drawn: a silhouette function quantised onto a 19×26 grid, eight
+frames, swapped with hard `steps(1)` cuts rather than eased — pixel art flickers
+by cutting between drawn frames, and easing is what makes a sprite look like
+vector art in a costume. A looping video would have outweighed the rest of the
+feature on the screen most likely to be opened on a bad connection.
+
+Under `prefers-reduced-motion` the fire stays but stops moving; the parallax
+goes entirely, since scroll-coupled motion is the part most likely to make
+somebody feel ill.
+
+`/dev/flame` shows every stage side by side with a slider, and 404s in
+production. The growth curve is the whole design and is otherwise invisible from
+inside the app — seeing the top of it would mean earning 36 stars.
 
 ### The menu entry, and its copy
 
