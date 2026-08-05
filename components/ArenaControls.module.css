@@ -1,0 +1,90 @@
+/*
+ * The arena's two controls: sound, and the way out.
+ *
+ * Side by side rather than stacked. A column of two put the close button
+ * directly beneath the speaker, which is the arrangement most likely to be
+ * mis-hit on a phone — a thumb reaching for mute and landing on "leave the
+ * run" ends a run somebody was in the middle of. A row separates them along
+ * the axis a thumb is least likely to travel by accident, and reads as one
+ * small cluster instead of a stack of unrelated buttons.
+ *
+ * Boxed, always. The duel's version drew no border until hovered, which on a
+ * touch screen means never: there is no hover on a phone, so the controls
+ * were two faint glyphs floating on the backdrop with nothing to say they
+ * could be pressed.
+ */
+/*
+ * No `position` here, deliberately.
+ *
+ * The modes genuinely differ about where these go — survival has an empty
+ * top corner, a duel has health plates along that whole edge — so each arena
+ * sets its own. Setting a default here and overriding it per arena would be
+ * two single-class rules fighting, which this project has already lost once:
+ * CSS modules are ordered by import in dev and by chunk in production, so a
+ * rule that wins by source order is a coin flip that lands differently in
+ * the build nobody runs locally. Appearance is decided here and position is
+ * decided there, with no overlap between them.
+ */
+.controls {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+/*
+ * The leave button, drawn to match the speaker beside it.
+ *
+ * Deliberately a copy of `.toggle` in SoundToggle.module.css rather than a
+ * style of its own, because the speaker draws its own box and always has.
+ * What used to happen here was that this class was handed to SoundToggle as
+ * well, where it lands on the *wrapper* around that button — so the speaker
+ * came out with a box inside a box while the ✕ had one. Two controls sitting
+ * against each other have to be the same object; the one that was already
+ * right is the one to match.
+ *
+ * The same padding rather than the same fixed size: the speaker is a 16px
+ * sprite in 6px of padding, so matching the recipe keeps the two boxes the
+ * same height even if that sprite is ever redrawn at another size.
+ */
+.iconBtn {
+  /* The positioning context for the enlarged tap target below. */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Squared against the speaker, which is a little wider than it is tall. */
+  min-width: 32px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  color: var(--faint);
+  font: inherit;
+  font-size: 13px;
+  line-height: 0;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.iconBtn:hover,
+.iconBtn:focus-visible {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+/*
+ * A real tap target on a phone, without making the box bigger.
+ *
+ * Thirty pixels is the size that looks right beside the arena and is under
+ * every accessibility floor going. Growing the button to 44 would make two of
+ * them a slab in the corner of a screen that is mostly words, so the *target*
+ * grows instead and the box stays put.
+ */
+.iconBtn::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  /* Centred on the button it belongs to. */
+  transform: translate(-7px, -7px);
+}

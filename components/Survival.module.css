@@ -66,86 +66,21 @@
 /* ---------- Chrome, mirroring the duel's ---------- */
 
 /*
- * A row, not a stack.
+ * Where the pair sits in a run, and nothing else about it.
  *
- * These were stacked vertically, which put two unrelated controls in a column
- * down the corner of the arena — it read as a toolbar that had collapsed
- * rather than as two buttons. They are peers: one is sound, one is the way
- * out. Side by side is what says that.
+ * How they look now lives in ArenaControls.module.css, shared with the duel
+ * and the sprint. There were three copies of the same two buttons and they
+ * had drifted into three different appearances, which is only ever noticed by
+ * a player moving between modes — the one person who sees all three.
  *
- * Shared by Survival, the weekly sprint and the lesson screen, so this is the
- * one place the arena's chrome is described.
+ * This corner is free in both modes that use this stylesheet: the word stream
+ * runs down the middle and nothing is drawn along the top.
  */
 .controls {
   position: absolute;
   top: 10px;
   right: 12px;
   z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/*
- * One treatment for both. They were drifting apart — the sound toggle
- * carrying a filled panel and the exit an outline — which made two equal
- * controls look like a primary and a secondary, and neither is.
- *
- * 34px because a 30px target is under every touch guideline going, and this
- * sits in the corner of a screen somebody is typing on with their thumbs.
- */
-.iconBtn {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  background: rgba(8, 6, 18, 0.55);
-  border: 2px solid var(--edge);
-  color: var(--faint);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.iconBtn:hover,
-.iconBtn:focus-visible {
-  color: var(--gold);
-  border-color: var(--gold);
-}
-
-/*
- * The sound control wraps its own button in a div, so a class handed to it
- * lands on the wrapper and never reaches the thing being clicked — which is
- * exactly why the two controls sat at different sizes with different fills.
- * `display: contents` removes the wrapper from layout so its button sits
- * directly in the row, and the rule below dresses every button in here the
- * same way regardless of who rendered it.
- */
-.soundSlot { display: contents; }
-
-.controls :global(button) {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  background: rgba(8, 6, 18, 0.55);
-  border: 2px solid var(--edge);
-  color: var(--faint);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1;
-  padding: 0;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.controls :global(button:hover),
-.controls :global(button:focus-visible) {
-  color: var(--gold);
-  border-color: var(--gold);
 }
 
 .overlay {

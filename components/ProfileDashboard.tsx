@@ -10,6 +10,7 @@ import {
 import { useAccount } from '@/game/useAccount';
 import { asCharacter, DEFAULT_CHARACTER } from '@/models/character';
 import { formatPlayTime } from '@/models/profile';
+import { daysTyped } from '@/models/streak';
 import { markCosmeticsSeen, useUnseenCosmetics } from '@/game/seenCosmetics';
 import { markChallengesSeen } from '@/game/seenChallenges';
 import { takeProfileTab } from '@/game/profileIntent';
@@ -113,6 +114,22 @@ export default function ProfileDashboard() {
     // Keyed on the joined ids, same as the cosmetics effect above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, challengeKey]);
+
+  /**
+   * Plain derivations, not hooks, so they can sit here without the ordering
+   * hazard the two effects above carry — this component returns early three
+   * times, and anything conditional must stay above all of them.
+   */
+  const typedDays = daysTyped(profile?.streak);
+  /**
+   * Whether the run they are on *is* the record.
+   *
+   * Worth saying, because the two tiles otherwise show the same number twice
+   * with no explanation — which reads as a bug rather than as an achievement.
+   * Only when there is a streak at all: two zeroes are not a record.
+   */
+  const streakIsRecord = Boolean(profile?.streak?.current)
+    && profile?.streak?.current === profile?.streak?.best;
 
   /**
    * `!profile`, not just `loading`.
@@ -395,14 +412,44 @@ export default function ProfileDashboard() {
                 */}
               <section className={styles.section}>
                 <h2 className={`${styles.heading} pixel-font`}>Daily streak</h2>
-                <p className={styles.muted}>
-                  {profile.streak?.current
-                    ? `${profile.streak.current} ${profile.streak.current === 1 ? 'day' : 'days'} `
-                      + `running. Best: ${profile.streak.best}.`
-                    : 'Type anything today to start one. Any mode counts.'}
-                  {' '}
-                  You can miss one day a week without losing it.
-                </p>
+                {/*
+                  * Figures, not a sentence.
+                  *
+                  * This read "2 days running. Best: 2. You can miss one day a
+                  * week without losing it." — three separate facts in one line
+                  * of prose, so the two numbers a player actually came for had
+                  * to be unpicked from the words around them. The same tiles
+                  * the rest of the profile uses put each figure where the eye
+                  * already expects one, and the rule that protects the streak
+                  * sits under the streak it protects rather than trailing the
+                  * paragraph.
+                  */}
+                <dl className={`${styles.stats} ${styles.streakStats}`}>
+                  <Stat
+                    label="Current streak"
+                    value={profile.streak?.current ?? 0}
+                    unit={(profile.streak?.current ?? 0) === 1 ? 'day' : 'days'}
+                    highlight
+                    note={profile.streak?.current
+                      ? 'miss one day a week and it survives'
+                      : 'type anything today to start one'}
+                  />
+                  <Stat
+                    label="Best streak"
+                    value={profile.streak?.best ?? 0}
+                    unit={(profile.streak?.best ?? 0) === 1 ? 'day' : 'days'}
+                    note={streakIsRecord ? 'your record, right now' : 'the longest you have run'}
+                  />
+                  {/* The third fact the calendar is already showing and nothing
+                      was naming: a run resets, this only climbs. Somebody whose
+                      best streak is four days may still have typed on ninety. */}
+                  <Stat
+                    label="Days typed"
+                    value={typedDays}
+                    unit={typedDays === 1 ? 'day' : 'days'}
+                    note="in the last year"
+                  />
+                </dl>
                 <StreakGrid streak={profile.streak} handle={profile.handle} />
               </section>
 

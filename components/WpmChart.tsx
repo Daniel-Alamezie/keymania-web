@@ -371,13 +371,29 @@ export default function WpmChart({ points, className }: Props) {
           claimed a "versus players" line — which is precisely how a missing
           line reads as a broken chart rather than as a gap in the record. */}
       <figcaption className={styles.legend}>
-        {placed.some((p) => p.ranked) && (
-          <span className={styles.key} data-series="ranked">Versus players</span>
-        )}
-        {placed.some((p) => !p.ranked) && (
-          <span className={styles.key} data-series="practice">Versus bots</span>
-        )}
-        <span className={styles.avgKey}>Average {Math.round(average)} wpm</span>
+        {/*
+          * The series keys and the average are two different kinds of thing,
+          * and the caption used to give them equal weight on one line: two
+          * swatches and a figure, evenly spaced, so "Average 57 wpm" read as
+          * a third series rather than as the number the dashed line marks.
+          * Grouping the keys and pushing the statistic to the far end says
+          * which is which before a word is read.
+          */}
+        <span className={styles.keys}>
+          {placed.some((p) => p.ranked) && (
+            <span className={styles.key} data-series="ranked">Versus players</span>
+          )}
+          {placed.some((p) => !p.ranked) && (
+            <span className={styles.key} data-series="practice">Versus bots</span>
+          )}
+        </span>
+        {/* The figure carries the emphasis, not the word "average" — it is
+            what somebody is reading the caption for. */}
+        <span className={styles.avgKey}>
+          Average
+          <strong className={styles.avgValue}>{Math.round(average)}</strong>
+          wpm
+        </span>
       </figcaption>
     </figure>
   );

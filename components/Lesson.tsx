@@ -12,7 +12,7 @@ import { fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
 import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
-import SoundToggle from './SoundToggle';
+import ArenaControls from './ArenaControls';
 import RunPause from './RunPause';
 import Hands from './Hands';
 import styles from './Survival.module.css';
@@ -183,16 +183,14 @@ export default function Lesson({
       data-layout="plain"
       data-keyboard={keyboardUp || undefined}
     >
-      <div className={styles.controls}>
-        <SoundToggle className={styles.soundSlot} />
-        <button
-          className={styles.iconBtn}
-          onClick={() => setPaused(true)}
-          aria-label="Leave the lesson"
-        >
-          ✕
-        </button>
-      </div>
+      {/* The same pair as every other arena, from the one component that owns
+          them — a player moving between a lesson, a run and a duel should not
+          have to find these again each time. */}
+      <ArenaControls
+        className={styles.controls}
+        onLeave={() => setPaused(true)}
+        leaveLabel="Leave the lesson"
+      />
 
       <ArenaScene bare className={styles.arena}>
         <div className={styles.stream}>

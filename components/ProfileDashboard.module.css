@@ -251,6 +251,30 @@
   }
 }
 
+/*
+ * The streak's tiles, which live outside the `record` container.
+ *
+ * The rule above is a container query, and this panel is not in that column —
+ * so it never matched and the third tile wrapped onto a row of its own with
+ * two empty slots beside it, in a section that had seven hundred pixels
+ * spare. Sized to the space it actually has rather than to a container it is
+ * not inside: `auto-fit` gives three across when there is room and folds to
+ * two and then one as the panel narrows, so it needs no breakpoint to keep in
+ * step with.
+ */
+/*
+ * 130px, not 148: the floor decides the phone.
+ *
+ * At 148 a 280px panel fits only one tile per row, so a phone got three
+ * full-width blocks where every other stat grid on the profile stays two-up —
+ * the calendar below was pushed a screenful down to say three short numbers.
+ * 130 leaves two across at that width and still three on a desktop panel,
+ * which is the arrangement the rest of the page already uses at both sizes.
+ */
+.streakStats {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
 /* The sections with exactly two stats fill their row instead of leaving a hole
    where a third tile would be. Higher specificity than the rule above, so it
    holds at every width without needing its own query. */

@@ -15,7 +15,7 @@ import type { MessageHandler } from '@/game/useDuelSocket';
 import SentenceView from './SentenceView';
 import HeatBar from './HeatBar';
 import ArenaScene from './ArenaScene';
-import SoundToggle from './SoundToggle';
+import ArenaControls from './ArenaControls';
 import RunPause from './RunPause';
 import styles from './Survival.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
@@ -376,16 +376,11 @@ export default function Survival({
       data-layout="plain"
       data-keyboard={keyboardUp || undefined}
     >
-      <div className={styles.controls}>
-        <SoundToggle className={styles.soundSlot} />
-        <button
-          className={styles.iconBtn}
-          onClick={() => setPaused(true)}
-          aria-label="Leave the run"
-        >
-          ✕
-        </button>
-      </div>
+      <ArenaControls
+        className={styles.controls}
+        onLeave={() => setPaused(true)}
+        leaveLabel="Leave the run"
+      />
 
       <ArenaScene bare className={styles.arena}>
         <div className={styles.stream}>

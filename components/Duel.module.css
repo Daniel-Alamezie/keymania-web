@@ -421,49 +421,52 @@
 .screen[data-layout='plain'] .damage[data-side='opponent'] { right: 7%; left: auto; }
 
 /*
- * Mute and leave, out in the margin.
+ * Mute and leave, under the plates at the top of the arena.
  *
- * They used to sit at the top-right of the screen, which is the same corner as
- * the opponent's health plate — so the two ran into each other and the icons
- * read as part of the readout rather than as controls. The layout is centred
- * and narrower than the window, so there is empty desktop either side doing
- * nothing; putting them there gets them out of the duel entirely.
+ * Two earlier attempts, and each fixed the last one's problem while making a
+ * new one. They began in the screen's top-right corner, which is the
+ * opponent's health plate, so they read as part of the readout. They were
+ * moved out to the margin at the midpoint of the right edge, which did get
+ * them clear of the plate and put them over the word stream's own box instead,
+ * floating at a height nothing else on screen shares.
  *
- * Fixed rather than absolute, and vertically centred, so they hold one place
- * whatever the arena does. Stacked, because two icons in a column read as a
- * pair of controls where two in a row read as a toolbar with the rest missing.
+ * The trouble is that both usual corners are genuinely taken: the plates run
+ * the full width of the top row and the deck runs along the bottom. What is
+ * free is the band immediately under the plates, which is the top of the
+ * arena and which nothing but the backdrop occupies. Verified by hit-testing
+ * a live duel rather than by reading the layout, because two of the three
+ * candidate corners looked free and were not.
+ *
+ * Placed into the arena's own grid row rather than positioned at an offset.
+ * Two items in one grid cell overlay, so this pins to the top right of that
+ * row and the arena keeps its size — and since the row begins wherever the
+ * plates end, it follows them with no hard-coded number. That is the part
+ * that matters: a four-way has a taller strip than a duel, and any fixed
+ * offset would be right for one and wrong for the other.
+ *
+ * `position: relative` is for the stacking context, not for an offset: the
+ * arena comes later in the DOM and would otherwise paint over these.
  */
 .controls {
-  position: fixed;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
+  /*
+   * Absolute, and that word is load-bearing.
+   *
+   * `relative` put this in the grid as a real item, so it claimed row 2, the
+   * arena was auto-placed into row 3, the deck into an implicit row 4, and
+   * the arena lost two thirds of its height. Absolute takes it out of flow —
+   * it occupies no track and creates none — while `grid-row` still gives it
+   * the arena row as its containing block, because the grid container is
+   * positioned. So `top` and `right` below are measured from the top right of
+   * the arena's own row, which is the anchor this wanted all along: the row
+   * begins wherever the health plates end, so it follows them with no
+   * hard-coded number.
+   */
+  position: absolute;
+  grid-row: 2;
+  grid-column: 1;
+  top: 8px;
+  right: 4px;
   z-index: 8;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.iconBtn {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  /* Raised from 0.55: out on their own they can afford to be legible, and
-     the reason they were faint was to keep them off the health plate. */
-  opacity: 0.72;
-  transition: opacity 140ms ease, border-color 140ms ease, color 140ms ease;
-}
-.iconBtn:hover {
-  opacity: 1;
-  border-color: var(--edge);
-  color: var(--ink);
 }
 
 /* ---------- HUD ---------- */
