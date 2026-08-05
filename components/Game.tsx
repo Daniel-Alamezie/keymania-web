@@ -228,7 +228,14 @@ export default function Game() {
    * module's score is read back from there rather than from this sitting,
    * which is what lets a module be finished across several days.
    */
-  const [walk, setWalk] = useState<{ module: ModuleId; at: number } | null>(null);
+  /**
+   * `run` exists purely so Again works. The lesson is keyed on module and
+   * index so each mounts fresh -- but a retry is the SAME module and index,
+   * so without a third term the key never changes, nothing remounts, and the
+   * end card just sits there. The counter is meaningless except as a way to
+   * make the key different.
+   */
+  const [walk, setWalk] = useState<{ module: ModuleId; at: number; run: number } | null>(null);
 
   /**
    * The module panel, before any lesson is running.
@@ -1119,13 +1126,13 @@ export default function Game() {
         <Lesson
           /* Keyed so each lesson mounts fresh rather than inheriting the
              cursor and the miss count of the one before it. */
-          key={`${walk.module}-${walk.at}`}
+          key={`${walk.module}-${walk.at}-${walk.run}`}
           title={lesson.title}
           script={lesson.script}
           /* Remembered as it happens, not at the end of the module. Somebody
              who does one lesson and closes the tab has done one lesson. */
           onDone={(result) => recordLesson(walk.module, walk.at, result)}
-          onAgain={() => setWalk({ ...walk })}
+          onAgain={() => setWalk({ ...walk, run: walk.run + 1 })}
           onExit={() => { setWalk(null); setOpened(walk.module); }}
           onNext={() => setWalk({ ...walk, at: walk.at + 1 })}
           nextLabel={last
@@ -1178,7 +1185,7 @@ export default function Game() {
         <ModuleSheet
           module={opened}
           progress={learn.path}
-          onStart={(at) => { setOpened(null); setWalk({ module: opened, at }); }}
+          onStart={(at) => { setOpened(null); setWalk({ module: opened, at, run: 0 }); }}
           onBack={() => setOpened(null)}
         />
       );

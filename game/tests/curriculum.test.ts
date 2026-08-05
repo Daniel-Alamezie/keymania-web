@@ -7,13 +7,14 @@ const authored = Object.keys(CURRICULUM) as ModuleId[];
 
 describe('what has been written', () => {
   /**
-   * The sequencing rule, asserted. Module 1 is built end to end and played
-   * before anything else is written, so that the cost of eleven more is a
-   * number rather than a guess. If this fails because more modules were
-   * added, that is task 89 and the checkpoint has been passed deliberately.
+   * The sequencing rule, asserted: never write ahead of what has been played.
+   * Module 1's checkpoint was passed on 2026-08-05 (played end to end, boss
+   * beaten), which unlocked module 2. Growing this list is deliberate each
+   * time — a failure here means somebody added a module without playing the
+   * one before it.
    */
-  it('is module 1 and nothing else yet', () => {
-    expect(authored).toEqual(['home-row']);
+  it('is exactly the modules whose predecessors have been played', () => {
+    expect(authored).toEqual(['home-row', 'home-row-full']);
   });
 
   it('only names modules the path actually has', () => {
@@ -22,6 +23,7 @@ describe('what has been written', () => {
 
   it('reports what can and cannot be started', () => {
     expect(hasContent('home-row')).toBe(true);
+    expect(hasContent('home-row-full')).toBe(true);
     expect(hasContent('numbers')).toBe(false);
     expect(contentFor('numbers')).toBeUndefined();
   });

@@ -5,12 +5,12 @@
  * server holds the path's shape and knows none of this, which is what lets a
  * lesson be rewritten without a deploy or a migration.
  *
- * **Module 1 only, deliberately.** The sequencing rule for this whole feature
- * is to build one module end to end and then play it before writing any more,
- * because that is what turns the cost of eleven more from an estimate into a
- * number. If the loop is dull, one module has been lost rather than a
- * curriculum. Modules 2 to 12 are task 89 and must not be started until this
- * one has been played.
+ * The sequencing rule was: build module 1 end to end, play it, and only then
+ * write more. **That checkpoint was passed on 2026-08-05** — module 1 was
+ * played through, three lessons and the boss, three stars — so the curriculum
+ * is now allowed to grow. It still grows one module at a time, played as it
+ * goes; the rule was never "write everything after one works", it was "never
+ * write ahead of what has been played".
  *
  * Every character here is checked against `taughtBy` in the tests. A lesson
  * that asks for a key its module has not taught is the exact failure the path
@@ -104,6 +104,62 @@ const HOME_ROW_BOSS = [
 ];
 
 /**
+ * Module 2: the home row completed.
+ *
+ * Two keys, and they are the index fingers' reaches — g for the left, h for
+ * the right. The lesson to instil is not the letters but the return: stretch
+ * in, press, come back to f or j. That is why lesson one alternates each new
+ * key with the home key it launches from, rather than drilling g and h in
+ * isolation: the round trip is the skill.
+ *
+ * Two keys also buy the first real vocabulary. The home row alone has one
+ * vowel and no way out of it; g and h unlock has, had, flag, glass, half —
+ * words that read as language rather than as exercises, which is the moment
+ * this stops feeling like a drill.
+ */
+const HOME_ROW_FULL_LESSONS: Lesson[] = [
+  {
+    title: 'The reaches',
+    script: [
+      'fff ggg fff ggg',
+      'jjj hhh jjj hhh',
+      'fg fg gf jh jh hj',
+      'gh hg gh hg asdf jkl;',
+    ],
+  },
+  {
+    title: 'Words with g and h',
+    script: [
+      'gas has had hag',
+      'gash hash dash sash',
+      'flag glad glass flash',
+      'half hall shall gala',
+    ],
+  },
+  {
+    title: 'Whole phrases',
+    script: [
+      'a glad lad has a flag',
+      'dad had half a glass',
+      'all halls had flags',
+      'a hag adds a dash',
+    ],
+  },
+];
+
+/**
+ * Module 2's boss speaks the full home row. Cumulative on purpose: the module
+ * 1 staples stay in the bank, so the fight reads as everything learned so
+ * far rather than as two letters wearing a duel.
+ */
+const HOME_ROW_FULL_BOSS = [
+  'gas', 'has', 'had', 'hag', 'sag', 'aha',
+  'gash', 'hash', 'dash', 'sash', 'lash', 'slash',
+  'flag', 'flash', 'glass', 'glad', 'half', 'hall', 'shall', 'gala', 'saga',
+  'salad', 'flask', 'falls', 'lads', 'alas',
+];
+
+/**
  * What has been written.
  *
  * Partial, and the gaps are the point: a module with no content cannot be
@@ -112,6 +168,7 @@ const HOME_ROW_BOSS = [
  */
 export const CURRICULUM: Partial<Record<ModuleId, ModuleContent>> = {
   'home-row': { lessons: HOME_ROW_LESSONS, bossWords: HOME_ROW_BOSS },
+  'home-row-full': { lessons: HOME_ROW_FULL_LESSONS, bossWords: HOME_ROW_FULL_BOSS },
 };
 
 /** A module's content, or undefined if it has not been written yet. */

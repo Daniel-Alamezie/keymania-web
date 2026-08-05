@@ -166,7 +166,11 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
       </ol>
 
       <button className="btn btn-primary" onClick={() => onStart(at)}>
-        {started ? `Resume — lesson ${at + 1}` : 'Start'}
+        {/* A finished module has nothing to resume; replaying is the offer,
+            and stars only climb, so it costs nothing. */}
+        {done >= lessons.length
+          ? 'Practise again'
+          : started ? `Resume — lesson ${at + 1}` : 'Start'}
       </button>
     </main>
   );
