@@ -138,7 +138,7 @@ interface DuelProps {
    * practice record the same way any bot duel does -- this is not that, it is
    * the one bit the learning path needs and cannot get anywhere else.
    */
-  onBossResult?: (won: boolean) => void;
+  onBossResult?: (won: boolean, wpm: number) => void;
   onExit: () => void;
 }
 
@@ -685,10 +685,14 @@ export default function Duel({
     // playing both at once turns the whole beat into noise.
     audio.finishSwell(state.winner === state.mySlot);
 
-    /* The module's answer, before the record-keeping: a boss decides a star. */
-    if (boss) onBossResult?.(state.winner === state.mySlot);
-
     const stats = stateRef.current.stats;
+
+    /* The module's answer, before the record-keeping: a boss decides a star,
+       and its speed is what the completion screen measures against the bots. */
+    if (boss) {
+      onBossResult?.(state.winner === state.mySlot, stats.endedAt ? finalWpm(stats) : 0);
+    }
+
     if (stats.endedAt) {
       saveResult({
         stats,

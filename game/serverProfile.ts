@@ -53,7 +53,8 @@ export interface ProfileState {
    * nothing. It also ignores this entirely when LEARN_LIVE is off, which is
    * why nothing here checks the flag a second time.
    */
-  saveModule: (module: ModuleId, stars: number) => Promise<{ ok: boolean; error?: string }>;
+  saveModule: (module: ModuleId, stars: number) =>
+  Promise<{ ok: boolean; error?: string; granted?: string[] }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -407,12 +408,25 @@ const saveCountry = (country: string | null) =>
  * reading a result card, not typing.
  */
 const saveModule = async (module: ModuleId, stars: number) => {
+  /**
+   * What was owned before the write, so the answer to "what did this grant?"
+   * can be a diff of server truth rather than a client-side mirror of
+   * MODULE_UNLOCKS — which would be one more copy of the same fact, and the
+   * copy that drifts. The PUT re-reads the record before answering and
+   * savePatch folds its cosmetics into the snapshot, so after the await the
+   * earned list IS the server's.
+   */
+  const before = new Set(snapshot.profile?.cosmetics?.earned ?? []);
   const result = await savePatch(
     { learn: { module, stars } },
     'Could not save your progress on that module.',
   );
-  if (result.ok) invalidateProfile();
-  return result;
+  if (!result.ok) return result;
+
+  const granted = (snapshot.profile?.cosmetics?.earned ?? [])
+    .filter((id) => !before.has(id));
+  invalidateProfile();
+  return { ...result, granted };
 };
 
 /**

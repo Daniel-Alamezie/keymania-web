@@ -1,0 +1,184 @@
+/*
+ * The moment after the boss. Louder than any other learn screen on purpose —
+ * this is the one place in the path where excess is the correct amount — but
+ * the loudness is staged, not simultaneous: stars, then reward, then the
+ * door out. A screen that fires everything at once reads as noise.
+ */
+
+.screen {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  place-items: center;
+  padding: var(--gap-md);
+}
+
+.panel {
+  width: min(480px, 100%);
+  padding: var(--gap-lg) var(--gap-md);
+  background: var(--panel);
+  border: 2px solid var(--gold);
+  box-shadow: var(--shadow-lift);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-sm);
+  animation: arrive 260ms ease-out;
+}
+
+@keyframes arrive {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------- the stars */
+
+.stars {
+  display: flex;
+  gap: 12px;
+  margin: var(--gap-xs) 0;
+}
+
+/*
+ * Each star pops in on its own beat. Scale-overshoot rather than fade,
+ * because a fade is furniture arriving and a pop is something being STRUCK —
+ * the same reason the game's blades hit rather than appear.
+ */
+.star {
+  font-size: 34px;
+  line-height: 1;
+  color: var(--edge-soft);
+  transform: scale(0);
+  animation: strike 380ms cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+}
+
+.earned { color: var(--gold); }
+
+@keyframes strike {
+  from { transform: scale(0) rotate(-18deg); }
+  to { transform: scale(1) rotate(0); }
+}
+
+/* ------------------------------------------------------------ the reward */
+
+.rewards {
+  width: 100%;
+  margin-top: var(--gap-xs);
+  padding: var(--gap-sm);
+  border: 2px solid var(--edge-soft);
+  background: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-xs);
+  /* After the stars have landed. The reveal is a second beat, not a chord. */
+  opacity: 0;
+  animation: reveal 320ms ease-out 1.25s forwards;
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.unlockLabel {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+}
+
+.reward {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.reward img { image-rendering: pixelated; }
+
+.swatch { font-size: 22px; }
+
+.titleChip {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  border: 2px solid var(--edge-soft);
+  padding: 6px 10px;
+}
+
+.rewardName {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.rewardName strong { color: var(--ink); font-weight: 400; }
+
+.rewardName span:last-child {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.wearNote {
+  margin: 0;
+  font-size: 10px;
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- the rest */
+
+.note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 40ch;
+}
+
+/*
+ * The door out. Last beat, and the sentence the screen most wants somebody to
+ * leave on — it points at the game, which is what the whole path is for.
+ */
+.botLine {
+  margin: var(--gap-xs) 0 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--good);
+  opacity: 0;
+  animation: reveal 320ms ease-out 1.7s forwards;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  width: 100%;
+  margin-top: var(--gap-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { animation: none; }
+  .star { animation: none; transform: none; }
+  .rewards, .botLine { animation: none; opacity: 1; }
+}

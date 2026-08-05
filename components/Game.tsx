@@ -28,6 +28,7 @@ import Weekly from './Weekly';
 import Ladder from './Ladder';
 import Lesson from './Lesson';
 import ModuleSheet from './ModuleSheet';
+import ModuleComplete from './ModuleComplete';
 import Tutorial from './Tutorial';
 import { bankFor, contentFor, moduleStars } from '@/game/curriculum';
 import { recordLesson, runFor } from '@/game/moduleRun';
@@ -248,6 +249,17 @@ export default function Game() {
   const [opened, setOpened] = useState<ModuleId | null>(null);
 
   /**
+   * The moment after a boss falls.
+   *
+   * `granted` starts empty and is filled in when the save answers — the
+   * screen mounts on the win, and the reward reveals a beat later, which is
+   * the right order for a moment anyway: stars first, consequence second.
+   */
+  const [celebrate, setCelebrate] = useState<{
+    module: ModuleId; stars: number; wpm: number | null; granted: string[];
+  } | null>(null);
+
+  /**
    * The hand tutorial, which is a screen but not a module.
    *
    * Its own flag rather than a value in `opened`, because it is not a module
@@ -275,8 +287,10 @@ export default function Game() {
    * *now*, and re-binding it on every depth change would push a fresh entry
    * each time and bury the real history under our own.
    */
-  const depth = useRef({ walk, opened, tutorial });
-  useEffect(() => { depth.current = { walk, opened, tutorial }; }, [walk, opened, tutorial]);
+  const depth = useRef({ walk, opened, tutorial, celebrate });
+  useEffect(() => {
+    depth.current = { walk, opened, tutorial, celebrate };
+  }, [walk, opened, tutorial, celebrate]);
 
   const inLearn = screen === 'learn';
   useEffect(() => {
@@ -287,6 +301,7 @@ export default function Game() {
       const here = depth.current;
       const trap = () => window.history.pushState({ km: 'learn' }, '');
 
+      if (here.celebrate) { setCelebrate(null); trap(); return; }
       if (here.walk) { setWalk(null); setOpened(here.walk.module); trap(); return; }
       if (here.tutorial) { setTutorial(false); trap(); return; }
       if (here.opened) { setOpened(null); trap(); return; }
@@ -307,7 +322,7 @@ export default function Game() {
    * somebody staring at a spinner after the most rewarding moment the feature
    * has.
    */
-  const finishModule = useCallback((id: ModuleId, bossBeaten: boolean) => {
+  const finishModule = useCallback((id: ModuleId, bossBeaten: boolean, wpm?: number) => {
     const lessons = contentFor(id)?.lessons.length ?? 0;
     /**
      * Read back from the remembered run rather than from this sitting.
@@ -326,12 +341,27 @@ export default function Game() {
       finishedAll: lessons > 0 && passed.length >= lessons, accuracy: mean, bossBeaten,
     });
     if (stars > 0) {
-      /* The whole module, boss included — a bigger sound than one lesson. */
-      audio.moduleDone();
       /* An account keeps it; without one, this device does, until there is. */
-      if (profile) void saveModule(id, stars);
-      else recordLocal(id, stars);
+      if (profile) {
+        const save = saveModule(id, stars);
+        /* The reveal is whatever the server says it granted — filled into the
+           celebration when the answer lands, never guessed client-side. */
+        if (bossBeaten) {
+          void save.then((result) => {
+            if (result.ok && result.granted?.length) {
+              setCelebrate((current) => (current && current.module === id
+                ? { ...current, granted: result.granted! }
+                : current));
+            }
+          });
+        }
+      } else {
+        recordLocal(id, stars);
+      }
     }
+    /* Beating the boss earns the moment; leaving early just returns. The
+       fanfare plays on the celebration screen itself, not here. */
+    if (bossBeaten) setCelebrate({ module: id, stars, wpm: wpm ?? null, granted: [] });
     setWalk(null);
   }, [saveModule, profile]);
   const igniteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1158,7 +1188,16 @@ export default function Game() {
             key={`boss-${walk.module}`}
             difficulty="rookie"
             boss={bank}
-            onBossResult={(won) => finishModule(walk.module, won)}
+            onBossResult={(won, wpm) => {
+              /* A defeat stays on the duel's own card, rematch and all —
+                 losing the boss costs nothing and retrying is right there.
+                 Only leaving records the run without its third star. */
+              if (!won) return;
+              /* Let the killing blow land — the collapse, the swell — before
+                 the celebration takes the screen. Yanking at the instant of
+                 the win was the anticlimatic thing being fixed. */
+              window.setTimeout(() => finishModule(walk.module, true, wpm), 1300);
+            }}
             onExit={() => finishModule(walk.module, false)}
           />
         );
@@ -1175,6 +1214,28 @@ export default function Game() {
             if (contentFor(MODULES[0].id)) setOpened(MODULES[0].id);
           }}
           onExit={() => setTutorial(false)}
+        />
+      );
+    }
+
+    /* The moment after the boss: stars, the reward, and the door out. */
+    if (celebrate) {
+      const at = MODULES.findIndex((entry) => entry.id === celebrate.module);
+      const next = MODULES[at + 1]?.id;
+      return (
+        <ModuleComplete
+          module={celebrate.module}
+          stars={celebrate.stars}
+          wpm={celebrate.wpm}
+          granted={celebrate.granted}
+          catalogue={profile?.cosmetics?.catalogue}
+          signedIn={account.signedIn}
+          onContinue={() => {
+            setCelebrate(null);
+            /* Into the next module if it exists; the ladder if not. */
+            if (next && contentFor(next)) setOpened(next);
+          }}
+          onBack={() => setCelebrate(null)}
         />
       );
     }

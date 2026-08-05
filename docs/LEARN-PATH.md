@@ -267,13 +267,27 @@ path rather than only new art.
 **Not built, and not blocked: the bot line.** See above. It is a statement on a
 results screen rather than a grant, so nothing stops it.
 
-#### Still granted silently
+#### The unlock moment (built 2026-08-05)
 
-The rewards land on the record and **nobody is told**. Backlog task #38, the
-unlock moment on the results screen, is unbuilt. A feature resting entirely on
-the feeling of earning something is, today, earning things invisibly — the
-grants are real, the moment is not. This remains the single most important
-outstanding piece, and it is worth more than the three missing badges.
+Beating a boss now lands on a completion screen instead of teleporting to the
+ladder mid-kill-blow. Three staged beats, in a deliberate order: the stars pop
+in first (earned by skill), the reward reveals second (a consequence, not the
+point), and the bot line lands last — because it is the door out of the path
+and into the game, which is what the path is for.
+
+**The reveal is server truth.** `saveModule` diffs the earned list before and
+after the PUT — the route re-reads the record before answering — so the screen
+shows exactly what was granted, and there is no client-side mirror of
+`MODULE_UNLOCKS` to drift. A defeat stays on the duel's own card with rematch
+right there; losing costs nothing and the screen never pretends otherwise.
+
+The bot line is the one from the original design: *"42 wpm — that clears
+Rookie. Try a duel."* The boss is a real timed duel, so the number is earned,
+and the thresholds come from `botLadder`'s own table.
+
+Still open beyond the path: rewards granted outside the learn flow (weekly
+podium, challenges) have no equivalent moment — that is the rest of backlog
+#38, and it is not this feature's to solve.
 
 ### Nothing existing is gated behind the path
 
