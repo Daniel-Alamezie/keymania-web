@@ -66,8 +66,18 @@ export interface HandsProps {
 export default function Hands({ next }: HandsProps) {
   const wanted = next ? fingerFor(next) : undefined;
 
-  const live = (digit: Digit) =>
-    Boolean(wanted && wanted.hand === digit.hand && wanted.finger === digit.finger);
+  /**
+   * Either thumb takes the space bar, so both light for it.
+   *
+   * `fingerFor(' ')` has to name one hand to fit the model, and lighting only
+   * that one would teach a rule nobody follows — most typists use whichever
+   * thumb is nearer and it makes no difference. Every other finger is exact.
+   */
+  const live = (digit: Digit) => {
+    if (!wanted) return false;
+    if (wanted.finger === 'thumb') return digit.finger === 'thumb';
+    return wanted.hand === digit.hand && wanted.finger === digit.finger;
+  };
 
   return (
     <svg

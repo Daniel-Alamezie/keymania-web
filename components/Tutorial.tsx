@@ -26,8 +26,15 @@ import styles from './Tutorial.module.css';
  * events, and only the second one puts anything in the hands.
  */
 
-/** The home row, left to right. One step per finger. */
-const HOME = [...'asdfjkl;'];
+/**
+ * The home row left to right, then the space bar.
+ *
+ * Space is last and is not an afterthought: it is the most pressed key on the
+ * board by a wide margin, and it is the one people reach for with a stray
+ * index finger for years. A tutorial that covers eight fingers and ignores the
+ * thumbs teaches most of a habit.
+ */
+const HOME = [...'asdfjkl;', ' '];
 
 export interface TutorialProps {
   onDone: () => void;
@@ -115,7 +122,11 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
               {HOME[at] === ' ' ? 'Space' : HOME[at].toUpperCase()}
             </h1>
             <p className={styles.body}>
-              Your <strong>{fingerLabel(HOME[at])}</strong>.
+              {HOME[at] === ' '
+                ? <>The space bar belongs to your <strong>thumbs</strong>. Use
+                  whichever is nearer — it makes no difference, as long as it is
+                  not a finger.</>
+                : <>Your <strong>{fingerLabel(HOME[at])}</strong>.</>}
             </p>
             <p className={styles.prompt}>
               Press it to carry on. Nothing here is timed or scored.

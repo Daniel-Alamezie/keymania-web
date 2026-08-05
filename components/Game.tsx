@@ -319,6 +319,8 @@ export default function Game() {
       finishedAll: lessons > 0 && passed.length >= lessons, accuracy: mean, bossBeaten,
     });
     if (stars > 0) {
+      /* The whole module, boss included — a bigger sound than one lesson. */
+      audio.moduleDone();
       /* An account keeps it; without one, this device does, until there is. */
       if (profile) void saveModule(id, stars);
       else recordLocal(id, stars);

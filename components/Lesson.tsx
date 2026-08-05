@@ -100,7 +100,7 @@ export default function Lesson({
   useEffect(() => {
     if (!over || reported.current) return;
     reported.current = true;
-    audio.finishSwell(true);
+    audio.lessonDone();
     onDone({ stars: lessonStars(stateRef.current), accuracy: lessonAccuracy(stateRef.current) });
   }, [over, onDone]);
 
