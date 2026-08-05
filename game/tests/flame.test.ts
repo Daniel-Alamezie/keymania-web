@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   flameFrame, flameFrames, flameHeat, flameLabel, flameStage, SPARK, SPRITE_FRAMES,
-  SPRITE_H, SPRITE_W, starsEarned, TOTAL_STARS,
+  SHAPES, SPRITE_H, SPRITE_W, starsEarned, TOTAL_STARS,
 } from '../flame';
+
+const STAGES = ['spark', 'kindling', 'burning', 'roaring', 'inferno'] as const;
 import { MAX_STARS, MODULE_IDS } from '../learnPath';
 
 const everything = '3'.repeat(MODULE_IDS.length);
@@ -142,10 +144,75 @@ describe('the sprite', () => {
     expect(distinct.size).toBeGreaterThan(SPRITE_FRAMES / 2);
   });
 
-  /** Fire is anchored: the tip leans, the base does not wander. */
+  /**
+   * Fire is anchored: the tip leans, the base does not wander. Measured on
+   * `inferno`, the only stage that reaches the top of the grid — every other
+   * stage leaves empty rows up there and would compare two blanks.
+   */
   it('holds the base still while the tip moves', () => {
-    const base = frames.map((frame) => frame[SPRITE_H - 2]);
-    const tips = frames.map((frame) => frame[2]);
+    const tall = flameFrames('inferno');
+    const base = tall.map((frame) => frame[SPRITE_H - 2]);
+    const tips = tall.map((frame) => frame[3]);
     expect(new Set(base).size).toBeLessThan(new Set(tips).size);
+  });
+});
+
+/**
+ * A bigger fire is a different fire, not a zoomed one. This is the difference
+ * between the flame growing and the flame being resized, and it is the whole
+ * reason each stage has its own silhouette.
+ */
+describe('the stages are different fires', () => {
+  it('gives every stage a shape', () => {
+    for (const stage of STAGES) expect(SHAPES[stage]).toBeDefined();
+  });
+
+  const lit = (frame: string[]) =>
+    frame.join('').split('').filter((c) => c !== '.').length;
+
+  it('grows taller and denser from ember to inferno', () => {
+    let previousReach = 0;
+    let previousLit = 0;
+    for (const stage of STAGES) {
+      const shape = SHAPES[stage];
+      expect(shape.reach).toBeGreaterThan(previousReach);
+      previousReach = shape.reach;
+
+      const cells = lit(flameFrame(0, stage));
+      expect(cells).toBeGreaterThan(previousLit);
+      previousLit = cells;
+    }
+  });
+
+  /** Fire grows taller faster than it grows wider, or it is just a cone. */
+  it('gains more height than width across the range', () => {
+    const first = SHAPES.spark;
+    const last = SHAPES.inferno;
+    expect(last.reach / first.reach).toBeGreaterThan(last.girth / first.girth);
+  });
+
+  /** A coal barely licks; a blaze tears. */
+  it('gets more ragged as it gets hotter', () => {
+    let previous = -1;
+    for (const stage of STAGES) {
+      expect(SHAPES[stage].lick).toBeGreaterThan(previous);
+      previous = SHAPES[stage].lick;
+    }
+  });
+
+  it('opens the hot core up as the fire gets hotter', () => {
+    expect(SHAPES.inferno.core).toBeGreaterThan(SHAPES.spark.core);
+  });
+
+  it('draws a visibly different sprite per stage', () => {
+    const shapes = STAGES.map((stage) => flameFrame(0, stage).join('|'));
+    expect(new Set(shapes).size).toBe(STAGES.length);
+  });
+
+  /** An ember is a coal: squat, and nowhere near the top of the grid. */
+  it('keeps the ember low', () => {
+    const frame = flameFrame(0, 'spark');
+    const filled = frame.findIndex((row) => /[123]/.test(row));
+    expect(filled).toBeGreaterThan(SPRITE_H / 2);
   });
 });

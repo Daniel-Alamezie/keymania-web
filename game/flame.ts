@@ -82,68 +82,114 @@ export const flameLabel = (stage: FlameStage): string => WORDS[stage];
 /* ------------------------------------------------------------ the sprite */
 
 /**
- * The flame's shape, generated rather than hand-drawn.
+ * The flame's shape, generated per stage.
  *
- * The first pixel version was three authored frames, and it read as static —
- * three frames is a jitter, not a fire. Authoring twelve by hand would have
- * fixed that and made the shape unmaintainable, so the silhouette comes from a
- * curve instead and the pixels are quantised out of it.
+ * **A bigger fire is a different fire, not a zoomed one.** The first version
+ * scaled one sprite from small to large, and it read exactly like what it was:
+ * a cone being resized. Real fire changes character as it grows — a coal
+ * glowing dull red, a young flame that is all tongue and no body, a blaze with
+ * a white heart and licks tearing off the top. So each stage gets its own
+ * silhouette *and* its own palette, and growing along the path is a transition
+ * between them rather than a scale factor.
  *
- * That buys two things the authored version could not have. **Rounded**,
- * because the outline follows a smooth function and only becomes blocky at the
- * grid, which is what pixel art actually is — a curve sampled coarsely, not a
- * shape drawn out of squares. And **fluid**, because the number of frames is
- * now a constant rather than an afternoon.
+ * The silhouette comes from a curve so the outline stays rounded and only
+ * becomes blocky where the grid samples it — which is what pixel art is, a
+ * curve sampled coarsely rather than a shape built out of squares.
  *
- * Deterministic: frame `n` always produces the same cells. No randomness, so
- * this is testable and the animation never stutters into an odd shape.
+ * Deterministic: frame `n` of stage `s` is always the same cells. Testable,
+ * and the loop can never stutter into an odd shape.
  */
-export const SPRITE_W = 15;
-export const SPRITE_H = 22;
+export const SPRITE_W = 19;
+export const SPRITE_H = 26;
 /** Enough that the cycle reads as motion rather than as a flicker of three. */
 export const SPRITE_FRAMES = 8;
 
-/** How far the tip leans, in cells, at its widest. */
-const SWING = 1.9;
-
-/**
- * Half the flame's width at a given depth, in cells.
- *
- * `u` is 0 at the tip and 1 at the base. Widest around two-thirds down and
- * drawn back in slightly at the very bottom, which is what stops a flame
- * reading as a triangle — fire narrows where it meets what it is burning.
- */
-function halfWidth(u: number): number {
-  const max = (SPRITE_W - 1) / 2;
-  return max * Math.pow(u, 0.62) * (1 - 0.2 * Math.pow(u, 7));
+export interface FlameShape {
+  /** How much of the grid's height the flame uses, 0 to 1. */
+  reach: number;
+  /** How much of the width at its widest, 0 to 1. */
+  girth: number;
+  /** How far the tip leans, in cells. */
+  swing: number;
+  /**
+   * How ragged the edge is.
+   *
+   * The single most important number here. A flame with a smooth outline is a
+   * cone; the notches and tongues are what the eye reads as *burning*.
+   */
+  lick: number;
+  /** Share of the width taken by the hot core, 0 to 1. */
+  core: number;
 }
 
 /**
- * One frame, as rows of `.`, `1`, `2`, `3`.
+ * Each stage's fire.
  *
- * Bands come from how far across the flame a cell sits rather than from its
- * height, so the core is a column up the middle and the edge stays one cell
- * thick — the contrast that makes it read as hot.
+ * An ember is squat, wide and barely licks at all — it is a coal, not a flame.
+ * From there the fire grows *taller faster than it grows wider*, because that
+ * is what fire does and because a flame that widened evenly would just be the
+ * cone again. The core opens up as it gets hotter, so an inferno is mostly
+ * white heart with a thin skin, and an ember is all skin with a dull middle.
  */
-export function flameFrame(frame: number): string[] {
+export const SHAPES: Record<FlameStage, FlameShape> = {
+  spark: { reach: 0.30, girth: 0.62, swing: 0.5, lick: 0.30, core: 0.30 },
+  kindling: { reach: 0.52, girth: 0.66, swing: 1.5, lick: 0.85, core: 0.34 },
+  burning: { reach: 0.72, girth: 0.78, swing: 2.1, lick: 1.15, core: 0.42 },
+  roaring: { reach: 0.88, girth: 0.88, swing: 2.6, lick: 1.45, core: 0.52 },
+  inferno: { reach: 1.00, girth: 1.00, swing: 3.0, lick: 1.75, core: 0.62 },
+};
+
+/**
+ * One frame of a stage, as rows of `.`, `1`, `2`, `3`.
+ *
+ * The width profile is a bulge rather than a taper: widest around two-thirds
+ * down, drawn in at the very base where fire meets what it is burning, and
+ * pinched at a waist above that. The waist is what stops it reading as a
+ * triangle. Two harmonics of wobble ride on top so no two rows notch the same
+ * way, which is the raggedness that makes it look alight.
+ */
+export function flameFrame(frame: number, stage: FlameStage = 'burning'): string[] {
+  const shape = SHAPES[stage];
   const phase = (2 * Math.PI * frame) / SPRITE_FRAMES;
   const rows: string[] = [];
 
+  const top = Math.round(SPRITE_H * (1 - shape.reach));
+  const maxHalf = ((SPRITE_W - 1) / 2) * shape.girth;
+
   for (let y = 0; y < SPRITE_H; y += 1) {
-    const u = y / (SPRITE_H - 1);
-    /* The tip moves most and the base not at all: fire is anchored. */
-    const lean = SWING * Math.pow(1 - u, 2.1) * Math.sin(phase + u * 3.1);
-    /* A slow pulse in overall height, so the whole shape breathes. */
-    const breath = 1 + 0.06 * Math.sin(phase * 2);
+    if (y < top) { rows.push('.'.repeat(SPRITE_W)); continue; }
+
+    /* 0 at the tip, 1 at the base. */
+    const u = (y - top) / Math.max(1, SPRITE_H - 1 - top);
+
+    /* Belly two-thirds down, waist above it, drawn in at the base. */
+    const belly = Math.pow(u, 0.82) * (1 + 0.42 * Math.sin(u * Math.PI * 1.15));
+    const foot = 1 - 0.26 * Math.pow(u, 8);
+
+    /*
+     * Two harmonics, so the notches never line up into a smooth edge, damped
+     * at both ends. A flame tapers to a point and sits flat where it meets its
+     * fuel, so the licks belong to the flanks — letting them run to the tip is
+     * what kept it blunt, and a blunt tip reads as a cone however ragged the
+     * sides are.
+     */
+    const ragged = shape.lick * (
+      0.6 * Math.sin(phase * 1.3 + u * 9.1)
+      + 0.4 * Math.sin(phase * 2.1 + u * 15.7)
+    ) * Math.pow(u, 0.5) * Math.pow(1 - u, 0.3);
+
+    const hw = Math.max(0, maxHalf * belly * foot + ragged);
+
+    /* The tip leans; the base is anchored, because fire is. */
+    const lean = shape.swing * Math.pow(1 - u, 2.0) * Math.sin(phase + u * 2.6);
     const centre = (SPRITE_W - 1) / 2 + lean;
-    const hw = halfWidth(u) * breath;
 
     let row = '';
     for (let x = 0; x < SPRITE_W; x += 1) {
       const d = Math.abs(x - centre) / Math.max(hw, 0.0001);
-      if (hw < 0.45 || d > 1) { row += '.'; continue; }
-      if (d < 0.33) row += '3';
-      else if (d < 0.7) row += '2';
+      if (hw < 0.5 || d > 1) { row += '.'; continue; }
+      if (d < shape.core) row += '3';
+      else if (d < 0.72) row += '2';
       else row += '1';
     }
     rows.push(row);
@@ -152,6 +198,6 @@ export function flameFrame(frame: number): string[] {
   return rows;
 }
 
-/** Every frame of the loop. */
-export const flameFrames = (): string[][] =>
-  Array.from({ length: SPRITE_FRAMES }, (_, i) => flameFrame(i));
+/** Every frame of a stage's loop. */
+export const flameFrames = (stage: FlameStage = 'burning'): string[][] =>
+  Array.from({ length: SPRITE_FRAMES }, (_, i) => flameFrame(i, stage));

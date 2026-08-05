@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import {
   flameFrames, flameLabel, SPRITE_FRAMES, SPRITE_H, SPRITE_W, type FlameStage,
 } from '@/game/flame';
@@ -37,8 +37,6 @@ export interface PathFlameProps {
  * one because a flame reads as hot from the contrast between its edge and its
  * middle, and a single colour at any opacity reads as smoke.
  */
-const FRAMES = flameFrames();
-
 /** Which class paints each band. */
 const BAND: Record<string, string> = { 1: styles.outer, 2: styles.mid, 3: styles.core };
 
@@ -66,9 +64,11 @@ function cells(frame: readonly string[]) {
   return out;
 }
 
-const DRAWN = FRAMES.map(cells);
-
 export default function PathFlame({ heat, stage, offset }: PathFlameProps) {
+  /* Regenerated only when the stage changes, which is a handful of times in a
+     player's whole life with the feature. */
+  const drawn = useMemo(() => flameFrames(stage).map(cells), [stage]);
+
   return (
     <div
       className={styles.wrap}
@@ -95,7 +95,7 @@ export default function PathFlame({ heat, stage, offset }: PathFlameProps) {
         shapeRendering="crispEdges"
       >
         <title>{flameLabel(stage)}</title>
-        {DRAWN.map((frame, i) => (
+        {drawn.map((frame, i) => (
           <g
             key={i}
             className={styles.frame}

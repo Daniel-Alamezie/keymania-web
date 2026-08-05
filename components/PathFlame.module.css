@@ -57,8 +57,8 @@
  */
 .flame {
   position: relative;
-  width: calc(16% + 84% * var(--heat, 0.2));
-  height: calc(16% + 84% * var(--heat, 0.2));
+  width: calc(52% + 48% * var(--heat, 0.2));
+  height: calc(52% + 48% * var(--heat, 0.2));
   overflow: visible;
 }
 
@@ -80,18 +80,52 @@
   100% { opacity: 0; }
 }
 
-/* The three heat bands. Flat fills — a gradient inside a pixel is a mistake. */
-.outer { fill: var(--opponent-deep, #a8391b); opacity: calc(0.30 + 0.24 * var(--heat, 0.2)); }
-.mid { fill: var(--gold-deep, #c8791f); opacity: calc(0.34 + 0.28 * var(--heat, 0.2)); }
-.core { fill: var(--gold, #f5c451); opacity: calc(0.38 + 0.34 * var(--heat, 0.2)); }
+/*
+ * The palette, per stage — the other half of "a bigger fire is a different
+ * fire". Fire tells you its temperature by colour: a coal is dull red, a young
+ * flame is orange, and a blaze runs yellow to white with the heart brightest.
+ * Scaling one palette up would have made an inferno a large ember, which is
+ * exactly what it must not look like.
+ *
+ * Flat fills throughout: a gradient inside a pixel is a mistake.
+ */
+.outer { fill: #7a2410; }
+.mid { fill: #c04a12; }
+.core { fill: #e0761c; }
+
+/* A coal. Barely a flame at all, and deliberately dim. */
+.wrap[data-stage='spark'] .outer { fill: #5c1b0c; }
+.wrap[data-stage='spark'] .mid { fill: #8f2f0e; }
+.wrap[data-stage='spark'] .core { fill: #c25516; }
+
+.wrap[data-stage='kindling'] .outer { fill: #77230e; }
+.wrap[data-stage='kindling'] .mid { fill: #b8430f; }
+.wrap[data-stage='kindling'] .core { fill: #e2801f; }
+
+.wrap[data-stage='burning'] .outer { fill: #8a2a0d; }
+.wrap[data-stage='burning'] .mid { fill: #d1600f; }
+.wrap[data-stage='burning'] .core { fill: #f2a52a; }
+
+.wrap[data-stage='roaring'] .outer { fill: #a03410; }
+.wrap[data-stage='roaring'] .mid { fill: #e07c14; }
+.wrap[data-stage='roaring'] .core { fill: var(--gold, #f5c451); }
+
+/* White-hot heart, and the only stage that gets one. */
+.wrap[data-stage='inferno'] .outer { fill: #b83c12; }
+.wrap[data-stage='inferno'] .mid { fill: #f0a022; }
+.wrap[data-stage='inferno'] .core { fill: #fff2c4; }
+
+/*
+ * Opacity climbs with heat so the fire also gets *denser*, not only larger —
+ * an ember should sit back in the dark and an inferno should dominate.
+ */
+.outer, .mid, .core { opacity: calc(0.42 + 0.58 * var(--heat, 0.2)); }
 
 /*
  * A mastered path is allowed to be louder. It is the only genuinely finished
  * state, and the one place a little excess is the correct amount.
  */
-.wrap[data-stage='inferno'] .core { opacity: 0.88; }
-.wrap[data-stage='inferno'] .mid { opacity: 0.72; }
-.wrap[data-stage='inferno'] .glow { animation-duration: 3.4s; }
+.wrap[data-stage='inferno'] .glow { animation-duration: 3.2s; }
 
 @keyframes breathe {
   0%, 100% { opacity: 0.84; transform: scale(1); }
