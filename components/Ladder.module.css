@@ -170,15 +170,27 @@
 
 .body { flex: 1; min-width: 0; }
 
+/*
+ * Blocks, not inline.
+ *
+ * These are `<span>`s inside a button — a button may not contain block-level
+ * elements, so they cannot be `<p>` — and a span defaults to inline, which
+ * ran the module's name, its keys and its length together into one collapsed
+ * line of overlapping text. The margins were there and did nothing, because
+ * vertical margin does not apply to an inline box.
+ */
 .name {
+  display: block;
   margin: 0;
   font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--ink);
+  line-height: 1.35;
 }
 
 /* How much work a module is, before somebody commits to it. */
 .cost {
+  display: block;
   margin: 3px 0 0;
   font-size: 10px;
   letter-spacing: 0.06em;
@@ -186,6 +198,7 @@
 }
 
 .teaches {
+  display: block;
   margin: 2px 0 0;
   font-size: 11px;
   color: var(--muted);

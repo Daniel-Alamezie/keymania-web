@@ -1117,17 +1117,22 @@ export default function Game() {
     }
 
     return (
-      <Ladder
-        progress={learn.path}
-        onStart={(id) => {
-          /* Only what has been written. The ladder disables the rest. */
-          if (!contentFor(id)) return;
-          track({ name: 'guide_opened' });
-          setOpened(id);
-        }}
-        onExit={() => setScreen('menu')}
-        onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
-      />
+      <>
+        {/* The guide overlay lives in the menu's markup, which this branch
+            returns before ever reaching — so the link opened a panel nobody
+            could see. It renders here too, over the ladder that asked for it. */}
+        {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
+        <Ladder
+          progress={learn.path}
+          onStart={(id) => {
+            /* Only what has been written. The ladder disables the rest. */
+            if (!contentFor(id)) return;
+            setOpened(id);
+          }}
+          onExit={() => setScreen('menu')}
+          onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
+        />
+      </>
     );
   }
 
