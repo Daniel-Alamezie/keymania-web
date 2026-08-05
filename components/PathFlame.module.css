@@ -81,17 +81,13 @@
 }
 
 /*
- * The palette, from the game's own three flames.
+ * The palette: what fire actually does as it heats — red, orange, blue, white.
  *
- * `ember`, `azure` and `gold` are what the podium and every rating already
- * use, so somebody who has seen a gold flame at the top of the leaderboard
- * knows what a gold flame on their own path means without being told. A fourth
- * colour language here would have made one picture mean two things a screen
- * apart.
- *
- * Fire also tells you its temperature by colour, and the two agree: dull red
- * is cool, blue is hotter, and the white-gold heart is hottest. The game's
- * ranking language and the physics happen to point the same way.
+ * **Not the leaderboard's flames.** Those are earned status markers, gold
+ * meaning a rating of 450 through grinding ranked duels; this is a backdrop
+ * nobody else ever sees. Handing out that gold for finishing a beginner's
+ * tutorial would cheapen the one somebody ground for, so the path takes the
+ * temperature scale instead and leaves gold alone.
  *
  * Flat fills throughout: a gradient inside a pixel is a mistake.
  */
@@ -99,20 +95,25 @@
 .mid { fill: #c04a12; }
 .core { fill: #e0761c; }
 
-/* Ember: a coal and a young flame. Dull, sitting back in the dark. */
-.wrap[data-kind='ember'] .outer { fill: #5c1b0c; }
-.wrap[data-kind='ember'] .mid { fill: #a8360f; }
-.wrap[data-kind='ember'] .core { fill: #d9701c; }
+/* Coal: barely alight, sitting back in the dark. */
+.wrap[data-tone='coal'] .outer { fill: #5c1b0c; }
+.wrap[data-tone='coal'] .mid { fill: #a8360f; }
+.wrap[data-tone='coal'] .core { fill: #d9701c; }
 
-/* Azure: the fire has got hot enough to turn. */
-.wrap[data-kind='azure'] .outer { fill: #10386e; }
-.wrap[data-kind='azure'] .mid { fill: #1f6fc4; }
-.wrap[data-kind='azure'] .core { fill: #7fd4f5; }
+/* Amber: a proper flame, and the last of the warm range. */
+.wrap[data-tone='amber'] .outer { fill: #8a2a0d; }
+.wrap[data-tone='amber'] .mid { fill: #d1600f; }
+.wrap[data-tone='amber'] .core { fill: #f2a52a; }
 
-/* Gold: a mastered path, and the only white-hot heart on the ladder. */
-.wrap[data-kind='gold'] .outer { fill: #a3651a; }
-.wrap[data-kind='gold'] .mid { fill: var(--gold-deep, #c99a2a); }
-.wrap[data-kind='gold'] .core { fill: #fff4cd; }
+/* Azure: hot enough to turn, which is where the fire stops being ordinary. */
+.wrap[data-tone='azure'] .outer { fill: #10386e; }
+.wrap[data-tone='azure'] .mid { fill: #1f6fc4; }
+.wrap[data-tone='azure'] .core { fill: #7fd4f5; }
+
+/* White: the hottest a fire gets, and the only one on a mastered path. */
+.wrap[data-tone='white'] .outer { fill: #1f5fa8; }
+.wrap[data-tone='white'] .mid { fill: #9ee0fb; }
+.wrap[data-tone='white'] .core { fill: #ffffff; }
 
 /*
  * The embers. One cell or two, rising and drifting, on a long stagger so the
@@ -125,9 +126,10 @@
   animation: ember 2.8s ease-out infinite;
 }
 
-.wrap[data-kind='ember'] .spark { fill: #d9701c; }
-.wrap[data-kind='azure'] .spark { fill: #7fd4f5; }
-.wrap[data-kind='gold'] .spark { fill: #fff4cd; }
+.wrap[data-tone='coal'] .spark { fill: #d9701c; }
+.wrap[data-tone='amber'] .spark { fill: #f2a52a; }
+.wrap[data-tone='azure'] .spark { fill: #7fd4f5; }
+.wrap[data-tone='white'] .spark { fill: #ffffff; }
 
 @keyframes ember {
   0% { transform: translate(0, 0); opacity: 0; }
@@ -149,7 +151,7 @@
  * A mastered path is allowed to be louder. It is the only genuinely finished
  * state, and the one place a little excess is the correct amount.
  */
-.wrap[data-stage='inferno'] .glow { animation-duration: 3.2s; }
+.wrap[data-tone='white'] .glow { animation-duration: 3.2s; }
 
 @keyframes breathe {
   0%, 100% { opacity: 0.84; transform: scale(1); }

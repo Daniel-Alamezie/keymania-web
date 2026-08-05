@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import PathFlame from './PathFlame';
 import {
-  flameHeat, flameKind, flameLabel, flameStage, sparksFor, TOTAL_STARS,
+  flameHeat, flameLabel, flameStage, flameTone, sparksFor, TOTAL_STARS,
 } from '@/game/flame';
 import { MAX_STARS, MODULE_IDS } from '@/game/learnPath';
 import styles from './FlameLab.module.css';
@@ -68,7 +68,7 @@ export default function FlameLab() {
           />
           <p className={`${styles.readout} pixel-font`}>
             {stars} / {TOTAL_STARS} stars · {flameLabel(flameStage(live))} ·
-            {' '}{flameKind(flameStage(live))} · {sparksFor(flameStage(live)).length} embers ·
+            {' '}{flameTone(flameStage(live))} · {sparksFor(flameStage(live)).length} embers ·
             {' '}heat {flameHeat(live).toFixed(3)}
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function FlameLab() {
                 <strong className="pixel-font">{sample}★</strong>
                 <span>{flameLabel(flameStage(progress))}</span>
                 <span className={styles.dim}>
-                  {flameKind(flameStage(progress))} · {flameHeat(progress).toFixed(2)}
+                  {flameTone(flameStage(progress))} · {flameHeat(progress).toFixed(2)}
                 </span>
               </figcaption>
             </figure>

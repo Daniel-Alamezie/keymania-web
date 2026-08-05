@@ -205,24 +205,32 @@ export const flameFrames = (stage: FlameStage = 'burning'): string[][] =>
 /* ------------------------------------------------------- colour and sparks */
 
 /**
- * Which of the game's three flames this stage burns as.
+ * How hot the path's fire is burning, as a colour.
  *
- * Reuses `FlameKind` from the leaderboard rather than inventing a palette.
- * The game already says something specific with flame colour — ember, azure,
- * gold, on the podium and beside every rating — and a fourth colour language
- * on the learning path would mean the same picture meaning two different
- * things one screen apart.
+ * **Deliberately NOT the leaderboard's flame.** An earlier version reused
+ * `FlameKind` — the board's `ember | azure | gold` — on the theory that the two
+ * screens should agree. That was wrong, and the reason is worth writing down:
+ * the board's flame is an *earned status marker*, gold meaning a rating of 450
+ * reached through grinding ranked duels. This one is a background decoration
+ * that nobody else ever sees, derived from a progress string at render time.
+ * It is never granted, never stored, and never sits beside a name.
  *
- * So the path climbs the same ladder the board does. Somebody who has seen a
- * gold flame beside the top of the leaderboard already knows what a gold flame
- * on their own path means, and nobody had to explain it.
+ * Handing a gold flame to somebody for finishing a beginner's tutorial would
+ * cheapen the one earned by rating, even though the two never appear in the
+ * same place. The screens should not agree, because they are not measuring the
+ * same thing.
+ *
+ * So the path keeps a tiered colour of its own and gets out of the board's way.
+ * The tiers follow what fire actually does — red, orange, blue, white — which
+ * gives four honest steps and leaves gold alone entirely.
  */
-export type FlameKind = 'ember' | 'azure' | 'gold';
+export type FlameTone = 'coal' | 'amber' | 'azure' | 'white';
 
-export const flameKind = (stage: FlameStage): FlameKind => {
-  if (stage === 'inferno') return 'gold';
-  if (stage === 'burning' || stage === 'roaring') return 'azure';
-  return 'ember';
+export const flameTone = (stage: FlameStage): FlameTone => {
+  if (stage === 'inferno') return 'white';
+  if (stage === 'roaring') return 'azure';
+  if (stage === 'burning') return 'amber';
+  return 'coal';
 };
 
 export interface Spark {

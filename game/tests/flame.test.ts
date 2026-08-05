@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  flameFrame, flameFrames, flameHeat, flameKind, flameLabel, flameStage, SHAPES,
+  flameFrame, flameFrames, flameHeat, flameLabel, flameStage, flameTone, SHAPES,
   SPARK, sparksFor, SPRITE_FRAMES, SPRITE_H, SPRITE_W, starsEarned, TOTAL_STARS,
 } from '../flame';
 import { MAX_STARS, MODULE_IDS } from '../learnPath';
@@ -219,21 +219,29 @@ describe('the stages are different fires', () => {
 
 describe('colour', () => {
   /**
-   * The game already says something specific with flame colour. A fourth
-   * language on the path would mean one picture meaning two things a screen
-   * apart.
+   * The board's flame is an earned status marker — gold means a rating of 450,
+   * ground out in ranked duels. This one is a backdrop nobody else ever sees.
+   * Handing out that gold for finishing a beginner's tutorial would cheapen the
+   * one somebody ground for, so the path takes fire's own temperature scale and
+   * leaves the board's colours alone.
    */
-  it('climbs the same ember to azure to gold the leaderboard uses', () => {
-    expect(flameKind('spark')).toBe('ember');
-    expect(flameKind('kindling')).toBe('ember');
-    expect(flameKind('burning')).toBe('azure');
-    expect(flameKind('roaring')).toBe('azure');
-    expect(flameKind('inferno')).toBe('gold');
+  it('climbs red to orange to blue to white, as fire does', () => {
+    expect(flameTone('spark')).toBe('coal');
+    expect(flameTone('kindling')).toBe('coal');
+    expect(flameTone('burning')).toBe('amber');
+    expect(flameTone('roaring')).toBe('azure');
+    expect(flameTone('inferno')).toBe('white');
   });
 
-  it('reserves gold for a fully mastered path', () => {
-    const golds = STAGES.filter((stage) => flameKind(stage) === 'gold');
-    expect(golds).toEqual(['inferno']);
+  /** The peak is white heat, never the leaderboard's gold. */
+  it('never awards the gold the leaderboard grants', () => {
+    const tones = STAGES.map(flameTone);
+    expect(tones).not.toContain('gold');
+    expect(tones[tones.length - 1]).toBe('white');
+  });
+
+  it('reserves the hottest tone for a fully mastered path', () => {
+    expect(STAGES.filter((stage) => flameTone(stage) === 'white')).toEqual(['inferno']);
   });
 });
 

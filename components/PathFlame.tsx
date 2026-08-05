@@ -2,7 +2,7 @@
 
 import { useMemo, type CSSProperties } from 'react';
 import {
-  flameFrames, flameKind, flameLabel, sparksFor, SPRITE_FRAMES, SPRITE_H, SPRITE_W,
+  flameFrames, flameLabel, flameTone, sparksFor, SPRITE_FRAMES, SPRITE_H, SPRITE_W,
   type FlameStage,
 } from '@/game/flame';
 import styles from './PathFlame.module.css';
@@ -85,8 +85,8 @@ export default function PathFlame({ heat, stage, offset, contained }: PathFlameP
       className={`${styles.wrap}${contained ? ` ${styles.contained}` : ''}`}
       aria-hidden="true"
       data-stage={stage}
-      /* The game's own flame colours, so the path and the board agree. */
-      data-kind={flameKind(stage)}
+      /* The path's own tiers. Deliberately not the board's earned flames. */
+      data-tone={flameTone(stage)}
       style={{
         '--heat': heat,
         /* Against the scroll and at a fraction of it: the parallax. Negative
