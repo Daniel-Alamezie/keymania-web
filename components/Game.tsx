@@ -53,6 +53,7 @@ import MenuKey from './MenuKey';
 import { useAccount } from '@/game/useAccount';
 import { setBusy } from '@/game/busy';
 import { takeRoom, useRoomOffers } from '@/game/joinIntent';
+import { forgetDuel, liveDuel, rememberDuel } from '@/game/liveDuel';
 import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
@@ -169,6 +170,18 @@ export default function Game() {
     }
   }, [screen]);
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
+
+  /**
+   * A duel this tab was in when the page reloaded.
+   *
+   * Read once, synchronously, so the first paint can say "picking your duel
+   * back up" instead of flashing the menu at somebody who is mid-match.
+   */
+  const [reclaiming, setReclaiming] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(liveDuel());
+  });
+
   /** Which bot has been chosen and is mid-ignition, if any. */
   const [igniting, setIgniting] = useState<Difficulty | null>(null);
 
@@ -752,6 +765,9 @@ export default function Game() {
             return;
           }
 
+          /* The tab is now in a duel. Parked so a refresh reclaims the seat
+             rather than walking away from a live match. */
+          rememberDuel(message.roomId);
           setMatch({
             roomId: message.roomId,
             script: message.script,
@@ -783,10 +799,16 @@ export default function Game() {
             // the menu with an explanation beats a result screen for a match
             // they never saw finish.
             setError('That duel ended while you were disconnected.');
+            forgetDuel();
             setMatch(null);
+            setReclaiming(false);
             setScreen('menu');
             return;
           }
+          /* Still live, on a new connection: keep the room parked and stop
+             showing the reclaim notice. */
+          rememberDuel(message.roomId);
+          setReclaiming(false);
           setMatch({
             roomId: message.roomId,
             script: message.script,
@@ -814,7 +836,9 @@ export default function Game() {
           setError(message.reason === 'auth'
             ? 'Your session expired, so the duel could not be resumed.'
             : 'That duel has ended.');
+          forgetDuel();
           setMatch(null);
+          setReclaiming(false);
           setScreen('menu');
         }
       }),
@@ -838,6 +862,48 @@ export default function Game() {
    * closed or error. If the rejoin itself fails, `rejoinFailed` below decides —
    * this effect must not loop against a server that is saying no.
    */
+  /**
+   * Reclaim it.
+   *
+   * A refresh is the one disconnect the client used to lose, because every
+   * other kind kept the room id in React state. The server never noticed the
+   * difference: the room stays live through a dropped connection and `rejoin`
+   * hands back the whole board, which is how a locked phone is already
+   * survived. So this is that same path, started from the parked id.
+   *
+   * Guarded on a signed-in account, because a token is required and asking
+   * for one while the session is still resolving fails for the wrong reason.
+   * Once per load: `rejoinFailed` and the over-status branch both decide what
+   * happens next, and this must not argue with them.
+   */
+  const reclaimed = useRef(false);
+  useEffect(() => {
+    if (!reclaiming || reclaimed.current) return;
+    /* The token needs a resolved session; asking early fails for the wrong
+       reason and would give up on a duel that is still perfectly reclaimable. */
+    if (account.loading) return;
+
+    reclaimed.current = true;
+
+    /* Every exit runs through the async body, so none of them sets state
+       synchronously inside the effect. */
+    void (async () => {
+      const roomId = liveDuel();
+      const token = roomId && account.signedIn ? await duelToken() : null;
+
+      if (!roomId || !token) {
+        /* No seat to reclaim, or nothing to prove it with. Drop the id so the
+           next load does not try again, and fall through to the menu. */
+        forgetDuel();
+        setReclaiming(false);
+        return;
+      }
+
+      connect();
+      send({ action: 'rejoin', roomId, token });
+    })();
+  }, [reclaiming, account.loading, account.signedIn, connect, send]);
+
   const rejoinAsked = useRef(0);
   useEffect(() => {
     if (screen !== 'duel' || !match) return;
@@ -852,7 +918,9 @@ export default function Game() {
       // quietly would be this bug again with extra steps; say why instead.
       if (!token) {
         setError('Your session expired, so the duel could not be resumed.');
+        forgetDuel();
         setMatch(null);
+        setReclaiming(false);
         setScreen('menu');
         return;
       }
@@ -1079,6 +1147,9 @@ export default function Game() {
    */
   const clearDuel = useCallback(() => {
     queuedRoom.current = null;
+    /* Every way out of a duel runs through here. A stale room id would make
+       the next page load reclaim a seat at a table nobody is at. */
+    forgetDuel();
     setMatch(null);
     setWaiting(null);
     setRooms([]);
@@ -1423,6 +1494,28 @@ export default function Game() {
           onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
         />
       </>
+    );
+  }
+
+  /**
+   * Picking a duel back up after a reload.
+   *
+   * Shown before anything else, because the alternative is flashing the menu
+   * at somebody who is mid-match — which is precisely the impression this
+   * whole change exists to remove. It resolves either way within a round
+   * trip: `rejoined` puts them back in the duel, and both failure paths land
+   * on the menu with a reason.
+   */
+  if (reclaiming) {
+    return (
+      <main className={styles.screen}>
+        <div className={`panel ${styles.notice}`}>
+          <h1 className={`${styles.noticeTitle} pixel-font`}>Picking your duel back up</h1>
+          <p className={styles.noticeBody}>
+            Your seat is still there. One moment.
+          </p>
+        </div>
+      </main>
     );
   }
 

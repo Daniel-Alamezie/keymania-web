@@ -424,3 +424,34 @@
 @media (max-width: 560px) {
   .sound { display: none; }
 }
+
+/*
+ * Picking a duel back up after a reload.
+ *
+ * Deliberately plain: the whole point is that this is a moment, not a screen.
+ * Anything more decorated would read as a destination somebody had arrived
+ * at, when what it actually says is "wait, you are still in the match".
+ */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-lg);
+  text-align: center;
+  max-width: min(420px, 90vw);
+  margin: auto;
+}
+
+.noticeTitle {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.noticeBody {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
