@@ -13,26 +13,29 @@
  * A range rather than a fixed number, because a wait that ends on exactly the
  * same second every search is the first thing anybody notices.
  *
- * Down again, from 20-39 seconds, and this time the queue's own numbers made
- * the case. Across two days of production it paired **one** search with a real
- * person against four hundred and thirty that ended in a simulated opponent —
- * so holding every player for the better part of a minute was preserving a
- * possibility that fires roughly once in four hundred, and charging everybody
- * a spinner for it.
+ * Down twice already, from 50 to 20-39 to 16-24, and now to 5-8. Every cut has
+ * been made by the same number: across two days of production the queue paired
+ * **one** search with a real person against four hundred and thirty that ended
+ * in a simulated opponent. Holding anybody at all is charging every player a
+ * spinner for a possibility that fires about once in four hundred.
  *
- * The floor stays above the server's own minimum of fifteen seconds on
- * purpose. That minimum is what stops a modified client skipping the queue
- * entirely, and a client whose patience ran out *below* it would have every
- * first request refused and would wait for the retry instead — slower than
- * simply asking later. Ten seconds of margin covers a slow socket without
- * getting anywhere near it.
+ * The last cut was prompted by somebody on r/typing saying the wait was the
+ * reason they would not use the game. That is the cheapest possible version of
+ * a piece of feedback nobody else bothered to send.
+ *
+ * **The floor still has to clear the server's own minimum**, which came down to
+ * four seconds in the same change. That is not a coincidence to be tidied up
+ * later: the server refuses anything earlier, and the client retries only every
+ * five seconds, so a client asking under the floor is refused and seated on a
+ * retry instead — which was the whole cost of leaving the two out of step. The
+ * web test mirrors the server's number and fails if they cross.
  *
  * This is a number to revisit, not a settled one: the day real players are
  * dense enough that pairings actually happen, waiting longer starts being
  * worth something again.
  */
-export const MIN_WAIT_S = 16;
-export const WAIT_SPREAD_S = 9;
+export const MIN_WAIT_S = 5;
+export const WAIT_SPREAD_S = 4;
 
 /** Pick this search's limit. Called once per search. */
 export function waitLimit(random: () => number = Math.random): number {

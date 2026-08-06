@@ -21,8 +21,14 @@ import {
  * above it: a request landing underneath is refused, so a client that asked
  * too early would wait for its own retry instead — slower than simply asking
  * later. If that constant ever moves, this test is where it should bite.
+ *
+ * Moved from 15 to 4 on 2026-08-06, in the same change that took the client's
+ * wait from 16-24 seconds to 5-8. It had to move: leaving it at fifteen while
+ * the client asked at five would have refused the first two asks of every
+ * search and seated everybody at fifteen anyway, which is the entire failure
+ * this constant is mirrored here to prevent.
  */
-const SERVER_FLOOR_S = 15;
+const SERVER_FLOOR_S = 4;
 
 describe('how long anybody waits', () => {
   /**
@@ -32,8 +38,8 @@ describe('how long anybody waits', () => {
    * most of a minute was charging every player a spinner for a possibility
    * that fires about once in four hundred.
    */
-  it('is over inside half a minute', () => {
-    expect(MIN_WAIT_S + WAIT_SPREAD_S - 1).toBeLessThanOrEqual(25);
+  it('is over in seconds, not most of a minute', () => {
+    expect(MIN_WAIT_S + WAIT_SPREAD_S - 1).toBeLessThanOrEqual(10);
   });
 
   /**
@@ -60,7 +66,10 @@ describe('how long anybody waits', () => {
   it('is not the same every time', () => {
     const seen = new Set(Array.from({ length: 600 }, () => waitLimit()));
     expect(seen.size).toBe(WAIT_SPREAD_S);
-    expect(WAIT_SPREAD_S).toBeGreaterThanOrEqual(5);
+    /* Enough values that the end of the wait is not a fixed second. Lowered
+       with the wait itself: a four second spread on a five second floor is
+       proportionally wider than nine on sixteen ever was. */
+    expect(WAIT_SPREAD_S).toBeGreaterThanOrEqual(3);
   });
 });
 
