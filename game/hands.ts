@@ -29,6 +29,16 @@ export interface DrawnFinger {
   finger: Finger;
   /** Fixed on the palm. The pivot everything else swings from. */
   knuckle: Point;
+  /**
+   * The point the finger curves through on its way to the tip.
+   *
+   * This is the difference between a finger and a beam. A straight line from
+   * knuckle to key is what made the first cut read as a rake of rectangles:
+   * real fingers bow, and the bow flattens as the reach gets longer, exactly
+   * like a finger straightening to stretch. One control point buys all of
+   * that.
+   */
+  joint: Point;
   /** Where the tip is right now: home, or the key being asked for. */
   tip: Point;
   /** Resting on its home key, rather than reaching off it. */
@@ -80,9 +90,17 @@ const HOME: Record<Hand, Record<Finger, string>> = {
   right: { pinky: ';', ring: 'l', middle: 'k', index: 'j', thumb: ' ' },
 };
 
-/** Fingers are not the same thickness, and drawing them so reads as a rake. */
+/**
+ * Fingers are not the same thickness, and drawing them so reads as a rake.
+ *
+ * Fattened from the first cut (0.30 to 0.44), which was sized against nothing
+ * and came out at roughly a third of a keycap — thin enough that the gaps
+ * between fingers were wider than the fingers, which is most of why the hand
+ * read as separate sticks. A real finger is about four fifths of a key wide;
+ * these sit a little under that so the splay still shows daylight.
+ */
 const GIRTH: Record<Finger, number> = {
-  pinky: 0.30, ring: 0.36, middle: 0.38, index: 0.37, thumb: 0.44,
+  pinky: 0.42, ring: 0.50, middle: 0.52, index: 0.50, thumb: 0.56,
 };
 
 const ORDER: Finger[] = ['pinky', 'ring', 'middle', 'index', 'thumb'];
@@ -133,19 +151,51 @@ export function drawHands(next?: string): DrawnHand[] {
       const tip = shifting && !reaching
         ? shiftTip(hand)
         : tipFor(hand, finger, target);
+      const knuckle = knuckles[finger];
 
       return {
         hand,
         finger,
-        knuckle: knuckles[finger],
+        knuckle,
+        joint: jointFor(hand, finger, knuckle, tip),
         tip,
         home: !reaching && !shifting,
         girth: GIRTH[finger],
       };
     });
 
-    return { hand, fingers, palm: palmOf(fingers, hand) };
+    return { hand, fingers, palm: palmOf(knuckles, hand) };
   });
+}
+
+/**
+ * Where the finger bows on its way to the tip.
+ *
+ * The midpoint, pushed a little way along the perpendicular towards the
+ * outside of the hand — fingers splay outward, not inward. The push shrinks as
+ * the finger gets longer, because a finger at full stretch is nearly straight:
+ * a reach that bowed as much as a rest would look broken at the second
+ * knuckle.
+ *
+ * The thumb bows more and does not straighten. It is the one digit that is
+ * genuinely curved at rest, and the fixed bow is what stops it reading as a
+ * kickstand.
+ */
+function jointFor(hand: Hand, finger: Finger, knuckle: Point, tip: Point): Point {
+  const mx = (knuckle.x + tip.x) / 2;
+  const my = (knuckle.y + tip.y) / 2;
+  const dx = tip.x - knuckle.x;
+  const dy = tip.y - knuckle.y;
+  const len = Math.hypot(dx, dy) || 1;
+
+  /* The perpendicular, flipped if needed so it points outward. */
+  let nx = -dy / len;
+  let ny = dx / len;
+  const outward = hand === 'left' ? -1 : 1;
+  if (nx * outward < 0) { nx = -nx; ny = -ny; }
+
+  const bow = finger === 'thumb' ? 0.2 : Math.max(0.05, 0.17 - len * 0.03);
+  return { x: mx + nx * bow, y: my + ny * bow };
 }
 
 /**
@@ -172,25 +222,28 @@ const shiftTip = (hand: Hand): Point => ({ x: hand === 'left' ? 1.1 : 12.9, y: 3
  * The back of the hand, traced round the knuckles it belongs to.
  *
  * Built from the finger anchors rather than written as its own polygon, so a
- * palm can never drift away from the fingers growing out of it. Four knuckles
- * across the top, then down and around the heel of the hand.
+ * palm can never drift away from the fingers growing out of it.
+ *
+ * **The thumb's knuckle is inside this shape now, and that was the fix.** The
+ * first cut stopped the palm at the index finger's edge, which left the thumb
+ * anchored to empty space half a unit away — a stick floating beside a box,
+ * and the single most disjointed thing on the screen. The outline swings past
+ * the thumb's base and under it, so the thumb grows out of the hand the way
+ * the fingers grow out of the knuckle line.
  */
-function palmOf(fingers: DrawnFinger[], hand: Hand): Point[] {
-  const by = (f: Finger) => fingers.find((entry) => entry.finger === f)!.knuckle;
-  const pinky = by('pinky');
-  const index = by('index');
+function palmOf(knuckles: Record<Finger, Point>, hand: Hand): Point[] {
   const outward = hand === 'left' ? -1 : 1;
-
-  const outer = pinky.x + outward * 0.34;
-  const inner = index.x - outward * 0.30;
-  const wrist = KNUCKLE_Y + 1.55;
+  const inward = -outward;
+  const { pinky, index, thumb } = knuckles;
+  const wrist = KNUCKLE_Y + 1.5;
 
   return [
-    { x: outer, y: pinky.y - 0.12 },
-    { x: inner, y: index.y - 0.16 },
-    /* The thumb side bulges before it narrows to the wrist. */
-    { x: inner + outward * -0.22, y: KNUCKLE_Y + 0.75 },
-    { x: inner + outward * -0.10, y: wrist },
-    { x: outer - outward * -0.06, y: wrist },
+    { x: pinky.x + outward * 0.36, y: pinky.y - 0.1 },
+    { x: index.x + inward * 0.28, y: index.y - 0.14 },
+    /* The saddle between index and thumb, then the ball of the thumb. */
+    { x: thumb.x + inward * 0.02, y: thumb.y - 0.2 },
+    { x: thumb.x + inward * 0.1, y: thumb.y + 0.55 },
+    { x: index.x + inward * 0.1, y: wrist },
+    { x: pinky.x + outward * 0.3, y: wrist },
   ];
 }

@@ -98,33 +98,44 @@
  * The hands.
  *
  * Translucent so the board reads through them, which is not decoration: a hand
- * that hides the key it is pressing teaches nothing. The outline stays fully
- * opaque, so the shape survives being see-through.
+ * that hides the key it is pressing teaches nothing.
+ *
+ * **The opacity is on the group and nowhere else, and that placement is the
+ * fix.** Fading each shape individually is what made the first cut read as a
+ * bag of parts: two translucent shapes double-darken where they overlap, so
+ * every knuckle wore a seam. Group opacity composites the hand solid first and
+ * fades the finished thing, so the overlaps disappear and eleven shapes read
+ * as one object. Everything inside is therefore OPAQUE on purpose — any alpha
+ * sneaking back onto a fill brings the seams back with it.
  */
 .hand {
   pointer-events: none;
+  opacity: 0.55;
 }
 
+/* The colour the silhouette outline is flooded with, fed to the filter. One
+   contour around the union of the whole hand, where per-shape strokes would
+   draw every internal edge too. */
+.edgeInk {
+  flood-color: var(--ink);
+}
+
+/* Rounded corners by fat same-colour stroke, the cheapest trick there is. */
 .palm {
-  fill: color-mix(in srgb, var(--muted) 22%, transparent);
+  fill: var(--muted);
   stroke: var(--muted);
-  stroke-width: 0.03;
+  stroke-width: 0.3;
   stroke-linejoin: round;
 }
 
+/* A finger is one stroke: the round cap is the fingertip, so there is no
+   separate circle to detach from it. */
 .finger {
-  fill: color-mix(in srgb, var(--muted) 22%, transparent);
+  fill: none;
   stroke: var(--muted);
-  stroke-width: 0.03;
+  stroke-linecap: round;
   stroke-linejoin: round;
-  transition: fill 120ms ease, stroke 120ms ease;
-}
-
-.tip {
-  fill: color-mix(in srgb, var(--muted) 30%, transparent);
-  stroke: var(--muted);
-  stroke-width: 0.03;
-  transition: fill 120ms ease, stroke 120ms ease;
+  transition: stroke 120ms ease;
 }
 
 /*
@@ -132,15 +143,12 @@
  *
  * Green, matching the key it is being sent to, because the two are one fact
  * and colouring them differently would make the eye do a join it should not
- * have to. Everything else stays exactly as it was: only one finger moves at a
- * time, and only one changes colour.
+ * have to. Only one finger moves at a time, and only one changes colour.
  */
-.finger[data-active],
-.tip[data-active] {
-  fill: color-mix(in srgb, var(--good) 45%, transparent);
+.finger[data-active] {
   stroke: var(--good);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .finger, .tip { transition: none; }
+  .finger { transition: none; }
 }
