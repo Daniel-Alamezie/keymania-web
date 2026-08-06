@@ -379,4 +379,13 @@ export interface FinishedDuel {
    * person and the server wrote the record itself.
    */
   difficulty: Difficulty;
+  /**
+   * This was a module's boss, not a duel, so it is recorded nowhere.
+   *
+   * A boss is a bot duel by construction, which is exactly why it needs saying
+   * out loud: `difficulty` on one is the tier the arena was built from and not
+   * the speed the bot actually typed at, so anything counting practice wins by
+   * difficulty would be counting a much easier fight. See `saveResult`.
+   */
+  boss?: boolean;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bankFor, contentFor, CURRICULUM, hasContent, moduleStars } from '../curriculum';
 import { bossScript, bossWords, unspellable } from '../bossBank';
-import { MODULE_IDS, taughtBy, type ModuleId } from '../learnPath';
+import { MODULE_IDS, moduleById, taughtBy, type ModuleId } from '../learnPath';
 
 const authored = Object.keys(CURRICULUM) as ModuleId[];
 
@@ -107,6 +107,28 @@ describe('boss calibration', () => {
 
   it('rides the bank into the duel', () => {
     expect(bankFor('home-row')!.wpm).toBe(contentFor('home-row')!.bossWpm);
+  });
+
+  /**
+   * Every boss knows its own name.
+   *
+   * The arena names an opponent after the bot tier it was assembled from, and
+   * every boss is assembled from Rookie — so without this each one introduced
+   * itself as ROOKIE, a 34 wpm bot, in front of a fight running at anything
+   * from 17. A player read that as a practice duel and asked whether the path
+   * was moving their rating.
+   */
+  it('carries the module name, so the arena stops calling it Rookie', () => {
+    for (const id of authored) {
+      expect(bankFor(id)!.label).toBe(moduleById(id)!.title);
+    }
+  });
+
+  it('never labels a boss after a bot tier', () => {
+    const tiers = ['rookie', 'rival', 'master'];
+    for (const id of authored) {
+      expect(tiers).not.toContain(bankFor(id)!.label!.toLowerCase());
+    }
   });
 });
 

@@ -125,18 +125,31 @@ interface DuelProps {
    *
    * Both fighters are held to the module's keys — the player through a script
    * handed to the reducer, the bot through the same bank feeding its pacing.
-   * Nothing else about the duel changes, and in particular it stays exactly as
-   * uncompetitive as ordinary bot practice: no rating, no board, no result
-   * saved. That is inherited rather than re-implemented, by leaving
-   * `multiplayer` absent.
+   *
+   * **A boss is not a duel, and is not recorded as one.** This prop used to
+   * claim no result was saved; that was never true, because the duel folded
+   * itself into the practice record like any other bot fight. Three things
+   * were wrong with that, and only the first was visible:
+   *
+   *  - It appeared in Recent duels, where a win over eight home-row keys sat
+   *    next to real games and looked like one.
+   *  - It moved win rate and best wpm, which are figures about duelling. A
+   *    boss is timed against the curriculum's pace, not a tier's, so its wpm
+   *    is not comparable to anything else on that panel.
+   *  - Worst, it was reported as `difficulty: 'rookie'` while the bot actually
+   *    typed at the module's own speed — 17 wpm for home row against Rookie's
+   *    34. `beatBot` in the API's challenges counts practice wins by
+   *    difficulty, so beating the gentlest boss on the path was earning credit
+   *    for beating Rookie.
+   *
+   * The star it decides is the whole of its consequence.
    */
   boss?: BossBank;
   /**
    * How a boss fight ended, for the module that sent the player into it.
    *
-   * Only meaningful with `boss` set. The duel already folds itself into the
-   * practice record the same way any bot duel does -- this is not that, it is
-   * the one bit the learning path needs and cannot get anywhere else.
+   * Only meaningful with `boss` set, and with the record-keeping skipped it is
+   * now the ONLY thing a boss reports. Nothing else downstream hears about it.
    */
   onBossResult?: (won: boolean, wpm: number) => void;
   onExit: () => void;
@@ -463,7 +476,12 @@ export default function Duel({
 
   const beginDuel = useCallback(() => {
     openKeyboard();
-    trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
+    /* A boss stays out of the duel funnel at both ends. `duel_started` is the
+       denominator every duel rate is measured against, and now that a boss no
+       longer fires `duel_finished`, counting its start would quietly report
+       bot duels as being abandoned more often than they are. The path has
+       `learn_boss` for this, which says which module and against what pace. */
+    if (!boss) trackEvent({ name: 'duel_started', mode: 'bot', difficulty, touch });
     /* A fresh script per attempt, so a retried boss is not the same lines. */
     dispatch({
       type: 'start', difficulty, character: mine, script: boss ? bossScript(boss) : undefined,
@@ -709,16 +727,23 @@ export default function Duel({
         multiplayer: Boolean(multiplayer),
         // Which bot. Meaningless when multiplayer, and ignored there.
         difficulty,
+        // A boss is an exercise wearing a duel's clothes. `saveResult` drops
+        // it; the arena only says which it was.
+        boss: Boolean(boss),
       });
 
-      trackEvent({
-        name: 'duel_finished',
-        mode: multiplayer ? 'human' : 'bot',
-        won: state.winner === state.mySlot,
-        wpm: finalWpm(stats),
-        accuracy: accuracy(stats),
-        seconds: Math.round((stats.endedAt - stats.startedAt) / 1000),
-      });
+      /* A boss stays out of the duel funnel at both ends, matching its start.
+         Counting it here would report the path's exercises as bot duels. */
+      if (!boss) {
+        trackEvent({
+          name: 'duel_finished',
+          mode: multiplayer ? 'human' : 'bot',
+          won: state.winner === state.mySlot,
+          wpm: finalWpm(stats),
+          accuracy: accuracy(stats),
+          seconds: Math.round((stats.endedAt - stats.startedAt) / 1000),
+        });
+      }
     }
     // account/multiplayer are read, not tracked: the effect must fire once, on
     // the transition into a winner, not again if the session resolves later.
@@ -1077,8 +1102,20 @@ export default function Duel({
   const myTarget = me.target;
   const playerLow = me.health <= 25 && state.phase === 'playing';
 
-  const labelFor = (fighter: FighterState) =>
-    (isMulti ? fighter.name || 'RIVAL' : BOT_PROFILES[state.difficulty].label).toUpperCase();
+  /**
+   * What the opponent is called.
+   *
+   * A boss is named after the module it guards. Left to the tier it is built
+   * from, every boss on the path introduces itself as ROOKIE, which is both
+   * wrong and the reason one player asked whether these fights were touching
+   * their rating: it looked exactly like the practice duel it is assembled out
+   * of.
+   */
+  const labelFor = (fighter: FighterState) => (
+    isMulti
+      ? fighter.name || 'RIVAL'
+      : boss?.label ?? BOT_PROFILES[state.difficulty].label
+  ).toUpperCase();
 
   /**
    * Whether the status plate is all the body anybody has.
@@ -1209,10 +1246,13 @@ export default function Duel({
                    * A bot keeps its caption, because a bot has no rating and its
                    * speed is the honest answer to the same question.
                    */
+                  /* A boss's own pace, not the tier's. The two differ by up to
+                     double at the start of the path, and the caption was
+                     quoting the one the player was NOT about to face. */
                   caption={
                     foes.length > 1 || isMulti
                       ? undefined
-                      : `${BOT_PROFILES[state.difficulty].wpm} wpm bot`
+                      : `${boss?.wpm ?? BOT_PROFILES[state.difficulty].wpm} wpm boss`
                   }
                   big={plateIsTheFighter}
                   /*
@@ -1432,7 +1472,10 @@ export default function Duel({
                 store already holds it, and re-applying it here is what used to
                 undo a mute the moment the next duel began. */}
             <button className="btn btn-primary" onClick={beginDuel}>
-              Fight {BOT_PROFILES[difficulty].label}
+              {/* "Fight Home row" is not a sentence. A bot has a name you
+                  fight; a boss guards a module, so it needs the article and
+                  the noun to read as English. */}
+              {boss?.label ? `Fight the ${boss.label} boss` : `Fight ${BOT_PROFILES[difficulty].label}`}
             </button>
             <button className="btn btn-ghost" onClick={onExit}>Back</button>
             <p className={styles.shortcut}>
@@ -1464,7 +1507,7 @@ export default function Duel({
         */}
       {linkDown && isMulti && state.phase !== 'over' && (
         <div className={styles.linkDown} role="status">
-          Connection lost — rejoining the duel…
+          Connection lost, rejoining the duel…
         </div>
       )}
 

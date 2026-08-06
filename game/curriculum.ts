@@ -18,7 +18,7 @@
  * page and obvious to the beginner who hits it.
  */
 
-import { taughtBy, type ModuleId } from './learnPath';
+import { moduleById, taughtBy, type ModuleId } from './learnPath';
 import type { BossBank } from './bossBank';
 
 export interface Lesson {
@@ -661,7 +661,13 @@ export const hasContent = (id: ModuleId): boolean => Boolean(CURRICULUM[id]);
  */
 export function bankFor(id: ModuleId): BossBank | undefined {
   const content = contentFor(id);
-  return content && { alphabet: taughtBy(id), words: content.bossWords, wpm: content.bossWpm };
+  return content && {
+    alphabet: taughtBy(id),
+    words: content.bossWords,
+    wpm: content.bossWpm,
+    /* The module's own name, so the arena stops calling it Rookie. */
+    label: moduleById(id)?.title,
+  };
 }
 
 /** The accuracy across a module's lessons that earns its second star. */

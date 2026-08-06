@@ -35,6 +35,18 @@ export interface BossBank {
   words: string[];
   /** The boss's typing speed. Absent means the bot tier's own pace. */
   wpm?: number;
+  /**
+   * What this boss is called, which is the module it guards.
+   *
+   * The arena names its opponent from the bot tier it was built out of, and a
+   * boss is built out of Rookie. So a player fighting the home-row boss was
+   * told they were facing ROOKIE, a 34 wpm bot, while the thing in front of
+   * them typed at 17 — and one of them reported the path afterwards, asking
+   * whether these fights moved their rating. Naming it after the module is
+   * what makes it legible as an exercise rather than a duel they half
+   * recognise.
+   */
+  label?: string;
 }
 
 /** Whether a word can be typed using only the keys taught so far. */

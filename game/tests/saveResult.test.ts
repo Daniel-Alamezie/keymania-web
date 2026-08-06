@@ -98,6 +98,43 @@ describe('saveResult', () => {
     expect(recordDuel).toHaveBeenCalledWith(stats, true, 62, 94);
   });
 
+  /**
+   * A module's boss goes nowhere.
+   *
+   * Reported by a player who found boss fights in their Recent duels and asked
+   * whether the path was moving their rating. It was not — practice is always
+   * unranked — but the boss was still being folded into the duelling record,
+   * and the damage was worse than cosmetic: it posts `difficulty: 'rookie'`
+   * because that is the arena it is built from, while the bot actually types at
+   * the module's own pace. `beatBot` in the API counts practice wins by
+   * difficulty, so the home-row boss at 17 wpm was earning credit for beating
+   * Rookie at 34.
+   *
+   * Pinned in both directions, because the local write and the POST are
+   * separate paths and skipping only one would be worse than skipping neither.
+   */
+  it('records a module boss nowhere at all', () => {
+    finish({ boss: true });
+    expect(recordDuel).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('drops a boss whether or not the player is signed in', () => {
+    for (const signedIn of [true, false]) {
+      vi.mocked(recordDuel).mockClear();
+      finish({ boss: true, signedIn });
+      expect(recordDuel).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    }
+  });
+
+  it('still records an ordinary rookie duel, which the boss is disguised as', () => {
+    // The guard must key off `boss` and not off the difficulty it borrows.
+    finish({ difficulty: 'rookie' });
+    expect(recordDuel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not throw when the practice post fails', () => {
     // A sync failure must never interrupt the victory screen.
     fetchMock.mockReturnValue(Promise.reject(new Error('offline')));

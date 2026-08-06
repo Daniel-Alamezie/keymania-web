@@ -7,8 +7,10 @@ import { invalidateProfile } from './serverProfile';
 /**
  * Where a finished duel goes.
  *
- * Three cases, and the distinction matters:
+ * Four cases, and the distinctions matter:
  *
+ *  - A module boss is not a duel. It goes nowhere: not to the local record,
+ *    not to the server. See below.
  *  - A human duel was refereed by the server, which already wrote both players'
  *    records from figures it computed itself. Posting again from here would
  *    double-count it, and would be the client's word for a ranked result.
@@ -16,13 +18,35 @@ import { invalidateProfile } from './serverProfile';
  *    truth. It is posted for the player's own history and stored unranked.
  *  - A signed-out guest gets the browser-local record only.
  *
- * The local record is written in every case: it is what the menu panels read,
- * so the arena updates the moment a duel ends without waiting on a round trip.
+ * Apart from a boss, the local record is written in every case: it is what the
+ * menu panels read, so the arena updates the moment a duel ends without waiting
+ * on a round trip.
+ *
+ * WHY A BOSS IS EXCLUDED. It is built out of a bot duel and was therefore
+ * recorded as one, which a player reported after finding boss fights sitting in
+ * their Recent duels and wondering whether the path was moving their rating.
+ * It was not — practice is always `ranked: false` — but three things were
+ * genuinely wrong:
+ *
+ *  - Recent duels showed a win over eight home-row keys next to real games.
+ *  - Win rate and best wpm are figures about duelling, and a boss is timed
+ *    against the curriculum's pace rather than a tier's, so its wpm is not
+ *    comparable to anything else on that panel.
+ *  - It was reported as `difficulty: 'rookie'` while the bot typed at the
+ *    module's own speed, 17 wpm for home row against Rookie's 34. `beatBot` in
+ *    the API's challenges counts practice wins by difficulty, so the gentlest
+ *    boss on the path was earning credit for beating Rookie.
+ *
+ * The rule lives here rather than in the arena because this function is where
+ * "where does a finished duel go" is already decided, and here it can be
+ * tested. A boss's whole consequence is the star it grants on the path.
  */
 
 export function saveResult({
-  stats, won, wpm, accuracy, signedIn, multiplayer, difficulty,
+  stats, won, wpm, accuracy, signedIn, multiplayer, difficulty, boss,
 }: FinishedDuel): void {
+  if (boss) return;
+
   recordDuel(stats, won, wpm, accuracy);
 
   // The account record now has a duel the cached copy does not know about —
