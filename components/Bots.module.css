@@ -1,0 +1,154 @@
+/*
+ * The roster.
+ *
+ * A grid here rather than the hub's rows, and for the opposite reason: these
+ * ARE six of a kind, differing in one number, and picking one means comparing
+ * them. Faces in a row is the shape that invites the comparison.
+ */
+
+.screen {
+  height: 100dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 16px 48px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(720px, 100%);
+  text-align: center;
+}
+
+.back {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.back:hover { color: var(--ink); }
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.note, .footnote {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(720px, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 10px 12px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  border-bottom-width: 4px;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 90ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.card:hover:not(:disabled) {
+  background: var(--edge-soft);
+  border-color: var(--opponent);
+  transform: translateY(-2px);
+}
+
+.card:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+
+/*
+ * Locked, but still legible.
+ *
+ * The portrait dims rather than disappearing: knowing who is waiting up there
+ * is the reason to reach the speed that opens them, and a blank tile is not a
+ * reason to do anything.
+ */
+.card[data-locked] {
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.card[data-locked] img { opacity: 0.28; filter: grayscale(1); }
+.card[data-locked] .name { color: var(--faint); }
+
+/* The one nearest your own speed. */
+.card[data-suggested] { border-color: var(--gold); }
+
+/* The chosen one lights up while the duel is being armed. */
+.card[data-igniting] {
+  border-color: var(--gold);
+  background: var(--edge-soft);
+  animation: pulse 320ms ease-out;
+}
+
+@keyframes pulse {
+  50% { transform: translateY(-3px); }
+}
+
+.name { font-size: 13px; }
+
+.speed {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+/* A target rather than a padlock. */
+.locked {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.flag {
+  position: absolute;
+  top: -9px;
+  padding: 2px 6px;
+  background: var(--panel);
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 560px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: border-color 140ms ease, background 140ms ease; }
+  .card:hover:not(:disabled), .card:active:not(:disabled) { transform: none; }
+  .card[data-igniting] { animation: none; }
+}

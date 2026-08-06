@@ -418,40 +418,124 @@ inside the app — seeing the top of it would mean earning 36 stars.
 
 ### The menu entry, and its copy
 
-Learn sits under Play, top-left of a two-by-two grid. Play stays the hero; the
-four modes beneath it fall into two rows that pair by what the player is there
-for:
+Four buttons, each full width, stacked:
 
-|                   |                            |
-| ----------------- | -------------------------- |
-| **Learn to type** | **Practice** — no stakes   |
-| **Weekly**        | **Survival** — stakes      |
+| | |
+| --- | --- |
+| **Play** | find a duel at your level |
+| **Learn to type** | the keyboard from scratch, or a warm-up |
+| **Weekly** | same script, resets Monday |
+| **Survival** | one mistake ends it |
 
-**Revised 2026-08-06.** Learn and Weekly each ran full width under Play, which
-made three near-identical bars down the column and said they were three of a
-kind. They are not. The borders already carry the grouping — Weekly runs gold,
-Survival runs warm — so the bottom row reads as the one with consequences before
-a word of it is read.
+**Revised twice on 2026-08-06,** and the second revision is the one that
+mattered. The first tried a two-by-two grid pairing by stakes. That was a better
+arrangement of five things; what actually fixed the menu was there being four.
 
-A player suggested putting Learn beside Practice and was right about the
-pairing. Their mock also promoted Weekly and Survival to full width above it,
-which is the half not taken: Survival at Play's width makes "one mistake ends
-it" the third-loudest thing on a page beginners land on, and Survival is the
-most niche mode here rather than the second most important. Learn keeps
-top-left, the strongest cell in a grid, because the person who needs it is the
-person least equipped to go hunting for it.
+Practice used to unfold a six-rung bot roster **inside the menu**. So one of the
+five options was secretly a whole screen, and every layout that treated it as a
+peer of the others was wrong before it was drawn. Moving it behind the hub is
+what let the rest sit down a column at full width.
 
-On touch there is no Learn, so three modes remain, and three in a two-column
-grid strands one on a row of its own. That case keeps the old shape: Weekly full
-width, the other two across.
+Ordered by how much is at stake, descending: Play is a ranked duel, Learn asks
+nothing of anybody, and the two in between keep their own colours — Weekly gold,
+Survival warm — so the ones that can cost you something still say so.
 
-Weekly's sub-copy shortened to "same script, resets Monday" — the old line wrapped
-to three lines at half width and made the bottom row taller than the top.
+**Learn is second, not last.** Beginners scan top to bottom, and Survival above
+Learn puts "one mistake ends it" in front of exactly the person least able to
+survive it.
 
-The copy describes the content and never the reader: **"the whole keyboard, one
-row at a time"**. It is aimed at people who cannot yet touch type, and those are
-exactly the people who will not press anything that calls them beginners. No
-"basics", no "new players", no "start here".
+The label describes the content and never the reader. It is aimed at people who
+cannot yet touch type, and those are exactly the people who will not press
+anything that calls them beginners. No "basics", no "new players", no "start
+here".
+
+The sub-line does a different job: **it is the whole mitigation for having moved
+the bot ladder.** A player who has typed for years will not look for practice
+behind a button that says Learn, so the button has to tell them. "Or a warm-up"
+is buying back discoverability, not describing a feature.
+
+When the path is unavailable — the flag is dark, or this is a phone — the button
+falls back to **Practice / "warm up, or take on a bot"**, because that is
+honestly what is behind it then.
+
+### The hub, and its three doors
+
+`LearnHub`, behind the one menu entry:
+
+| Door | Copy |
+| --- | --- |
+| **The path** | twelve modules, the whole keyboard, one row at a time |
+| **Warm-up** | no clock, no health, no end. Words keep coming; keep the streak alive |
+| **Bots** | six opponents, 34 to 150 words a minute. Beat one, then pick the next |
+
+Ordered by how much each asks of you, which is also the order a nervous typist
+needs them in: a curriculum that starts from nothing, a screen with no pressure
+at all, then an opponent.
+
+Rows rather than tiles, unlike the bot roster below. These are not three of a
+kind to be compared at a glance, they are three different amounts of
+commitment, and each needs a full sentence to explain itself. The roster is a
+grid for the opposite reason: six things differing in one number, where picking
+one means comparing them.
+
+**Only the path is gated on `learn`.** The screen is not. Bots predate the path
+by a long way, and the kill switch is meant to close a new feature rather than
+take an old one down with it — same for touch, where the path is hidden by
+design but a phone still gets a warm-up and a bot.
+
+Implemented as a sub-state of `screen === 'learn'` rather than three new screen
+values, so the `?learn=1` restore and the browser-Back trap keep working off one
+condition instead of four. Back unwinds the same steps forward took: out of a
+room to the hub, out of the hub to the menu.
+
+### The bots get their faces
+
+The roster was six text buttons unfolding in the menu. It is now a screen with
+portraits.
+
+**The art already existed.** `BOT_CHARACTERS` gave every difficulty its own
+character a while ago, so a bot duel would stop being two identical figures
+throwing knives at each other. It was drawn in the arena and nowhere else, which
+meant the one moment you actually chose an opponent was the one moment you could
+not see them.
+
+Locked tiers dim rather than disappear: knowing who is waiting up there is the
+reason to reach the speed that opens them, and the card still says how far away
+that is. "20 wpm away" is a target; a padlock is a closed door.
+
+### Warm-up: the mode with nothing at stake
+
+Endless words, no clock, no health, no end. The session is over when the player
+leaves.
+
+**The streak is not the combo.** The arena's combo is explicitly about chaining
+words *fast* — a speed mechanic wearing a counter — and with the time pressure
+gone it has nothing left to measure. So this counts something else with the same
+word, under a rule a player can hold in their head: **every clean word adds one;
+any typo puts you back to zero.** A word you mistyped inside does not count even
+if you then fix it, which is what `wordClean` is for; without it the counter
+would climb through mistakes, which is the one thing it must not do.
+
+**No speed is shown anywhere**, live or in the summary. A speed on screen is a
+speed being judged, and this mode's claim is that nothing here is.
+
+**It records a best streak, locally, and nothing else.** Not the duel record,
+not `bestWpm`. Same rule as the boss, for a sharper reason: `bestSpeed` feeds
+the bot unlock ladder, so a figure earned with no clock and no opponent leaking
+into it would silently open Champion for somebody who had never fought anybody.
+A streak count cannot be mistaken for a speed, which is the other reason it is
+the only thing kept. It is deliberately not on the account either — the fastest
+way to put something at stake is to sync a number somewhere it can be compared.
+
+The reducer stays pure and cannot draw its own sentences: the screen feeds it a
+buffer. There is a floor under that buffer which repeats the last line if it
+ever runs dry, because an endless mode that can reach an empty sentence is one
+that can stop dead, and a repeated line is a far cheaper failure than a screen
+nobody can type on.
+
+**Second pass, not built:** restrict the words to keys the player has learned on
+the path, so a module-3 student warms up on module-3 letters. `taughtBy` gives
+it almost free now the mode exists.
 
 "New here? Read how to play" comes off the menu when Learn is on it — two doors
 for one intention means most people pick neither, and Learn is the real answer

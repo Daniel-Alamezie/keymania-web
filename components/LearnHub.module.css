@@ -1,0 +1,153 @@
+/*
+ * The hub: one door on the menu, three rooms behind it.
+ *
+ * Rows rather than a grid, and deliberately. These are not three of a kind to
+ * be compared at a glance — they are three different amounts of commitment, and
+ * a row you read top to bottom says that where three tiles side by side would
+ * say pick one. Each row is wide enough to carry a sentence, which all three
+ * need: none of them explains itself from its name alone.
+ */
+
+.screen {
+  /* Its own scroll container. `html, body` are locked to stop the arena
+     bouncing, so a screen that can overflow has to say so itself. */
+  height: 100dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 16px 48px;
+}
+
+.head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(620px, 100%);
+  text-align: center;
+}
+
+.back {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.back:hover { color: var(--ink); }
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.doors {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(620px, 100%);
+}
+
+.door {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  border-bottom-width: 4px;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 90ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.door:hover {
+  background: var(--edge-soft);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+
+.door:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+/* Each door keeps the colour its room already uses, so the association is
+   made before the screen behind it ever opens. */
+.door[data-door='path'] { border-color: var(--player-shade, var(--edge)); }
+.door[data-door='bots'] { border-color: var(--opponent-deep, var(--edge)); }
+
+/*
+ * The slot the flame sits in.
+ *
+ * `position: relative` is not decoration: PathFlame's contained variant is
+ * `position: absolute; inset: 0`, so without a positioned ancestor it escapes
+ * to the viewport and draws itself across the whole page. It did exactly that
+ * the first time this screen was rendered.
+ */
+.art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px;
+  overflow: hidden;
+}
+
+.glyph {
+  font-size: 26px;
+  color: var(--muted);
+}
+
+.door:hover .glyph { color: var(--gold); }
+
+.doorBody {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.doorTitle {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.doorNote {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Where you are in that room, which is the line that makes a door worth
+   coming back to rather than just worth opening once. */
+.doorState {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+@media (max-width: 480px) {
+  .door { grid-template-columns: 60px minmax(0, 1fr); gap: 10px; }
+  .art { height: 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .door { transition: border-color 140ms ease, background 140ms ease; }
+  .door:hover, .door:active { transform: none; }
+}

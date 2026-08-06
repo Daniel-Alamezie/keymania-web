@@ -173,21 +173,22 @@
 
 /* ---------- Game modes ----------
  *
- * Two labels under Play, and nothing else until one is chosen. The menu at rest
- * is one button and two words rather than one button and eight, which is the
- * whole point: Play answers "I want a game now" and needs no decision, and these
- * are the only two decisions worth offering.
+ * Three labels under Play, stacked, each carrying its full width.
+ *
+ * This was a two-column grid, and before that a mix of full-width bars and
+ * half-width chips. Both were arrangements of FIVE things. What fixed it was
+ * not a better arrangement: it was Practice moving out. It used to unfold a
+ * six-rung bot roster inside this menu, so one of the five options was
+ * secretly a whole screen, and every layout that treated it as a peer of the
+ * others was wrong before it was drawn. With it behind Learn, four items fit
+ * down a column and none has to be half width to do it.
  */
 .modes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
   width: 100%;
 }
-
-/* One button borrowing Play's full width. The two-column grid is the row's
-   default, so a lone chip inside it sat in column one at half width. */
-.modes[data-solo] { grid-template-columns: 1fr; }
 
 .mode { min-width: 0; }
 
@@ -269,50 +270,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .modePanel { animation: none; }
-}
-
-/* ---------- The bot ladder ----------
- *
- * Six rungs on a fixed three-column grid rather than a wrapping flex row. Flex
- * would put four on one line and two on the next at some widths, which reads as
- * two groups and invites the question of what separates them. Two rows of three
- * says one ladder, and the second row being the locked half is a coincidence
- * worth keeping.
- */
-.ladder {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  width: 100%;
-  animation: unfold 200ms ease-out;
-}
-
-.rung { min-width: 0; }
-
-/*
- * A locked rung is dim but still legible, and still says what opens it.
- *
- * Not hidden: the ladder is the reason to keep playing, and a player who cannot
- * see what is above them has nothing to climb towards. Not greyed to the point
- * of being unreadable either, because the number underneath is the whole point.
- */
-.rung[data-locked] {
-  opacity: 0.42;
-  border-style: dashed;
-  cursor: not-allowed;
-}
-.rung[data-locked]:hover { opacity: 0.55; }
-
-/*
- * The one at your level, marked without shouting.
- *
- * A left edge rather than a fill or a badge: it picks the rung out at a glance
- * and survives sitting next to the ignition glow, which a coloured background
- * would not.
- */
-.rung[data-suggested] {
-  border-color: var(--player);
-  box-shadow: inset 3px 0 0 0 var(--player);
 }
 
 /* ---------- Choosing an opponent ----------

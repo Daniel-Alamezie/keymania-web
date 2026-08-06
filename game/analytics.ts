@@ -139,6 +139,22 @@ export type GameEvent =
       boss_wpm: number;
     }
   | { name: 'learn_module_completed'; module: string; stars: number; granted: number }
+  /**
+   * The warm-up, which is the one mode with no result to report.
+   *
+   * Nothing here is a score, and none of it may be read as one — there is
+   * deliberately no wpm, because a figure earned with no clock and no opponent
+   * is not comparable to one earned under both, and publishing it would invite
+   * exactly that comparison. What these answer is narrower and more useful:
+   * whether a mode with nothing at stake is somewhere people actually spend
+   * time, and whether the streak is a thing they chase.
+   *
+   * A session with `words` near zero is somebody who opened it and left, which
+   * is a different failure from one who typed for four minutes and never got
+   * past a streak of three.
+   */
+  | { name: 'warmup_started' }
+  | { name: 'warmup_finished'; words: number; best_streak: number; accuracy: number }
   | { name: 'handler_crashed'; messageType: string; error: string };
 
 /**

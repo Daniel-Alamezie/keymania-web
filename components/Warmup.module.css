@@ -1,0 +1,109 @@
+/*
+ * The warm-up's own pieces. Everything structural comes from Survival's shell
+ * and Lesson's finger hint; what is here is the streak, which no other mode
+ * displays, and the card that closes a session nothing else ever ends.
+ */
+
+/*
+ * The number that stands where the sprint puts its clock.
+ *
+ * Big, because it is the only figure on the screen and the whole reason to
+ * stay. Dim at zero and lit above it: the difference between "nothing yet" and
+ * "something going" is the feedback loop the mode runs on, and it has to be
+ * readable out of the corner of an eye that is busy reading words.
+ */
+.streak {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--faint);
+  transition: color 160ms ease;
+}
+
+.streak[data-live] { color: var(--player); }
+
+.streakLabel {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The context under it: this session's best, the one to beat, the accuracy.
+   One line, quiet, because none of it is what you are doing right now. */
+.line {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* ---------- The way out ---------- */
+
+.card {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.cardTitle {
+  font-size: 18px;
+  color: var(--gold);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(420px, 100%);
+  margin: 0;
+}
+
+.stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 2px solid var(--edge);
+  border-bottom-width: 4px;
+  background: var(--panel-2);
+}
+
+.stats dt {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stats dd {
+  margin: 0;
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.record {
+  margin: 0;
+  font-size: 11px;
+  color: var(--gold);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, 100%);
+}
+
+.actions .btn { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .streak { transition: none; }
+}

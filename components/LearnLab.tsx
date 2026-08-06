@@ -6,6 +6,7 @@ import { contentFor } from '@/game/curriculum';
 import { clearRuns, lessonsDone, recordLesson } from '@/game/moduleRun';
 import { clearLocal, localSnapshot, recordLocal } from '@/game/localPath';
 import { markSeen } from '@/game/tutorialSeen';
+import { bestSnapshot, clearBest, recordStreak } from '@/game/warmupBest';
 import styles from './LearnLab.module.css';
 
 /**
@@ -50,8 +51,18 @@ export default function LearnLab() {
       run: () => {
         clearRuns();
         clearLocal();
+        clearBest();
         try { window.localStorage.removeItem('keymania.learn.tutorial.v1'); } catch { /* none */ }
-        return 'Cleared. The tutorial is unread and every lesson is shut.';
+        return 'Cleared. Tutorial unread, every lesson shut, no streak to beat.';
+      },
+    },
+    {
+      label: 'A warm-up streak to beat',
+      hint: 'Puts 24 on record, so the warm-up has something to chase and can show a new best.',
+      run: () => {
+        clearBest();
+        recordStreak(24);
+        return 'Best streak set to 24. The warm-up should say "to beat 24".';
       },
     },
     {
@@ -135,6 +146,9 @@ export default function LearnLab() {
       <section className={styles.state}>
         <h2 className={`${styles.stateTitle} pixel-font`}>This browser now</h2>
         <p className={styles.note}>Guest path: {localSnapshot() || 'empty'}</p>
+        <p className={styles.note}>
+          Warm-up best: {bestSnapshot() || 'none yet'}
+        </p>
         <ul className={styles.list}>
           {MODULES.map((module) => {
             const lessons = contentFor(module.id)?.lessons.length ?? 0;

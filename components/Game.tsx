@@ -5,15 +5,14 @@ import Link from 'next/link';
 import { useDuelSocket } from '@/game/useDuelSocket';
 import { invalidateBoards } from '@/game/useBoard';
 import { audio } from '@/game/audio';
-import { BOT_PROFILES } from '@/game/constants';
-import { BOT_UNLOCK_WPM, bestSpeed, isBotUnlocked, suggestedBot } from '@/game/botLadder';
+import { bestSpeed } from '@/game/botLadder';
 import { useProfile } from '@/game/profile';
 import { resolveDisplayName, useDisplayName, useServerProfile } from '@/game/serverProfile';
 import { Flame } from './RankFlame';
 import { ratingFlame } from '@/models/rating';
 import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
 import type { PowerKind } from '@/game/powers';
-import { DIFFICULTIES, type Difficulty } from '@/models/bot';
+import { type Difficulty } from '@/models/bot';
 import Duel, { type MultiplayerConfig } from './Duel';
 import Lobby from './Lobby';
 import ArenaScene from './ArenaScene';
@@ -26,6 +25,9 @@ import Searching from './Searching';
 import Survival from './Survival';
 import Weekly from './Weekly';
 import Ladder from './Ladder';
+import LearnHub from './LearnHub';
+import Bots from './Bots';
+import Warmup from './Warmup';
 import Lesson from './Lesson';
 import ModuleSheet from './ModuleSheet';
 import ModuleComplete from './ModuleComplete';
@@ -67,11 +69,23 @@ type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'w
 /**
  * Which of the menu's panels is unfolded, or none.
  *
- * Named rather than inlined because `modeTab` takes one, and the menu renders
- * the same three buttons in two arrangements depending on whether the path is
- * available.
+ * Practice is no longer among them. It used to unfold a six-rung bot roster
+ * inside the menu, which is where the menu's crowding came from; it now has a
+ * screen of its own behind the hub. What is left here are the two modes that
+ * genuinely have something short to say before you commit to them.
  */
-type Mode = 'practice' | 'survival' | 'weekly' | null;
+type Mode = 'survival' | 'weekly' | null;
+
+/**
+ * Which room of the training area is open, or the hub itself.
+ *
+ * A sub-state of `screen === 'learn'` rather than three more screen values, so
+ * that the ?learn=1 restore and the browser-Back trap keep working off one
+ * condition instead of four. The area is one place with rooms in it, which is
+ * also how a player experiences it: Back from a room goes to the hub, and Back
+ * from the hub goes to the menu.
+ */
+type Door = 'path' | 'warmup' | 'bots' | null;
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -207,7 +221,9 @@ export default function Game() {
   const myBest = profile
     ? bestSpeed(profile.ranked.bestWpm, profile.practice.bestWpm)
     : bestSpeed(0, local.bestWpm);
-  const suggestion = suggestedBot(myBest);
+  /* Which bot to suggest is the roster's own business now that it has a
+     screen. This still computes `myBest` because that is what opens the top
+     three, and the screen is handed the figure rather than the conclusion. */
   /**
    * The learning path, or nothing at all.
    *
@@ -363,6 +379,15 @@ export default function Game() {
   const [tutorial, setTutorial] = useState(false);
 
   /**
+   * Which room of the training area is open. Null is the hub itself.
+   *
+   * Declared here with the rest of the learn state rather than beside `mode`,
+   * because the Back trap below reads it and would otherwise reach for it
+   * before it exists.
+   */
+  const [door, setDoor] = useState<Door>(null);
+
+  /**
    * Browser Back, inside the learn flow.
    *
    * These screens are state rather than routes -- the URL stays `/` the whole
@@ -381,10 +406,12 @@ export default function Game() {
    * *now*, and re-binding it on every depth change would push a fresh entry
    * each time and bury the real history under our own.
    */
-  const depth = useRef({ walk, opened, tutorial, celebrate });
+  const depth = useRef({ walk, opened, tutorial, celebrate, door });
   useEffect(() => {
-    depth.current = { walk, opened, tutorial, celebrate };
-  }, [walk, opened, tutorial, celebrate]);
+    depth.current = {
+      walk, opened, tutorial, celebrate, door,
+    };
+  }, [walk, opened, tutorial, celebrate, door]);
 
   const inLearn = screen === 'learn';
   useEffect(() => {
@@ -399,7 +426,11 @@ export default function Game() {
       if (here.walk) { setWalk(null); setOpened(here.walk.module); trap(); return; }
       if (here.tutorial) { setTutorial(false); trap(); return; }
       if (here.opened) { setOpened(null); trap(); return; }
-      /* At the ladder: let this one go, and land back on the menu. */
+      /* Out of a room and into the hub, which is one level shallower rather
+         than all the way out. Back has to unwind the same steps forward took,
+         and getting here took two clicks. */
+      if (here.door) { setDoor(null); trap(); return; }
+      /* At the hub: let this one go, and land back on the menu. */
       setScreen('menu');
     };
 
@@ -1015,12 +1046,11 @@ export default function Game() {
     id: Exclude<Mode, null>,
     label: string,
     note: string,
-    full = false,
   ) => (
     <button
       key={id}
       aria-expanded={mode === id}
-      className={`btn ${styles.mode}${full ? ` ${styles.full}` : ''}`}
+      className={`btn ${styles.mode} ${styles.full}`}
       data-active={mode === id || undefined}
       data-mode={id}
       onClick={() => setMode(mode === id ? null : id)}
@@ -1031,40 +1061,51 @@ export default function Game() {
   ), [mode]);
 
   /**
-   * The way into the path.
+   * The way into the training area.
    *
    * Not a `modeTab`: it unfolds nothing and navigates instead, which is why it
    * carries no `aria-expanded` and no active state. It only looks like its
    * neighbours.
    *
-   * THE COPY is the hard part. It is aimed at people who cannot yet touch
-   * type, and those are exactly the people who will not press anything that
-   * calls them beginners. So it describes the content and never the reader:
-   * "one row at a time" says who it is for to somebody who needs it, and reads
-   * as thoroughness to everybody else. No "basics", no "new players", no
-   * "start here".
+   * THE COPY is the hard part, and it does two jobs now that Practice lives
+   * behind it. The label is aimed at people who cannot yet touch type, and
+   * those are exactly the people who will not press anything that calls them
+   * beginners — so it describes the content and never the reader. No "basics",
+   * no "new players", no "start here".
    *
-   * Rendered only when the server sent a `learn` block, which it does only
-   * under LEARN_LIVE. The absence of the field is the off switch, so there is
-   * no second flag here to drift out of step.
+   * The sub-line is aimed at everybody else, and it is the whole mitigation for
+   * having moved their bot ladder: a player who has typed for years will not
+   * look for practice behind a button that says Learn, so the button has to
+   * tell them. "Or a warm-up" is doing that work rather than describing a
+   * feature.
+   *
+   * **Always rendered**, unlike before. The path is the part `learn` gates, and
+   * the hub holds two rooms the path never owned — the bots predate it
+   * entirely. When the flag is dark or this is a phone, the label falls back to
+   * the name of what is actually behind it.
    */
-  const learnMode = learn ? (
+  const trainingHere = Boolean(learn);
+  const learnMode = (
     <button
-      className={`btn ${styles.mode}`}
+      className={`btn ${styles.mode} ${styles.full}`}
       data-mode="learn"
       onClick={() => {
         track({
           name: 'learn_opened',
           signed_in: Boolean(profile),
-          modules_passed: completedCount(learn.path),
+          modules_passed: completedCount(learn?.path),
         });
         setScreen('learn');
       }}
     >
-      Learn to type
-      <small className="btn-sub">the whole keyboard, one row at a time</small>
+      {trainingHere ? 'Learn to type' : 'Practice'}
+      <small className="btn-sub">
+        {trainingHere
+          ? 'the keyboard from scratch, or a warm-up'
+          : 'warm up, or take on a bot'}
+      </small>
     </button>
-  ) : null;
+  );
 
   /**
    * Find me a game.
@@ -1397,14 +1438,44 @@ export default function Game() {
   }
 
   /**
-   * The path.
+   * The training area: the hub, and the three rooms behind it.
    *
-   * Guarded on `learn` as well as the screen, so a stale screen state can
-   * never render a ladder for a server that has the feature switched off —
-   * the flag going dark takes the screen with it rather than leaving somebody
-   * stranded on a path nothing will record.
+   * **Only the path is gated on `learn`.** The screen itself is not, and that
+   * distinction is load-bearing: bots have been in this game since long before
+   * the path, and the kill switch is meant to close a new feature rather than
+   * take an old one down with it. Same for touch, where the path is hidden by
+   * design — a phone still gets a warm-up and a bot.
    */
-  if (screen === 'learn' && learn) {
+  if (screen === 'learn') {
+    if (door === 'warmup') {
+      return <Warmup onExit={() => setDoor(null)} />;
+    }
+
+    if (door === 'bots') {
+      return (
+        <Bots
+          bestWpm={myBest}
+          igniting={igniting}
+          onPick={ignite}
+          onBack={() => setDoor(null)}
+        />
+      );
+    }
+
+    /* The hub. Everything below this point belongs to the path, so anything
+       that is not the path door stops here. */
+    if (door !== 'path' || !learn) {
+      return (
+        <LearnHub
+          progress={learn?.path}
+          onPath={() => setDoor('path')}
+          onWarmup={() => setDoor('warmup')}
+          onBots={() => setDoor('bots')}
+          onBack={() => setScreen('menu')}
+        />
+      );
+    }
+
     const content = walk && contentFor(walk.module);
 
     /* A lesson, until they run out. */
@@ -1572,7 +1643,10 @@ export default function Game() {
             setOpened(id);
           }}
           onTutorial={() => setTutorial(true)}
-          onExit={() => setScreen('menu')}
+          /* Back to the hub, not the menu. Leaving has to unwind the same
+             steps arriving took, or the way out is shorter than the way in
+             and the hub becomes a screen you can only ever see once. */
+          onExit={() => setDoor(null)}
           onGuide={() => { track({ name: 'guide_opened' }); setShowGuide(true); }}
         />
       </>
@@ -1740,63 +1814,31 @@ export default function Game() {
         )}
 
         {/*
-          * Everything that is not Play, in two rows of two.
+          * Three ways to spend a session, under the one button that is neither.
           *
-          * Play answers "I want a game now" and needs no decision. What is left
-          * is four ways to spend a session, and they are not a flat list — they
-          * fall into two pairs, which is what the rows are for:
+          * Each full width and stacked, which is the third arrangement this row
+          * has had and the first that is not fighting its own contents. It went
+          * from a stack of five, to a two-by-two grid pairing by stakes, to
+          * this — and what changed underneath is that Practice left. It used to
+          * unfold a six-rung bot roster INSIDE the menu, which is where all the
+          * crowding came from: a whole roster squeezed into the space of one
+          * option. Given a screen of its own behind Learn, the menu has four
+          * items instead of five and none of them has to be half width to fit.
           *
-          *   Learn to type | Practice     nothing is at stake; you are here to
-          *                                get better
-          *   Weekly        | Survival     something is at stake; a score, a
-          *                                board, a run that can end
+          * The order is by how much is at stake, descending. Play is a ranked
+          * duel. Learn asks nothing of anybody. Weekly and Survival sit between
+          * them and keep their own colours, gold and warm, so the two that can
+          * cost you something still say so at a glance.
           *
-          * The previous arrangement stacked Learn and Weekly full width under
-          * Play, which made three near-identical bars down the column and said
-          * they were three of a kind. They are not. Pairing by what the player
-          * is there for does more work than ordering by importance did, and the
-          * borders already carry it: Weekly runs gold and Survival runs warm,
-          * so the bottom row reads as the one with consequences before a word
-          * of it is read.
-          *
-          * A PLAYER SUGGESTED putting Learn next to Practice, and was right
-          * about the pairing. Their mock also promoted Weekly and Survival to
-          * full width above it, which is the half not taken: Survival at Play's
-          * width makes "one mistake ends it" the third-loudest thing on a page
-          * that beginners land on, and Survival is the most niche mode here,
-          * not the second most important.
-          *
-          * Learn keeps top-left, the strongest cell in a grid, because the
-          * person who needs it is the person least equipped to go hunting.
-          *
-          * On touch there is no Learn — the path is desktop only — which leaves
-          * three, and three in a two-column grid strands one on a row of its
-          * own. That case keeps the old shape: Weekly full width, then the
-          * other two across. Hence two arrangements rather than one clever
-          * grid that degrades badly.
+          * LEARN IS SECOND, not last. Beginners scan top to bottom, and
+          * Survival above Learn puts "one mistake ends it" in front of exactly
+          * the person least able to survive it.
           */}
-        {learn ? (
-          <>
-            <div className={styles.modes}>
-              {learnMode}
-              {modeTab('practice', 'Practice', 'against a bot')}
-            </div>
-            <div className={styles.modes}>
-              {modeTab('weekly', 'Weekly', 'same script, resets Monday')}
-              {modeTab('survival', 'Survival', 'one mistake ends it')}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.modes} data-solo>
-              {modeTab('weekly', 'Weekly', 'same script, resets Monday', true)}
-            </div>
-            <div className={styles.modes}>
-              {modeTab('practice', 'Practice', 'against a bot')}
-              {modeTab('survival', 'Survival', 'one mistake ends it')}
-            </div>
-          </>
-        )}
+        <div className={styles.modes}>
+          {learnMode}
+          {modeTab('weekly', 'Weekly', 'same script, resets Monday')}
+          {modeTab('survival', 'Survival', 'one mistake ends it')}
+        </div>
 
         {/*
           * Survival explains itself before it starts.
@@ -1863,39 +1905,6 @@ export default function Game() {
               </SignInLink>
             )}
           </div>
-        )}
-
-        {mode === 'practice' && (
-        <div className={styles.ladder}>
-          {DIFFICULTIES.map((key) => {
-            const unlocked = isBotUnlocked(key, myBest);
-            return (
-              <button
-                key={key}
-                className={`btn ${styles.rung}`}
-                // Marks the one chosen, so the ignition plays on that button and
-                // not on all of them at once.
-                data-igniting={igniting === key || undefined}
-                data-locked={!unlocked || undefined}
-                // The one nearest your own speed, so the ladder is a suggestion
-                // rather than a list to guess your way through.
-                data-suggested={unlocked && key === suggestion || undefined}
-                disabled={igniting !== null || !unlocked}
-                onClick={() => ignite(key)}
-                title={unlocked ? undefined : `Reach ${BOT_UNLOCK_WPM[key]} wpm to unlock`}
-              >
-                {BOT_PROFILES[key].label}
-                {/* A locked rung says what opens it rather than just refusing.
-                    "20 wpm away" is a target; a padlock is a closed door. */}
-                <small className="btn-sub">
-                  {unlocked
-                    ? `${BOT_PROFILES[key].wpm} wpm`
-                    : `${BOT_UNLOCK_WPM[key] - myBest} wpm away`}
-                </small>
-              </button>
-            );
-          })}
-        </div>
         )}
 
           {/*
