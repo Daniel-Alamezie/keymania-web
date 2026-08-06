@@ -10,6 +10,7 @@ import {
 import { useConfirmKey } from '@/game/useConfirmKey';
 import { fingerFor, fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
+import { keyFor } from '@/game/typing';
 import { track } from '@/game/analytics';
 import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
@@ -129,24 +130,11 @@ export default function Lesson({
     if (snapshot.phase !== 'typing') return;
     if (pausedRef.current) return;
 
-    /**
-     * Case matters only when the lesson is teaching it.
-     *
-     * Everything used to be lower-cased, borrowed from the sprint, which made
-     * module 8 unscoreable: a script asking for "A" could never be satisfied,
-     * because the A the player typed arrived as "a". But simply comparing
-     * exactly would punish the opposite habit, somebody with caps lock on
-     * during the home row, on a screen whose whole rule is that stray presses
-     * cost nothing.
-     *
-     * So the script decides. A lower-case expectation accepts either case,
-     * because case is not what that lesson is about. An upper-case one is
-     * exact, because it is the entire point: shift, held with the opposite
-     * hand, is what module 8 teaches.
-     */
+    /* The script decides about case. The rule and the reasoning now live in
+       game/typing.ts, shared with the duel — which is where the boss fight
+       runs, and where a second copy of this had gone missing. */
     const expected = snapshot.sentence[snapshot.cursor];
-    const teachingCase = expected !== expected.toLowerCase();
-    const key = teachingCase ? raw : raw.toLowerCase();
+    const key = keyFor(expected, raw);
 
     if (key !== expected) {
       audio.miss();

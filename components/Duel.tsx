@@ -9,6 +9,7 @@ import {
 import { startBot } from '@/game/bot';
 import { bossLine, bossScript, bossWords, type BossBank } from '@/game/bossBank';
 import { audio } from '@/game/audio';
+import { keyFor } from '@/game/typing';
 // `trackEvent`, not `track`: this file already has a `track` that collects
 // timers for cleanup, and the two silently compiled into each other.
 import { track as trackEvent } from '@/game/analytics';
@@ -527,9 +528,11 @@ export default function Duel({
   useConfirmKey(confirmAction);
 
   const typeChar = useCallback((raw: string) => {
-      const key = raw.toLowerCase();
       const snapshot = stateRef.current;
       const expected = snapshot.sentence[snapshot.cursor];
+      /* The script decides about case. This used to fold everything, which
+         made the capitals boss unbeatable — see game/typing.ts. */
+      const key = keyFor(expected, raw);
       const correct = key === expected;
 
       if (!correct) audio.miss();
