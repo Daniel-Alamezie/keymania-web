@@ -225,6 +225,35 @@ same reach, and only the shift hand is new. `shiftHandFor` returns the
 types the letter is the commonest self-taught habit and it caps somebody's speed
 permanently.
 
+#### The board and the hands (2026-08-06)
+
+The lesson's guidance graduated from a schematic pair of hands to a full drawn
+keyboard with hands resting on it — `RetroKeyboard`, fed the same single `next`
+character everything else keys off. The schematic could say WHICH finger; only
+a board can show where that finger has to GO, and every module after the first
+is reaches.
+
+Decisions that survived a day of prototyping at `/dev/keyboard`:
+
+- **The hands are computed, not drawn.** Knuckles that never move, tips that go
+  where they are sent. A picture can show a finger resting; it cannot show one
+  leaving, and leaving is the skill.
+- **One SVG, one coordinate system**, in key units. A fingertip lands ON a key
+  at any rendered size.
+- **One shift lights, the far one.** Both lighting taught the exact habit
+  module 8 corrects.
+- **The reaching finger draws last and slightly thicker.** Paint order is
+  depth: a finger crossing the hand lifts over it in life, and drawing it
+  under the thumb chopped the one green line on screen into fragments.
+- **The hand is flattened before it is faded.** Opacity on the group, opaque
+  fills inside; per-shape alpha double-darkens every overlap into a seam.
+
+Where it shows: **lessons always** (the path is desktop-only, so the space is
+there), **warm-up on desktop only** — a drawn keyboard above a phone's soft
+keyboard is two keyboards half-covering each other, so touch keeps the compact
+schematic. The tutorial still uses the schematic pair; its guided flow is built
+around that component and swapping it is its own piece of work.
+
 ### Milestones sit where people quit
 
 Rewards at modules 1, 2, 6, 9 and 12, plus one for three-starring everything.

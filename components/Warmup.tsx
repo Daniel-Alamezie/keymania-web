@@ -15,6 +15,7 @@ import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
 import ArenaControls from './ArenaControls';
 import Hands from './Hands';
+import RetroKeyboard from './RetroKeyboard';
 import styles from './Survival.module.css';
 import lesson from './Lesson.module.css';
 import warm from './Warmup.module.css';
@@ -239,7 +240,17 @@ export default function Warmup({ onExit }: { onExit: () => void }) {
             {percent}% accurate
           </span>
 
-          <Hands next={next} />
+          {/*
+            * The full board on a desktop, the compact hands on touch.
+            *
+            * Not the same swap the lesson made, because this screen goes where
+            * the path does not: the warm-up is reachable on a phone, and a
+            * drawn keyboard above a soft keyboard is two keyboards on one
+            * small screen, each half covering the other. The schematic pair
+            * earns its keep there; everywhere else the board says strictly
+            * more.
+            */}
+          {touch ? <Hands next={next} /> : <RetroKeyboard next={next} width={560} />}
 
           {next && (
             <span className={lesson.finger}>

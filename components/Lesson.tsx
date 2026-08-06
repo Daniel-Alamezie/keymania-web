@@ -15,7 +15,7 @@ import SentenceView from './SentenceView';
 import ArenaScene from './ArenaScene';
 import ArenaControls from './ArenaControls';
 import RunPause from './RunPause';
-import Hands from './Hands';
+import RetroKeyboard from './RetroKeyboard';
 import styles from './Survival.module.css';
 import lesson from './Lesson.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
@@ -281,13 +281,23 @@ export default function Lesson({
             * after already having reached with the wrong finger.
             */}
           {/*
-            * The hands, and the words underneath them.
+            * The board, the hands on it, and the words underneath them.
             *
-            * Both, because they answer at different speeds: the diagram is
-            * read at a glance and the sentence is what somebody falls back on
-            * when the diagram has not clicked yet. The picture leads.
+            * All three, because they answer at different speeds: the picture
+            * is read at a glance and the sentence is what somebody falls back
+            * on when the picture has not clicked yet. The picture leads.
+            *
+            * This replaced a schematic pair of hands with no keyboard under
+            * them, and the difference is the whole lesson: the schematic could
+            * say WHICH finger, but only the board can say where that finger
+            * has to GO — the reach, drawn from the key it leaves to the key it
+            * lands on. Every module after the first is reaches.
+            *
+            * No touch branch, because there is no touch: the path is desktop
+            * only by design, so a lesson never renders anywhere this board
+            * would not fit.
             */}
-          {!over && <Hands next={next} />}
+          {!over && <RetroKeyboard next={next} width={560} />}
 
           {!over && next && (
             <span className={lesson.finger}>
