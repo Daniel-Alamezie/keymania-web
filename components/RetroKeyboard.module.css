@@ -1,0 +1,146 @@
+/*
+ * The board, in the game's own materials.
+ *
+ * Everything here is a flat fill and a hard stroke. No gradients, no shadows
+ * except the one glow on the key being asked for, and no blur on the hands.
+ * That is the brand, and it is also the legibility: a diagram that a keyboard
+ * shows through reads as a diagram, and the moment it gets soft it starts
+ * reading as a photograph that has gone wrong.
+ *
+ * Stroke widths are in key units, because the whole SVG is. A 0.03 stroke is
+ * about two pixels at the size a lesson draws this, and it stays about two
+ * pixels at any other size, which is the point of not using pixels.
+ */
+
+.board {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* The slab the keys sit in. */
+.deck {
+  fill: var(--panel);
+  stroke: var(--edge);
+  stroke-width: 0.04;
+}
+
+/*
+ * The skirt: a second rect peeking out below the cap.
+ *
+ * The same construction as every button in this game, where a bottom border
+ * three times the others is what stops a rectangle reading as a sticker. Here
+ * it is a separate shape rather than a border because SVG has no per-side
+ * stroke width, and drawing it beneath is closer to what a keycap actually is.
+ */
+.skirt {
+  fill: var(--bg-deep);
+}
+
+.cap {
+  fill: var(--panel-2);
+  stroke: var(--edge);
+  stroke-width: 0.025;
+}
+
+/* Tab, Caps, Enter, the modifiers. Present so it reads as a keyboard, and
+   deliberately recessive so it never competes with a letter. */
+.cap[data-dead] {
+  fill: var(--panel);
+  stroke: var(--edge-soft);
+}
+
+/*
+ * The eight keys the hands live on.
+ *
+ * Marked at rest rather than only when asked for, because the home row is the
+ * thing a beginner is trying to internalise and it should be visible before
+ * anybody presses anything.
+ */
+.cap[data-home] {
+  stroke: var(--player-shade);
+  stroke-width: 0.035;
+}
+
+/* Where you are being sent. */
+.cap[data-target] {
+  fill: var(--good);
+  stroke: var(--ink);
+  stroke-width: 0.04;
+}
+
+/* Held, not pressed. A capital is two fingers, and the second one is this. */
+.cap[data-shift] {
+  fill: var(--player-shade);
+  stroke: var(--player);
+  stroke-width: 0.035;
+}
+
+.legend {
+  fill: var(--muted);
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.34px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+/* Tab, Shift, Enter and friends carry whole words and need to fit. */
+.legend[data-wide] { font-size: 0.24px; }
+
+/* Dark text on the lit key: it is the one bright thing on the board. */
+.legend[data-target] { fill: var(--bg-deep); }
+
+/* The two ridges that let anybody find the home row without looking. */
+.nub { fill: var(--faint); }
+
+/*
+ * The hands.
+ *
+ * Translucent so the board reads through them, which is not decoration: a hand
+ * that hides the key it is pressing teaches nothing. The outline stays fully
+ * opaque, so the shape survives being see-through.
+ */
+.hand {
+  pointer-events: none;
+}
+
+.palm {
+  fill: color-mix(in srgb, var(--muted) 22%, transparent);
+  stroke: var(--muted);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+}
+
+.finger {
+  fill: color-mix(in srgb, var(--muted) 22%, transparent);
+  stroke: var(--muted);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+  transition: fill 120ms ease, stroke 120ms ease;
+}
+
+.tip {
+  fill: color-mix(in srgb, var(--muted) 30%, transparent);
+  stroke: var(--muted);
+  stroke-width: 0.03;
+  transition: fill 120ms ease, stroke 120ms ease;
+}
+
+/*
+ * The finger that is doing something.
+ *
+ * Green, matching the key it is being sent to, because the two are one fact
+ * and colouring them differently would make the eye do a join it should not
+ * have to. Everything else stays exactly as it was: only one finger moves at a
+ * time, and only one changes colour.
+ */
+.finger[data-active],
+.tip[data-active] {
+  fill: color-mix(in srgb, var(--good) 45%, transparent);
+  stroke: var(--good);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finger, .tip { transition: none; }
+}
