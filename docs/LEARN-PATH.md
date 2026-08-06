@@ -251,8 +251,14 @@ Decisions that survived a day of prototyping at `/dev/keyboard`:
 Where it shows: **lessons always** (the path is desktop-only, so the space is
 there), **warm-up on desktop only** — a drawn keyboard above a phone's soft
 keyboard is two keyboards half-covering each other, so touch keeps the compact
-schematic. The tutorial still uses the schematic pair; its guided flow is built
-around that component and swapping it is its own piece of work.
+schematic. **The tutorial plays out entirely on it** (same day, second pass):
+finding F and J happens on the real board with the bumps drawn where the real
+ones are, the keys sink under the real presses, and the rolls and the walk
+leave a quiet trail on the keys already claimed. The board grew three props to
+say what the tutorial needs — `highlight` for two landmarks burning at once,
+`marked` for the trail, `pressed` for the keys answering — and the tutorial's
+interaction logic did not change by a line. The one schematic left is the
+warm-up on touch, where it is genuinely the right tool.
 
 ### Milestones sit where people quit
 
