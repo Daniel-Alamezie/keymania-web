@@ -65,6 +65,15 @@ import styles from './Game.module.css';
 type Screen = 'menu' | 'solo' | 'lobby' | 'duel' | 'searching' | 'survival' | 'weekly' | 'learn';
 
 /**
+ * Which of the menu's panels is unfolded, or none.
+ *
+ * Named rather than inlined because `modeTab` takes one, and the menu renders
+ * the same three buttons in two arrangements depending on whether the path is
+ * available.
+ */
+type Mode = 'practice' | 'survival' | 'weekly' | null;
+
+/**
  * How long a chosen bot burns before the duel takes the screen.
  *
  * Short enough that it reads as the button responding rather than the app
@@ -541,12 +550,15 @@ export default function Game() {
   /**
    * Which mode is open, if any.
    *
-   * Closed by default, so the menu at rest is Play and two labels rather than
+   * Closed by default, so the menu at rest is Play and four labels rather than
    * Play and eight buttons. Practice unfolds the ladder in place; survival
    * unfolds what it is about to do to you. Clicking the open one closes it,
    * because a player who opened it to look should be able to put it back.
+   *
+   * Learn is deliberately absent: it is a screen, not a panel, so it has
+   * nothing to be open.
    */
-  const [mode, setMode] = useState<'practice' | 'survival' | 'weekly' | null>(null);
+  const [mode, setMode] = useState<Mode>(null);
 
   /**
    * A room with nobody in it, for looking at.
@@ -983,6 +995,76 @@ export default function Game() {
     }
     send({ action: 'createRoom', name: seatName ?? account.displayName, visibility: 'private', token, mode: 'weekly' });
   }, [connect, send, seatName, account.displayName]);
+
+  /**
+   * One of the menu's mode buttons.
+   *
+   * A function rather than four near-identical blocks of JSX, because the menu
+   * now renders the same three buttons in two different arrangements depending
+   * on whether the path is available, and two copies of a button are two places
+   * for its copy to drift.
+   *
+   * `aria-expanded`, not `role="tab"`. These were marked up as tabs and were
+   * never a tablist: Weekly sat alone in a plain div wearing `role="tab"`, and
+   * nothing below carried `role="tabpanel"` or an id to point at. What they
+   * actually are is disclosure buttons — press one and a panel unfolds beneath
+   * the group — and that is what `aria-expanded` says. A screen reader was
+   * being told "tab, 1 of 1" about a button that opens a panel.
+   */
+  const modeTab = useCallback((
+    id: Exclude<Mode, null>,
+    label: string,
+    note: string,
+    full = false,
+  ) => (
+    <button
+      key={id}
+      aria-expanded={mode === id}
+      className={`btn ${styles.mode}${full ? ` ${styles.full}` : ''}`}
+      data-active={mode === id || undefined}
+      data-mode={id}
+      onClick={() => setMode(mode === id ? null : id)}
+    >
+      {label}
+      <small className="btn-sub">{note}</small>
+    </button>
+  ), [mode]);
+
+  /**
+   * The way into the path.
+   *
+   * Not a `modeTab`: it unfolds nothing and navigates instead, which is why it
+   * carries no `aria-expanded` and no active state. It only looks like its
+   * neighbours.
+   *
+   * THE COPY is the hard part. It is aimed at people who cannot yet touch
+   * type, and those are exactly the people who will not press anything that
+   * calls them beginners. So it describes the content and never the reader:
+   * "one row at a time" says who it is for to somebody who needs it, and reads
+   * as thoroughness to everybody else. No "basics", no "new players", no
+   * "start here".
+   *
+   * Rendered only when the server sent a `learn` block, which it does only
+   * under LEARN_LIVE. The absence of the field is the off switch, so there is
+   * no second flag here to drift out of step.
+   */
+  const learnMode = learn ? (
+    <button
+      className={`btn ${styles.mode}`}
+      data-mode="learn"
+      onClick={() => {
+        track({
+          name: 'learn_opened',
+          signed_in: Boolean(profile),
+          modules_passed: completedCount(learn.path),
+        });
+        setScreen('learn');
+      }}
+    >
+      Learn to type
+      <small className="btn-sub">the whole keyboard, one row at a time</small>
+    </button>
+  ) : null;
 
   /**
    * Find me a game.
@@ -1600,7 +1682,7 @@ export default function Game() {
 
         <p className={styles.blurb}>
           Type each word, then hit <kbd className="kbd">SPACE</kbd> to forge a blade and hurl it at
-          your opponent. Chain words fast to forge something bigger — a typo shatters your streak.
+          your opponent. Chain words fast to forge something bigger; a typo shatters your streak.
         </p>
 
         {/*
@@ -1658,98 +1740,63 @@ export default function Game() {
         )}
 
         {/*
-          * Two modes, under the one button that is neither.
+          * Everything that is not Play, in two rows of two.
           *
-          * Play is "I want a game now" and needs no decision. These are the two
-          * decisions worth offering, side by side and equal, because they are
-          * alternatives rather than a list: one is practice against a machine,
-          * the other is a run that ends the first time you slip.
+          * Play answers "I want a game now" and needs no decision. What is left
+          * is four ways to spend a session, and they are not a flat list — they
+          * fall into two pairs, which is what the rows are for:
           *
-          * Practice opens the ladder in place rather than on its own screen, so
-          * six bots stop being six buttons a player has to read past on the way
-          * to anything else.
+          *   Learn to type | Practice     nothing is at stake; you are here to
+          *                                get better
+          *   Weekly        | Survival     something is at stake; a score, a
+          *                                board, a run that can end
+          *
+          * The previous arrangement stacked Learn and Weekly full width under
+          * Play, which made three near-identical bars down the column and said
+          * they were three of a kind. They are not. Pairing by what the player
+          * is there for does more work than ordering by importance did, and the
+          * borders already carry it: Weekly runs gold and Survival runs warm,
+          * so the bottom row reads as the one with consequences before a word
+          * of it is read.
+          *
+          * A PLAYER SUGGESTED putting Learn next to Practice, and was right
+          * about the pairing. Their mock also promoted Weekly and Survival to
+          * full width above it, which is the half not taken: Survival at Play's
+          * width makes "one mistake ends it" the third-loudest thing on a page
+          * that beginners land on, and Survival is the most niche mode here,
+          * not the second most important.
+          *
+          * Learn keeps top-left, the strongest cell in a grid, because the
+          * person who needs it is the person least equipped to go hunting.
+          *
+          * On touch there is no Learn — the path is desktop only — which leaves
+          * three, and three in a two-column grid strands one on a row of its
+          * own. That case keeps the old shape: Weekly full width, then the
+          * other two across. Hence two arrangements rather than one clever
+          * grid that degrades badly.
           */}
-        {/*
-          * Learn, directly under Play and carrying its full width.
-          *
-          * Same weight as Weekly because it is the same kind of offer — a
-          * whole way to spend a session, not a variant of the duel. It sits
-          * above Weekly because the person it is for has not got as far as
-          * caring what resets on Monday.
-          *
-          * THE COPY is the hard part. It is aimed at people who cannot yet
-          * touch type, and those are exactly the people who will not press
-          * anything that calls them beginners. So it describes the content
-          * and never the reader: "one row at a time" says who it is for to
-          * somebody who needs it, and reads as thoroughness to everybody
-          * else. No "basics", no "new players", no "start here".
-          *
-          * Shown only when the server sent a `learn` block, which it does
-          * only under LEARN_LIVE. The absence of the field is the off switch,
-          * so there is no second flag here to drift out of step.
-          */}
-        {learn && (
-          <div className={styles.modes} data-solo>
-            <button
-              className={`btn ${styles.mode} ${styles.full}`}
-              data-mode="learn"
-              onClick={() => {
-            track({
-              name: 'learn_opened',
-              signed_in: Boolean(profile),
-              modules_passed: completedCount(learn.path),
-            });
-            setScreen('learn');
-          }}
-            >
-              Learn to type
-              <small className="btn-sub">the whole keyboard, one row at a time</small>
-            </button>
-          </div>
+        {learn ? (
+          <>
+            <div className={styles.modes}>
+              {learnMode}
+              {modeTab('practice', 'Practice', 'against a bot')}
+            </div>
+            <div className={styles.modes}>
+              {modeTab('weekly', 'Weekly', 'same script, resets Monday')}
+              {modeTab('survival', 'Survival', 'one mistake ends it')}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.modes} data-solo>
+              {modeTab('weekly', 'Weekly', 'same script, resets Monday', true)}
+            </div>
+            <div className={styles.modes}>
+              {modeTab('practice', 'Practice', 'against a bot')}
+              {modeTab('survival', 'Survival', 'one mistake ends it')}
+            </div>
+          </>
         )}
-
-        {/*
-          * Weekly gets Play's own width, directly beneath it.
-          *
-          * It sat in the two-across row first and wrapped onto a lonely half
-          * row of its own, which read as an afterthought. It is the opposite:
-          * the mode that resets every Monday is the one a returning player
-          * should trip over, so it borrows the visual grammar of the main
-          * button - full width, first in the reading order after Play.
-          */}
-        <div className={styles.modes} data-solo>
-          <button
-            role="tab"
-            aria-selected={mode === 'weekly'}
-            className={`btn ${styles.mode} ${styles.full}`}
-            data-active={mode === 'weekly' || undefined}
-            data-mode="weekly"
-            onClick={() => setMode(mode === 'weekly' ? null : 'weekly')}
-          >
-            Weekly
-            <small className="btn-sub">same script for everyone, resets Monday</small>
-          </button>
-        </div>
-
-        <div className={styles.modes} role="tablist" aria-label="Game modes">
-          {([
-            { id: 'practice', label: 'Practice', note: 'against a bot' },
-            { id: 'survival', label: 'Survival', note: 'one mistake ends it' },
-          ] as const).map((choice) => (
-            <button
-              key={choice.id}
-              role="tab"
-              aria-selected={mode === choice.id}
-              className={`btn ${styles.mode}`}
-              data-active={mode === choice.id || undefined}
-              data-mode={choice.id}
-              onClick={() => setMode(mode === choice.id ? null : choice.id)}
-            >
-              {choice.label}
-              <small className="btn-sub">{choice.note}</small>
-            </button>
-          ))}
-        </div>
 
         {/*
           * Survival explains itself before it starts.

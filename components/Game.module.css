@@ -151,11 +151,24 @@
  * and the previous menu answered that with six bots and a lobby, all the same
  * size, plus a list of rooms that is usually empty. Weight is the cheapest way
  * to say "start here".
+ *
+ * A PLAYER READ THE OLD SIZING AS INCONSISTENT rather than as hierarchy, and
+ * the numbers were on their side. It ran 15px against the base button's 11px,
+ * and 16px/18px padding against 13px/20px — so it was taller but NARROWER in
+ * its side padding than the buttons beneath it. Nothing meant that; it was two
+ * numbers picked at different times. Text sat at a different inset from the
+ * edge than every other label in the column, which is exactly the kind of
+ * one-pixel wrongness that gets felt without being seen.
+ *
+ * So: keep the difference, make it deliberate. Side padding now matches the
+ * base button exactly, so every label in the column shares an inset. Only the
+ * two things that carry hierarchy change — it is taller, and its type is a
+ * step up rather than an odd 4px jump.
  */
 .play {
   width: 100%;
-  padding: 16px 18px;
-  font-size: 15px;
+  padding: 18px 20px;
+  font-size: 14px;
 }
 
 /* ---------- Game modes ----------
