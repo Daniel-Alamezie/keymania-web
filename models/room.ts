@@ -40,6 +40,15 @@ export interface WaitingRoom {
    * absent has to keep meaning ranked.
    */
   friendly?: boolean;
+  /**
+   * The room is full and the host is being fetched.
+   *
+   * Set only for people who are NOT the host: their room has every seat taken
+   * and is not starting, and without a name to put to that it reads as broken
+   * rather than as somebody being asked a question. The host sees the same
+   * state as a pill instead, because they are the one being asked.
+   */
+  heldBy?: string;
   /** Everyone in so far, in slot order. Slot 0 is the host. */
   players: string[];
   capacity: number;

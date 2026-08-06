@@ -23,6 +23,16 @@ interface LobbyProps {
   onRefresh: () => void;
   onBack: () => void;
   /**
+   * Leave the waiting screen without closing the room.
+   *
+   * Offered to a host only, because only a host has a room to leave open. A
+   * joiner's way out is a departure, which is what `onBack` already does.
+   *
+   * Undefined when there is nothing to step out of, which keeps the button
+   * from appearing on a screen where it would do the wrong thing.
+   */
+  onStepOut?: () => void;
+  /**
    * The name from their account, used when they have not typed one.
    *
    * This field used to fall back to the literal word "Challenger", which the
@@ -71,7 +81,7 @@ const FOUR_PLAYER_READY = true;
  */
 export default function Lobby({
   status, configured, rooms, waiting, error,
-  onCreate, onJoin, onRefresh, onBack, accountName,
+  onCreate, onJoin, onRefresh, onBack, onStepOut, accountName,
 }: LobbyProps) {
   // Read the remembered name once, during initialisation rather than from an
   // effect: this component only ever mounts after the player opens the lobby,
@@ -128,7 +138,12 @@ export default function Lobby({
     return (
       <div className={`panel ${styles.lobby}`}>
         <h2 className={`${styles.heading} pixel-font`}>
-          {room > 2 ? 'Free-for-all' : 'Waiting for a challenger'}
+          {/* "Waiting for a challenger" is wrong once everybody is in — the
+              only thing missing is the host pressing start, and a heading that
+              says otherwise makes the room look stuck. */}
+          {waiting.heldBy
+            ? 'Almost'
+            : room > 2 ? 'Free-for-all' : 'Waiting for a challenger'}
         </h2>
 
         {/*
@@ -150,11 +165,29 @@ export default function Lobby({
           * there until the duel began, which reads as broken rather than as
           * waiting.
           */}
+        {/*
+          * Full, and the host is being fetched.
+          *
+          * Only a joiner ever sees this: their room has every seat taken and
+          * is not starting, and without a name attached to that it reads as
+          * broken. Nothing is being lost while they read it — the server has
+          * not armed the room, so the duel's clock has not begun for either
+          * of them.
+          */}
         <p className={styles.tally}>
-          <strong className="pixel-font">{here} of {room}</strong>
-          {spare > 0
-            ? `, waiting for ${spare} more ${spare === 1 ? 'player' : 'players'}`
-            : ', starting'}
+          {waiting.heldBy ? (
+            <>
+              <strong className="pixel-font">Everyone is in</strong>
+              {`, waiting on ${waiting.heldBy} to start it`}
+            </>
+          ) : (
+            <>
+              <strong className="pixel-font">{here} of {room}</strong>
+              {spare > 0
+                ? `, waiting for ${spare} more ${spare === 1 ? 'player' : 'players'}`
+                : ', starting'}
+            </>
+          )}
         </p>
 
         {/* Empty seats are drawn rather than left out, so the room has a visible
@@ -169,11 +202,13 @@ export default function Lobby({
         </ul>
 
         <p className={styles.note}>
-          {hosting
-            ? waiting.visibility === 'public'
-              ? 'Listed in the lobby. Share the code to pull someone in faster.'
-              : 'Private. The code is the only way in.'
-            : 'You are in. It starts the moment the room fills.'}
+          {waiting.heldBy
+            ? 'They stepped away while the room filled. Nothing has started, and the clock is not running.'
+            : hosting
+              ? waiting.visibility === 'public'
+                ? 'Listed in the lobby. Share the code to pull someone in faster.'
+                : 'Private. The code is the only way in.'
+              : 'You are in. It starts the moment the room fills.'}
         </p>
 
         <div className={`${styles.code} pixel-font`}>{waiting.code}</div>
@@ -183,10 +218,26 @@ export default function Lobby({
         >
           Copy code
         </button>
+        {/*
+          * The way out that keeps the room.
+          *
+          * The whole point of the change: the room lives on this socket, and
+          * until now the only exit from this screen closed the socket with it,
+          * so waiting meant sitting here. Now a host can go and play something
+          * while the room stays open, and a pill in the corner does the
+          * watching for them.
+          */}
+        {onStepOut && (
+          <button className="btn btn-primary" onClick={onStepOut}>
+            Wait somewhere else
+            <small className="btn-sub">the room stays open</small>
+          </button>
+        )}
+
         {/* "Leave", not "Cancel": a joiner is not cancelling anything, and the
             host's room disappears with them either way. */}
         <button className="btn btn-ghost" onClick={onBack}>
-          {hosting ? 'Cancel' : 'Leave'}
+          {hosting ? 'Close the room' : 'Leave'}
         </button>
       </div>
     );

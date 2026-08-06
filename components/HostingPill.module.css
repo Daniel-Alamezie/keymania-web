@@ -1,0 +1,53 @@
+/*
+ * What the hosting pill adds to the waiting pill it is built on.
+ *
+ * Only three things, deliberately. The two are the same promise about
+ * different objects — you asked for a game, go and do something, we will tell
+ * you — and the more this file grows the more they read as two unrelated
+ * notification systems sharing a corner by accident.
+ */
+
+/*
+ * The body is a button here, because a host has somewhere to go back to.
+ *
+ * An invite pill reports a row on a server that the player cannot visit; a
+ * hosted room is a screen with a code on it, and somebody who wants to share
+ * that code needs a way in. Styled as text rather than as a control: it is a
+ * shortcut for the people who want it, not a third thing competing for the eye
+ * with Start and the close cross.
+ */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.body:hover { color: var(--gold); }
+
+/*
+ * Somebody is in and the duel is waiting on this player.
+ *
+ * Gold, which is the one place in this pill's life it earns the toast's own
+ * edge: up to here it has been a note about something already done, and now it
+ * is the only thing standing between two people and a game. It is also the
+ * moment a stranger is sitting waiting, which is a cost this player is running
+ * up by not looking.
+ */
+.ready {
+  border-color: var(--gold);
+}
+
+/* Small enough to sit inside the pill without turning it into a dialog. */
+.go {
+  flex: none;
+  padding: 5px 12px;
+  font-size: 10px;
+}

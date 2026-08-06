@@ -170,6 +170,35 @@ export type ServerMessage =
     /** Played for nothing. The joiner's only chance to learn it. */
     friendly?: boolean;
   }
+  /**
+   * Full, and waiting on you — the host, who wandered off.
+   *
+   * The server does not arm a room that fills while its host is elsewhere,
+   * because a duel's clock starts on filling and cannot be paused afterwards.
+   * Nothing has begun when this arrives, and nothing will until `startHeld`.
+   */
+  | {
+    type: 'roomHeld';
+    roomId: string;
+    players: string[];
+    capacity: number;
+    friendly?: boolean;
+  }
+  /**
+   * You are in, and the host is being fetched.
+   *
+   * Sent to everybody who is not the host in a held room. Without it a joiner
+   * sits in front of a full room that is not starting, which reads as broken
+   * rather than as somebody being asked a question.
+   */
+  | {
+    type: 'waitingForHost';
+    roomId: string;
+    host: string;
+    players: string[];
+    capacity: number;
+    friendly?: boolean;
+  }
   | {
     type: 'matchStart';
     /**
@@ -449,4 +478,22 @@ export type ClientMessage =
    * is still connected — a rematch is not something you can decline once it has
    * started.
    */
-  | { action: 'rematch' };
+  | { action: 'rematch' }
+  /**
+   * "I have left the waiting screen", and later "I am back".
+   *
+   * The one thing the server cannot work out for itself: a host reading the
+   * leaderboard and a host staring at their room code are the same connection
+   * behaving identically. Saying it only ever makes this player's own room
+   * slower to start, which is why the server takes it at face value.
+   */
+  | { action: 'hostAway'; away: boolean }
+  /**
+   * Start the duel that has been waiting for you.
+   *
+   * The second of two ways a room arms. Filling it is the other, and the
+   * reason this exists is that the two cannot be the same moment when the host
+   * is somewhere else — the countdown begins on filling and there is no
+   * pausing it afterwards.
+   */
+  | { action: 'startHeld' };

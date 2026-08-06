@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Lobby from './Lobby';
+import HostingPill from './HostingPill';
+import type { Hosting } from '@/game/hosting';
 import type { RoomSize, RoomSummary, WaitingRoom } from '@/models/room';
 import styles from './LearnLab.module.css';
 
@@ -25,7 +27,7 @@ const ROOMS: RoomSummary[] = [
   { roomId: 'D3HLN', host: 'Orrin', createdAt: 0, players: 3, capacity: 4, friendly: false },
 ];
 
-type Scene = 'browsing' | 'empty' | 'connecting' | 'hostingRanked' | 'hostingFriendly' | 'joined';
+type Scene = 'browsing' | 'empty' | 'connecting' | 'hostingRanked' | 'hostingFriendly' | 'joined' | 'heldForHost';
 
 const SCENES: { id: Scene; label: string; hint: string }[] = [
   { id: 'browsing', label: 'Games to join', hint: 'Four rooms, ranked and friendly, duels and four-ways.' },
@@ -34,13 +36,25 @@ const SCENES: { id: Scene; label: string; hint: string }[] = [
   { id: 'hostingRanked', label: 'Waiting, ranked', hint: 'You hosted a rated duel and nobody has arrived.' },
   { id: 'hostingFriendly', label: 'Waiting, friendly', hint: 'The same room with nothing at stake.' },
   { id: 'joined', label: 'Joined a four-way', hint: 'A joiner, who never chose the listing but is told the stakes.' },
+  { id: 'heldForHost', label: 'Waiting on an absent host', hint: 'The room filled while the host was elsewhere. Nothing has started.' },
 ];
 
 const WAITING: Record<string, WaitingRoom> = {
   hostingRanked: { code: 'K7QP2', visibility: 'public', friendly: false, players: ['You'], capacity: 2 },
   hostingFriendly: { code: 'M4XZR', visibility: 'private', friendly: true, players: ['You'], capacity: 2 },
   joined: { code: 'B9WTC', visibility: null, friendly: true, players: ['Tamsin', 'You'], capacity: 4 },
+  /* The joiner's half of a held room: full, not starting, and told why. */
+  heldForHost: {
+    code: 'K7QP2', visibility: null, friendly: false, heldBy: 'Kestrel',
+    players: ['Kestrel', 'You'], capacity: 2,
+  },
 };
+
+/** Both pill states: passive, and the moment it becomes a question. */
+const PILLS: Hosting[] = [
+  { code: 'K7QP2', players: ['You'], capacity: 2, friendly: false, held: false },
+  { code: 'M4XZR', players: ['You', 'Wren'], capacity: 2, friendly: true, held: true },
+];
 
 export default function LobbyLab() {
   const [scene, setScene] = useState<Scene>('browsing');
@@ -74,6 +88,22 @@ export default function LobbyLab() {
 
       <p className={`${styles.result} pixel-font`}>{last}</p>
 
+      {/* The corner pill, in both of its states, side by side. It normally
+          lives above every page and can only be reached by hosting a room and
+          then walking away, which is two people and a socket to arrange. */}
+      <section className={styles.state}>
+        <h2 className={`${styles.stateTitle} pixel-font`}>The corner pill</h2>
+        {PILLS.map((pill) => (
+          <HostingPill
+            key={pill.code + String(pill.held)}
+            hosting={pill}
+            onStart={() => setLast('Start the held duel')}
+            onCancel={() => setLast('Close the room')}
+            onOpen={() => setLast('Back to the waiting room')}
+          />
+        ))}
+      </section>
+
       <Lobby
         status={scene === 'connecting' ? 'connecting' : 'open'}
         configured
@@ -86,6 +116,7 @@ export default function LobbyLab() {
         onJoin={(roomId, name) => setLast(`Join: ${roomId} as ${name}`)}
         onRefresh={() => setLast('Refresh')}
         onBack={() => setLast('Back')}
+        onStepOut={waiting?.visibility !== null ? () => setLast('Stepped out; the room stays open') : undefined}
       />
     </main>
   );

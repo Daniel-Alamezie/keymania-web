@@ -56,6 +56,7 @@ import { useAccount } from '@/game/useAccount';
 import { setBusy } from '@/game/busy';
 import { takeRoom, useRoomOffers } from '@/game/joinIntent';
 import { forgetDuel, liveDuel, rememberDuel } from '@/game/liveDuel';
+import { clearHosting, setHosting, setHostingActions, updateHosting } from '@/game/hosting';
 import { useRating } from '@/game/serverProfile';
 import type { PublicCosmetics } from '@/models/cosmetics';
 import type { CharacterId } from '@/models/character';
@@ -785,10 +786,43 @@ export default function Game() {
             players: message.players,
             capacity: message.capacity,
           }));
+          /* The pill counts heads too, for a host who is watching it rather
+             than the room. A four-way fills one seat at a time. */
+          updateHosting({ players: message.players });
+        }
+        /**
+         * The room filled while this player was off doing something else.
+         *
+         * Nothing has started: the server deliberately did not arm it, because
+         * a duel's clock begins on filling and cannot be paused afterwards. So
+         * the pill becomes the question rather than the interruption.
+         */
+        if (message.type === 'roomHeld') {
+          setError(null);
+          setWaiting((previous) => (previous ? { ...previous, players: message.players } : previous));
+          updateHosting({ players: message.players, held: true });
+          /* The host is looking at something else, so the pill alone may never
+             be seen. The same cue the path uses for finishing something, which
+             is the calmest arrival sound this game has. */
+          audio.lessonDone();
+        }
+        /** Somebody else's room is fetching its host. Keep them company. */
+        if (message.type === 'waitingForHost') {
+          setError(null);
+          setWaiting({
+            code: message.roomId,
+            visibility: null,
+            friendly: message.friendly === true,
+            players: message.players,
+            capacity: message.capacity,
+            heldBy: message.host,
+          });
         }
         if (message.type === 'matchStart') {
           setError(null);
           setWaiting(null);
+          /* Whatever the host was doing, the duel is real now. */
+          clearHosting();
 
           /**
            * A survival run arrives on the same message a duel does.
@@ -1306,6 +1340,7 @@ export default function Game() {
 
   const leave = useCallback(() => {
     clearDuel();
+    clearHosting();
     setScreen('menu');
     try {
       disconnect();
@@ -1313,6 +1348,73 @@ export default function Game() {
       /* already gone — the screen has changed either way */
     }
   }, [clearDuel, disconnect]);
+
+  /**
+   * Step out of the waiting room without closing it.
+   *
+   * The room lives on this socket — `$disconnect` deletes a waiting room — so
+   * the ONE thing this must not do is what `leave` does. That single
+   * `disconnect()` call was the whole of why a host was pinned to the waiting
+   * screen; the socket has always belonged to the page rather than to any
+   * screen, so nothing else was holding them there.
+   *
+   * The server is told, because it cannot tell from here: a host reading the
+   * leaderboard and a host watching their room code look identical from the
+   * other end. Knowing is what lets it hold the room rather than starting a
+   * duel on somebody who is halfway through a lesson.
+   */
+  const stepOut = useCallback(() => {
+    if (!waiting) { setScreen('menu'); return; }
+    setHosting({
+      code: waiting.code,
+      players: waiting.players,
+      capacity: waiting.capacity,
+      friendly: waiting.friendly === true,
+      held: false,
+    });
+    send({ action: 'hostAway', away: true });
+    setScreen('menu');
+  }, [waiting, send]);
+
+  /** Back into the waiting room, and back to being watched. */
+  const stepIn = useCallback(() => {
+    send({ action: 'hostAway', away: false });
+    clearHosting();
+    setScreen('lobby');
+  }, [send]);
+
+  /**
+   * Give up the room from the pill.
+   *
+   * A full teardown rather than a step back: the room only exists while this
+   * socket does, so closing it is the same act as leaving the lobby, and
+   * anybody sitting in it is told by the server's own disconnect handling.
+   */
+  const closeRoom = useCallback(() => {
+    clearHosting();
+    leave();
+  }, [leave]);
+
+  /**
+   * Lend the pill the three things only this component can do.
+   *
+   * The pill itself renders from `InviteHost`, above every page, because a host
+   * who wandered into a lesson has to be able to see the question — and every
+   * screen below this one is a different early return that would each have to
+   * remember to draw it. What cannot move up there is the websocket: the room
+   * lives on this connection and nothing else can speak for it.
+   *
+   * So the state goes to the store and the actions are registered from here.
+   * Cleared on unmount, so nothing is left holding a socket that has gone.
+   */
+  useEffect(() => {
+    setHostingActions({
+      start: () => send({ action: 'startHeld' }),
+      cancel: closeRoom,
+      open: stepIn,
+    });
+    return () => setHostingActions(null);
+  }, [send, closeRoom, stepIn]);
 
   /**
    * Keep the "find a new game" handler current.
@@ -1758,6 +1860,9 @@ export default function Game() {
           onJoin={(roomId, name) => { setError(null); void enterRoom(roomId, name); }}
           onRefresh={() => send({ action: 'listRooms' })}
           onBack={leave}
+          /* Only a host has a room to step out of. A joiner's Back is a
+             departure, which is what `onBack` already is. */
+          onStepOut={waiting?.visibility !== null ? stepOut : undefined}
           accountName={account.displayName}
         />
       </main>
