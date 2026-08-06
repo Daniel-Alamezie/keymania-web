@@ -124,6 +124,22 @@ export function inProgress(id: ModuleId, lessons: number): boolean {
   return done > 0 && done < lessons;
 }
 
+/**
+ * Forget every remembered lesson.
+ *
+ * A real operation rather than a test hook: somebody wanting to walk the path
+ * again from nothing has to be able to, and the dev harness at /dev/learn
+ * needs it to put the app into a first-run state. The server keeps the module
+ * stars either way, so this clears the detail and not the progress.
+ */
+export function clearRuns(): void {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* Nothing stored, nothing to clear. */
+  }
+}
+
 /** How many of a module's lessons have been passed. */
 export const lessonsDone = (id: ModuleId, lessons: number): number =>
   runFor(id, lessons).filter((result) => result && result.stars > 0).length;
