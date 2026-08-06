@@ -103,7 +103,12 @@ function Toast({ invite, onAccept, onDismiss }: {
 
       <p className={styles.who}>
         <strong className={styles.name}>{invite.fromName}</strong>
-        {' wants a duel'}
+        {/* What kind of duel, in the sentence rather than a badge beside it.
+            This is the line somebody reads before pressing Accept, and it is
+            their only chance to find out: no room exists to ask about, and by
+            the time one does they have agreed to whatever it turned out to
+            be. Being told afterwards is the complaint this answers. */}
+        {invite.friendly ? ' wants a friendly duel' : ' wants a ranked duel'}
       </p>
       <p className={styles.sub}>
         @{invite.fromHandle}
@@ -112,6 +117,9 @@ function Toast({ invite, onAccept, onDismiss }: {
             toast vanished while they were reading it. */}
         <span className={styles.clock}>{left}s</span>
       </p>
+      {invite.friendly && (
+        <p className={styles.stakes}>Nothing at stake. No rating moves either way.</p>
+      )}
 
       {failed && <p className={styles.failed}>{failed}</p>}
 

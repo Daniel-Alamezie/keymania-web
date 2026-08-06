@@ -144,14 +144,38 @@ export default function FriendsPanel() {
                   * say to them and a permanently dead button on most of the
                   * list would make the whole panel look broken.
                   */}
+                {/*
+                  * Two buttons, not one with a setting behind it.
+                  *
+                  * The stakes are decided in the same press as the invite, so
+                  * there is nothing to open and nothing to remember. The
+                  * alternative considered was one button with the last choice
+                  * kept — which would make an invisible sticky preference
+                  * decide whether a duel counts, and being surprised by that
+                  * is the exact complaint this feature answers.
+                  *
+                  * Ranked first and primary: it is the ordinary ask, and the
+                  * board is what most of this game is built around.
+                  */}
                 {person.presence === 'idle' && (
-                  <button
-                    type="button"
-                    className={`btn btn-primary ${styles.invite}`}
-                    onClick={() => { void sendInvite(person.handle, person.displayName); }}
-                  >
-                    Invite
-                  </button>
+                  <span className={styles.asks}>
+                    <button
+                      type="button"
+                      className={`btn btn-primary ${styles.invite}`}
+                      title={`Invite ${person.displayName} to a rated duel`}
+                      onClick={() => { void sendInvite(person.handle, person.displayName); }}
+                    >
+                      Ranked
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${styles.invite}`}
+                      title={`Invite ${person.displayName} to a duel with nothing at stake`}
+                      onClick={() => { void sendInvite(person.handle, person.displayName, true); }}
+                    >
+                      Friendly
+                    </button>
+                  </span>
                 )}
                 {person.presence === 'busy' && (
                   <span className={styles.playing} title={`${person.displayName} is in a game.`}>

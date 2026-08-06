@@ -11,6 +11,14 @@ export interface PendingInvite {
   fromHandle: string;
   fromName: string;
   fromRating?: number;
+  /**
+   * Played for nothing, if that is what they asked for.
+   *
+   * The only place the invitee can learn this. No room exists yet, so there is
+   * nothing else to ask — and once one does exist they have already accepted.
+   * Absent means ranked, which is what every older invite is.
+   */
+  friendly?: boolean;
   /** When this stops being good, as an epoch millisecond. */
   expiresAt: number;
 }

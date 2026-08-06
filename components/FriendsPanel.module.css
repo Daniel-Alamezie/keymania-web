@@ -360,6 +360,14 @@
  * pair had to move behind a menu first. Two full-weight buttons and a primary
  * one is not a row, it is a toolbar.
  */
+/* Two asks side by side, so the stakes are chosen in the same press as the
+   invite rather than by a setting somewhere the player cannot see. */
+.asks {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
 .invite {
   font-size: 10px;
   padding: 5px 10px;

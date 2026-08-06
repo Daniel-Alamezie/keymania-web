@@ -78,6 +78,21 @@
   font-weight: inherit;
 }
 
+/*
+ * Said only for a friendly ask.
+ *
+ * A ranked invite needs no reassurance — it is the ordinary thing, and a line
+ * under every toast saying "this one counts" would read as a warning attached
+ * to the normal case. What needs stating is the unusual promise, to the person
+ * about to decide whether to take it.
+ */
+.stakes {
+  margin: 6px 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 .sub {
   display: flex;
   align-items: baseline;

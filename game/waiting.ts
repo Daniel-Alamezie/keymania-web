@@ -22,6 +22,14 @@ export interface Waiting {
   handle: string;
   /** What to show. Falls back to the handle when the name is not to hand. */
   name: string;
+  /**
+   * What was asked for.
+   *
+   * On the pill as well as the toast, so the inviter can see which of the two
+   * buttons they pressed. Two friends and two different asks in quick
+   * succession is exactly when somebody loses track of what they offered.
+   */
+  friendly?: boolean;
   /** When the ask lapses, so the pill can count down honestly. */
   expiresAt: number;
 }

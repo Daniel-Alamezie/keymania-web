@@ -21,14 +21,30 @@ import { clearWaiting, setWaiting } from './waiting';
  * on the server before acknowledging the click — makes the button feel broken
  * on a slow connection, which is the state this is most likely to be used in.
  */
-export async function sendInvite(handle: string, name?: string): Promise<string | null> {
-  const optimistic = { handle, name: name || `@${handle}`, expiresAt: Date.now() + INVITE_MS };
+export async function sendInvite(
+  handle: string,
+  name?: string,
+  /**
+   * Played for nothing.
+   *
+   * Passed with the ask rather than settled later, because the row the server
+   * writes is what the other person reads before answering. There is no room
+   * yet to attach it to, and by the time there is, they have already agreed.
+   */
+  friendly = false,
+): Promise<string | null> {
+  const optimistic = {
+    handle,
+    name: name || `@${handle}`,
+    friendly,
+    expiresAt: Date.now() + INVITE_MS,
+  };
   setWaiting(optimistic);
 
   const res = await fetch(`/api/me/friends/${encodeURIComponent(handle)}/invite`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: '{}',
+    body: JSON.stringify({ friendly }),
   }).catch(() => null);
 
   if (res?.ok) return null;

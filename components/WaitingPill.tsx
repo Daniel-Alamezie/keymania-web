@@ -62,8 +62,13 @@ export default function WaitingPill({ waiting, onCancel }: {
 
       <span className={styles.text}>
         <span className={styles.line}>Waiting for {waiting.name}</span>
+        {/* Which of the two buttons was pressed, alongside the clock. Sending
+            two asks to two friends in quick succession is exactly when
+            somebody loses track of what they offered, and the pill is the
+            only thing still on screen that could tell them. */}
         <span className={styles.sub}>
-          they have {left}s to answer
+          {waiting.friendly ? 'friendly · ' : 'ranked · '}
+          {left}s to answer
         </span>
       </span>
 
