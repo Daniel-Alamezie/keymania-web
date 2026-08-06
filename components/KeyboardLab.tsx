@@ -20,6 +20,7 @@ import styles from './LearnLab.module.css';
 const CASES: { label: string; char: string; note: string }[] = [
   { label: 'f', char: 'f', note: 'Home. Nothing should move at all.' },
   { label: 'g', char: 'g', note: 'The inward reach. Left index leaves home.' },
+  { label: 'h', char: 'h', note: 'The reach that crossed the thumb and got chopped. Must stay one line.' },
   { label: 'b', char: 'b', note: 'Down and in, the longest index stretch.' },
   { label: 'p', char: 'p', note: 'Right little finger, the furthest corner.' },
   { label: 'q', char: 'q', note: 'Left little finger, up and out.' },
