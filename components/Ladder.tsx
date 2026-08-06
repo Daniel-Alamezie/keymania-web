@@ -9,6 +9,8 @@ import { contentFor, hasContent } from '@/game/curriculum';
 import { flameHeat, flameLabel, flameStage } from '@/game/flame';
 import { seenServerSnapshot, seenSnapshot, subscribeSeen } from '@/game/tutorialSeen';
 import PathFlame from './PathFlame';
+import LayoutPicker from './LayoutPicker';
+import type { LayoutId } from '@/game/keyboard';
 import styles from './Ladder.module.css';
 
 export interface LadderProps {
@@ -27,6 +29,18 @@ export interface LadderProps {
    * remaining questions about the game itself belong.
    */
   onGuide: () => void;
+  /**
+   * Which physical keyboard the player is at, and how to change it.
+   *
+   * It lives on this screen because this is where the board is explained and
+   * where every lesson is launched from. It is not a cosmetic setting: the
+   * fingering the whole path teaches is derived from it, so a wrong answer
+   * here is wrong instruction everywhere downstream.
+   */
+  layout: LayoutId;
+  onLayout: (layout: LayoutId) => void;
+  /** What the browser worked out by itself, where it could. */
+  detectedLayout?: LayoutId;
 }
 
 /**
@@ -111,7 +125,7 @@ function costOf(id: ModuleId): string {
 }
 
 export default function Ladder({
-  progress, onStart, onTutorial, onExit, onGuide,
+  progress, onStart, onTutorial, onExit, onGuide, layout, onLayout, detectedLayout,
 }: LadderProps) {
   const seen = useSyncExternalStore(subscribeSeen, seenSnapshot, seenServerSnapshot);
   const [view, setView] = useState<View>('path');
@@ -345,6 +359,19 @@ export default function Ladder({
               <span className={styles.chip} /> not yet
             </span>
           </div>
+
+          <section className={styles.layout}>
+            <h2 className={`${styles.layoutTitle} pixel-font`}>Your keyboard</h2>
+            <p className={styles.layoutNote}>
+              Punctuation moves between boards, so this decides which finger
+              every lesson asks for. Pick the one under your hands.
+            </p>
+            <LayoutPicker
+              current={layout}
+              onChoose={onLayout}
+              detected={detectedLayout}
+            />
+          </section>
 
           {focus && (
             <div className={styles.focus}>

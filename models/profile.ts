@@ -77,6 +77,15 @@ export interface ServerProfile {
    * opened the picker is still told who they currently look like.
    */
   character?: CharacterId;
+  /**
+   * Which physical keyboard they use, as a layout id.
+   *
+   * Deliberately a plain string on the wire rather than the client's union.
+   * This is data from a server, so it is narrowed with `asLayout` at the point
+   * of use like every other untrusted value; typing it as the union here would
+   * assert something the wire cannot guarantee.
+   */
+  layout?: string;
   /** Duels against humans, refereed by the server. The record that counts. */
   ranked: Tally;
   /** Bot practice. Real progress, but the client reported it about itself. */

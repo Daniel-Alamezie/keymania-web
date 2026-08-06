@@ -9,6 +9,7 @@ import {
 import { bestServerSnapshot, bestSnapshot, recordStreak, subscribeBest } from '@/game/warmupBest';
 import { randomSentence } from '@/game/sentences';
 import { fingerFor, fingerLabel } from '@/game/fingers';
+import { DEFAULT_LAYOUT, type LayoutId } from '@/game/keyboard';
 import { audio } from '@/game/audio';
 import { track } from '@/game/analytics';
 import SentenceView from './SentenceView';
@@ -51,7 +52,9 @@ const SEED_LINES = 4;
  * here is. It is also what keeps the mode honest about its own figures: see
  * `warmupBest` for why the streak is the only thing that survives the session.
  */
-export default function Warmup({ onExit }: { onExit: () => void }) {
+export default function Warmup(
+  { onExit, layout = DEFAULT_LAYOUT }: { onExit: () => void; layout?: LayoutId },
+) {
   const [state, dispatch] = useReducer(
     warmupReducer,
     null,
@@ -183,7 +186,7 @@ export default function Warmup({ onExit }: { onExit: () => void }) {
 
   const percent = Math.round(warmupAccuracy(state) * 100);
   const next = state.sentence[state.cursor];
-  const hint = next ? fingerLabel(next) : undefined;
+  const hint = next ? fingerLabel(next, layout) : undefined;
   const owner = next ? fingerFor(next) : undefined;
   const reachFrom = owner && next && next !== ' ' && owner.home !== next
     ? owner.home
@@ -250,7 +253,9 @@ export default function Warmup({ onExit }: { onExit: () => void }) {
             * earns its keep there; everywhere else the board says strictly
             * more.
             */}
-          {touch ? <Hands next={next} /> : <RetroKeyboard next={next} width={560} />}
+          {touch
+            ? <Hands next={next} />
+            : <RetroKeyboard next={next} width={560} layout={layout} />}
 
           {next && (
             <span className={lesson.finger}>

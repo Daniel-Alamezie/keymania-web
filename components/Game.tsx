@@ -7,6 +7,7 @@ import { invalidateBoards } from '@/game/useBoard';
 import { audio } from '@/game/audio';
 import { bestSpeed } from '@/game/botLadder';
 import { useProfile } from '@/game/profile';
+import { useKeyboardLayout } from '@/game/useKeyboardLayout';
 import { resolveDisplayName, useDisplayName, useServerProfile } from '@/game/serverProfile';
 import { Flame } from './RankFlame';
 import { ratingFlame } from '@/models/rating';
@@ -273,7 +274,18 @@ export default function Game() {
    * protecting with a round trip.
    */
   const local = useProfile();
-  const { profile, saveModule } = useServerProfile();
+  const { profile, saveModule, saveLayout } = useServerProfile();
+  /**
+   * Which physical keyboard the player is at.
+   *
+   * Owned here because three screens need the same answer and Game renders all
+   * of them, so a prop is one hop rather than a thread. See `resolveLayout`
+   * for why the account's value does not simply win: a layout describes the
+   * machine somebody is sitting at, not the person.
+   */
+  const {
+    layout: boardLayout, choose: chooseLayout, detected: detectedLayout,
+  } = useKeyboardLayout(profile?.layout);
   const myBest = profile
     ? bestSpeed(profile.ranked.bestWpm, profile.practice.bestWpm)
     : bestSpeed(0, local.bestWpm);
@@ -1623,7 +1635,7 @@ export default function Game() {
    */
   if (screen === 'learn') {
     if (door === 'warmup') {
-      return <Warmup onExit={() => setDoor(null)} />;
+      return <Warmup onExit={() => setDoor(null)} layout={boardLayout} />;
     }
 
     if (door === 'bots') {
@@ -1662,6 +1674,7 @@ export default function Game() {
           /* Keyed so each lesson mounts fresh rather than inheriting the
              cursor and the miss count of the one before it. */
           key={`${walk.module}-${walk.at}-${walk.run}`}
+          layout={boardLayout}
           module={walk.module}
           index={walk.at}
           title={lesson.title}
@@ -1766,6 +1779,7 @@ export default function Game() {
             if (contentFor(MODULES[0].id)) setOpened(MODULES[0].id);
           }}
           onExit={() => setTutorial(false)}
+          layout={boardLayout}
         />
       );
     }
@@ -1812,6 +1826,12 @@ export default function Game() {
         {showGuide && <HowToPlay onClose={() => setShowGuide(false)} />}
         <Ladder
           progress={learn.path}
+          layout={boardLayout}
+          detectedLayout={detectedLayout}
+          /* Written to the account as well as this machine, so somebody on a
+             browser that cannot detect anything still gets their usual board
+             on a new device. */
+          onLayout={(next) => { chooseLayout(next); void saveLayout(next); }}
           onStart={(id) => {
             /* Only what has been written. The ladder disables the rest. */
             if (!contentFor(id)) return;

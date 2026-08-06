@@ -386,7 +386,7 @@
  * and once the flame was centred they were competing with it for the same job
  * while doing it worse. One ambient thing, not two.
  */
-.head, .views, .path, .keyboard, .legend, .focus, .done, .guide, .jump {
+.head, .views, .path, .keyboard, .legend, .focus, .done, .guide, .jump, .layout {
   position: relative;
   z-index: 1;
 }
@@ -434,3 +434,49 @@
 }
 
 .node[data-quiet] .flag { color: var(--muted); }
+
+/*
+ * The keyboard choice, under the map of which module teaches which key.
+ *
+ * Placed here rather than in a settings screen because it belongs to the
+ * question the tab is already asking. Somebody looking at a board and thinking
+ * "that is not my board" is exactly the person who needs this control, and
+ * they are looking straight at it.
+ */
+/*
+ * A panel, not a bare block, and the flame is why.
+ *
+ * The first cut was a heading and a paragraph over the screen background with
+ * a rule above them. That reads fine against a spark and not at all against an
+ * inferno: the flame behind this screen goes white at the top of the path, and
+ * light text on white is unreadable however correct the stacking order is.
+ * Sitting above the flame was necessary and not sufficient.
+ *
+ * So it takes the same treatment `.focus` does. Every other block on this
+ * screen either owns a background or is a keycap; this was the only one
+ * trusting the backdrop to stay dark, and the backdrop is the one thing here
+ * that is designed to change.
+ */
+.layout {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+  padding: var(--gap-sm);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.layoutTitle {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0;
+}
+
+.layoutNote {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  max-width: 46ch;
+}

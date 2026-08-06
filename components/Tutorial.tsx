@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import RetroKeyboard from './RetroKeyboard';
 import { fingerLabel } from '@/game/fingers';
+import { DEFAULT_LAYOUT, type LayoutId } from '@/game/keyboard';
 import { audio } from '@/game/audio';
 import { track } from '@/game/analytics';
 import { markSeen } from '@/game/tutorialSeen';
@@ -54,9 +55,11 @@ const RIGHT_ROLL = ['j', 'k', 'l', ';'];
 export interface TutorialProps {
   onDone: () => void;
   onExit: () => void;
+  /** The board to teach on. See the note in LessonConfig. */
+  layout?: LayoutId;
 }
 
-export default function Tutorial({ onDone, onExit }: TutorialProps) {
+export default function Tutorial({ onDone, onExit, layout = DEFAULT_LAYOUT }: TutorialProps) {
   const [act, setAct] = useState<Act>('story');
   const [at, setAt] = useState(0);
 
@@ -249,6 +252,7 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
         */}
       <div className={styles.stage} aria-hidden="true">
         <RetroKeyboard
+          layout={layout}
           width={620}
           pressed={[fDown && 'f', jDown && 'j'].filter(Boolean) as string[]}
           {...(act === 'story' || act === 'both' ? { highlight: ['f', 'j'] }
@@ -396,7 +400,7 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
                     finger.
                   </>
                 )
-                : <>Your <strong>{fingerLabel(HOME[at])}</strong>.</>}
+                : <>Your <strong>{fingerLabel(HOME[at], layout)}</strong>.</>}
             </p>
             <p className={styles.prompt}>
               Press it to carry on. Nothing here is timed or scored.

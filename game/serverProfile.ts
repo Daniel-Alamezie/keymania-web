@@ -5,6 +5,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { asCharacter, DEFAULT_CHARACTER, type CharacterId } from '@/models/character';
 import type { Cosmetic } from '@/models/cosmetics';
 import type { ModuleId } from './learnPath';
+import type { LayoutId } from './keyboard';
 import type {
   ChallengeProgress, DuelResult, ServerProfile, Tally,
 } from '@/models/profile';
@@ -55,6 +56,14 @@ export interface ProfileState {
    */
   saveModule: (module: ModuleId, stars: number) =>
   Promise<{ ok: boolean; error?: string; granted?: string[] }>;
+  /**
+   * The physical keyboard this player uses.
+   *
+   * Kept on the account so it follows somebody to a new machine, but it is
+   * only ever a fallback: the browser's own detection describes the hardware
+   * actually in front of them and outranks it. See `resolveLayout`.
+   */
+  saveLayout: (layout: LayoutId) => Promise<{ ok: boolean; error?: string }>;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -311,6 +320,8 @@ async function savePatch(
      * save would quietly remove somebody's country.
      */
     country?: string | null;
+    /** The physical keyboard, so fingering follows the player between machines. */
+    layout?: LayoutId;
     /**
      * Minutes to ADD to UTC to reach this browser's local time, so the server
      * can date server-refereed results into the player's own days. Sent only
@@ -413,6 +424,9 @@ const saveCharacter = (character: CharacterId) =>
 const saveCountry = (country: string | null) =>
   savePatch({ country }, 'Could not save that country.');
 
+const saveLayout = (layout: LayoutId) =>
+  savePatch({ layout }, 'Could not save that keyboard.');
+
 /**
  * Record a passed module, then re-read the record.
  *
@@ -507,6 +521,7 @@ export function useServerProfile(): ProfileState {
 
   return {
     ...state, saveName, saveHandle, saveCharacter, saveCosmetics, saveCountry, saveModule,
+    saveLayout,
   };
 }
 

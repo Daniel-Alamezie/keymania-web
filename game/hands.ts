@@ -19,8 +19,8 @@
  * rather than near one.
  */
 
-import { capFor, centreOf, needsShift } from './keyboard';
-import { fingerFor, type Finger, type Hand } from './fingers';
+import { DEFAULT_LAYOUT, capFor, centreOf, type LayoutId } from './keyboard';
+import { fingerFor, shiftHandFor, type Finger, type Hand } from './fingers';
 
 export interface Point { x: number; y: number }
 
@@ -120,9 +120,9 @@ const ORDER: Finger[] = ['pinky', 'ring', 'middle', 'index', 'thumb'];
  * centre. The bar is nine units wide, so its true middle is a place no thumb
  * has ever been, and a thumb drawn reaching for it crosses the other hand.
  */
-function tipFor(hand: Hand, finger: Finger, char: string): Point {
+function tipFor(hand: Hand, finger: Finger, char: string, layout: LayoutId): Point {
   if (finger === 'thumb') return { x: hand === 'left' ? 6.4 : 8.6, y: 4.5 };
-  const cap = capFor(char);
+  const cap = capFor(char, layout);
   if (!cap) return { x: 0, y: 0 };
   const at = centreOf(cap);
   /* Sunk slightly into the key rather than dead centre: a tip drawn on the
@@ -139,9 +139,9 @@ function tipFor(hand: Hand, finger: Finger, char: string): Point {
  * reach too, by the opposite hand's little finger, because a capital is two
  * fingers moving and showing only one of them teaches half of it.
  */
-export function drawHands(next?: string): DrawnHand[] {
-  const owner = next ? fingerFor(next) : undefined;
-  const shift = next ? shiftReach(next) : undefined;
+export function drawHands(next?: string, layout: LayoutId = DEFAULT_LAYOUT): DrawnHand[] {
+  const owner = next ? fingerFor(next, layout) : undefined;
+  const shift = next ? shiftReach(next, layout) : undefined;
 
   return (['left', 'right'] as Hand[]).map((hand) => {
     const knuckles = hand === 'left' ? LEFT_KNUCKLES : RIGHT_KNUCKLES;
@@ -158,7 +158,7 @@ export function drawHands(next?: string): DrawnHand[] {
 
       const tip = shifting && !reaching
         ? shiftTip(hand)
-        : tipFor(hand, finger, target);
+        : tipFor(hand, finger, target, layout);
       const knuckle = knuckles[finger];
 
       return {
@@ -209,18 +209,23 @@ function jointFor(hand: Hand, finger: Finger, knuckle: Point, tip: Point): Point
 /**
  * Which little finger holds shift, if this character needs one.
  *
- * Asks `needsShift` rather than testing the case itself. Those were two
- * separate answers to one question for about an hour, and they disagreed on
- * every shifted punctuation mark: `?` does not lower-case to anything, so a
- * case test says no shift while the board says yes. The result was a keyboard
- * lighting a Shift key that no drawn finger was anywhere near, which teaches
- * the opposite of what module ten is for.
+ * The rule itself lives in `shiftHandFor`, which asks `needsShift` rather than
+ * testing the case: `?` does not lower-case to anything, so a case test says
+ * no shift while the board says yes. This adds only the geometry, that shift
+ * is a little finger's job.
  */
-export function shiftReach(char: string): { hand: Hand; finger: Finger } | undefined {
-  const owner = fingerFor(char);
-  if (!owner || !needsShift(char)) return undefined;
+export function shiftReach(char: string, layout: LayoutId = DEFAULT_LAYOUT): { hand: Hand; finger: Finger } | undefined {
+  /*
+   * Delegated rather than recomputed. This function and `shiftHandFor` were
+   * the same decision made twice, and they disagreed: this one had been fixed
+   * to ask `needsShift`, that one still tested the case, so the board drew a
+   * finger on Shift for `"` while the caption beside it said nothing about
+   * Shift. One rule, one place, and the drawing is now the words' geometry
+   * rather than a second opinion about them.
+   */
+  const hand = shiftHandFor(char, layout);
   // The opposite hand, always: same-hand shift is the habit this is correcting.
-  return { hand: owner.hand === 'left' ? 'right' : 'left', finger: 'pinky' };
+  return hand ? { hand, finger: 'pinky' } : undefined;
 }
 
 /** Where a little finger sits when it is holding shift down. */

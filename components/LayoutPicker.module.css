@@ -1,0 +1,65 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  /* 44px of tap target, like every other control that matters on a phone. */
+  min-height: 44px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.option:hover:not(:disabled) { border-color: var(--muted); }
+
+.option[data-on='true'] {
+  border-color: var(--good);
+  /* The chosen board is the loudest thing in the group, because the whole
+     point of this control is answering "which one am I on right now". */
+  box-shadow: inset 0 0 0 1px var(--good);
+}
+
+.name {
+  font-size: 13px;
+}
+
+.detail {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/*
+ * The board itself, shown at the size the picker can afford.
+ *
+ * A named layout is a thing somebody has to already know; a picture of the key
+ * beside Enter is a thing they can check against the keyboard in front of
+ * them without knowing any of the words.
+ */
+.preview {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}

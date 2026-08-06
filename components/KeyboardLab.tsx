@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import RetroKeyboard from './RetroKeyboard';
 import { fingerLabel, fingerFor } from '@/game/fingers';
-import { needsShift } from '@/game/keyboard';
+import { BOARDS, DEFAULT_LAYOUT, needsShift, type LayoutId } from '@/game/keyboard';
 import styles from './LearnLab.module.css';
 
 /**
@@ -34,6 +34,7 @@ const SCRIPT = 'the quick brown fox jumps over the lazy dog';
 
 export default function KeyboardLab() {
   const [next, setNext] = useState<string>('f');
+  const [layout, setLayout] = useState<LayoutId>(DEFAULT_LAYOUT);
   const [live, setLive] = useState(false);
   const [at, setAt] = useState(0);
   const [hands, setHands] = useState(true);
@@ -57,7 +58,7 @@ export default function KeyboardLab() {
   }, [onKey]);
 
   const shown = live ? SCRIPT[at] : next;
-  const digit = fingerFor(shown);
+  const digit = fingerFor(shown, layout);
 
   return (
     <main className={styles.page}>
@@ -92,6 +93,16 @@ export default function KeyboardLab() {
           <strong className="pixel-font">Size: {width}px</strong>
           <span>It is one SVG in key units, so nothing should shift as this changes.</span>
         </button>
+        <button
+          className={styles.card}
+          onClick={() => setLayout((was) => (was === 'us' ? 'uk' : 'us'))}
+        >
+          <strong className="pixel-font">Board: {BOARDS[layout].label}</strong>
+          <span>
+            The whole reason both exist. Watch the double quote move from the
+            apostrophe key to the 2, and the reaching hand change with it.
+          </span>
+        </button>
       </div>
 
       {live && (
@@ -100,12 +111,12 @@ export default function KeyboardLab() {
         </p>
       )}
 
-      <RetroKeyboard next={shown} hands={hands} width={width} />
+      <RetroKeyboard next={shown} hands={hands} width={width} layout={layout} />
 
       <p className={`${styles.result} pixel-font`}>
-        {shown === ' ' ? 'space' : shown} · {fingerLabel(shown) ?? 'nothing owns this'}
+        {shown === ' ' ? 'space' : shown} · {fingerLabel(shown, layout) ?? 'nothing owns this'}
         {digit && shown !== ' ' && digit.home !== shown.toLowerCase() && `, reaching from ${digit.home}`}
-        {needsShift(shown) && ' · shift on the other hand'}
+        {needsShift(shown, layout) && ' · shift on the other hand'}
       </p>
 
       {!live && (

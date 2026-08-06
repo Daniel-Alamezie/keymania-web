@@ -8,7 +8,8 @@ import {
   type LessonState,
 } from '@/game/lessonReducer';
 import { useConfirmKey } from '@/game/useConfirmKey';
-import { fingerFor, fingerLabel } from '@/game/fingers';
+import { fingerFor, fingerLabel, shiftHandFor } from '@/game/fingers';
+import { DEFAULT_LAYOUT, type LayoutId } from '@/game/keyboard';
 import { audio } from '@/game/audio';
 import { keyFor } from '@/game/typing';
 import { track } from '@/game/analytics';
@@ -39,6 +40,14 @@ export interface LessonConfig {
   /** Where a pass leads: the next lesson, or the module's boss. */
   onNext?: () => void;
   nextLabel?: string;
+  /**
+   * Which physical board the player is at.
+   *
+   * Every finger hint on this screen is wrong for somebody on the other one,
+   * and wrong with total confidence, which is the failure mode a learner has
+   * no way to catch.
+   */
+  layout?: LayoutId;
 }
 
 /**
@@ -62,6 +71,7 @@ export interface LessonConfig {
  */
 export default function Lesson({
   module, index, title, script, onDone, onAgain, onExit, onNext, nextLabel,
+  layout = DEFAULT_LAYOUT,
 }: LessonConfig) {
   const [state, dispatch] = useReducer(
     lessonReducer,
@@ -192,7 +202,7 @@ export default function Lesson({
 
   /** The key wanted next, and the finger that owns it. */
   const next = state.sentence[state.cursor];
-  const hint = next ? fingerLabel(next) : undefined;
+  const hint = next ? fingerLabel(next, layout) : undefined;
   /**
    * The home key this finger is leaving, when the next key is not its own.
    *
@@ -200,10 +210,20 @@ export default function Lesson({
    * finger leaves out the half that is actually new. "Left index finger" is
    * true for F and for G; only one of them requires moving.
    */
-  const owner = next ? fingerFor(next) : undefined;
+  const owner = next ? fingerFor(next, layout) : undefined;
   const reachFrom = owner && next && next !== ' ' && owner.home !== next
     ? owner.home
     : undefined;
+  /**
+   * The other hand's little finger, when the key needs shift held.
+   *
+   * The board has always drawn this and the words never said it, which is the
+   * wrong way round: somebody who has to decode a picture to learn that `"` is
+   * two fingers has been told nothing. It matters most in module 10, where
+   * nearly every character is shifted and the temptation to shift with the
+   * typing hand is strongest.
+   */
+  const shiftHand = next ? shiftHandFor(next, layout) : undefined;
 
   return (
     <main
@@ -285,7 +305,7 @@ export default function Lesson({
             * only by design, so a lesson never renders anywhere this board
             * would not fit.
             */}
-          {!over && <RetroKeyboard next={next} width={560} />}
+          {!over && <RetroKeyboard next={next} width={560} layout={layout} />}
 
           {!over && next && (
             <span className={lesson.finger}>
@@ -299,6 +319,7 @@ export default function Lesson({
                       home, since that is the whole skill a new module
                       teaches: leave home, press, come back. */}
                   {reachFrom && `, reaching from ${reachFrom}`}
+                  {shiftHand && `, with ${shiftHand} shift`}
                 </span>
               )}
             </span>
