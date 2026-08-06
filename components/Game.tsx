@@ -160,20 +160,54 @@ export default function Game() {
   useUiSounds();
   const { status, subscribe, connect, disconnect, send, configured } = useDuelSocket();
   /**
-   * Restored from the URL rather than in an effect.
+   * Always the menu on the first paint, then restored from the URL.
    *
-   * Safe because the profile store's server snapshot is EMPTY: through SSR
-   * and hydration `learn` is undefined, so the ladder's guard fails and this
-   * renders the menu exactly as the server did. Only after hydration, when
-   * the cached profile lands, does the ladder appear — no mismatch, and no
-   * setState cascading out of an effect.
+   * This used to read the URL in the initialiser, and the comment here said it
+   * was safe because `screen === 'learn'` could not draw anything while the
+   * profile store's server snapshot was empty — the ladder's guard failed and
+   * the first client render matched the server's menu.
+   *
+   * **That invariant was removed the day the hub landed.** The training area
+   * deliberately renders WITHOUT `learn`, because bots predate the path and
+   * the kill switch must not take practice down with it. Correct on its own
+   * terms, and it quietly turned this into a hydration mismatch: the server
+   * sent a menu, the client's first render produced a hub, and React threw the
+   * whole tree away and rebuilt it.
+   *
+   * The fix is `useSyncExternalStore`, which exists for exactly this: its
+   * server snapshot is allowed to differ from its client one, because React
+   * hydrates with the server's answer and re-renders with the client's rather
+   * than comparing them. Restoring in an effect would also have worked and is
+   * what the first attempt did — the linter rejects it, rightly, since it is a
+   * setState cascading out of an effect on every mount.
+   *
+   * So `chosen` is null until somebody navigates, and the screen is derived.
+   * The first render matches the server by construction now, rather than by an
+   * argument that a later feature can invalidate without anybody noticing.
    */
-  const [screen, setScreen] = useState<Screen>(() => {
-    if (typeof window === 'undefined') return 'menu';
-    return new URL(window.location.href).searchParams.get('learn') === '1'
-      ? 'learn'
-      : 'menu';
-  });
+  const restoringLearn = useSyncExternalStore(
+    /* Nothing external changes it: this component owns every later write to
+       the URL, through the replaceState below. */
+    () => () => {},
+    () => new URL(window.location.href).searchParams.get('learn') === '1',
+    () => false,
+  );
+
+  /**
+   * Null until somebody navigates, and the screen is derived from it.
+   *
+   * Exported to the rest of the component as the raw setter rather than a
+   * wrapper, deliberately: a `useCallback` here would be a new function
+   * identity that ten `useEffect` and `useCallback` dependency arrays do not
+   * list, and it added ten exhaustive-deps warnings to a file that had none.
+   * A plain `useState` setter is stable and the linter knows it.
+   *
+   * The one caller that passes a function reads `null` when nothing has been
+   * navigated to yet, and that is exactly right: it asks "am I on the
+   * searching screen", and a player who has navigated nowhere is not.
+   */
+  const [chosen, setScreen] = useState<Screen | null>(null);
+  const screen: Screen = chosen ?? (restoringLearn ? 'learn' : 'menu');
 
   /**
    * The learn screen survives a refresh, because it is somewhere you go
@@ -195,11 +229,25 @@ export default function Game() {
     if (screen === 'learn' && !marked) {
       url.searchParams.set(LEARN_PARAM, '1');
       window.history.replaceState(window.history.state, '', url);
-    } else if (screen !== 'learn' && marked) {
+    } else if (chosen !== null && screen !== 'learn' && marked) {
+      /**
+       * `chosen !== null` is load-bearing, and it cost a refresh to find.
+       *
+       * This effect runs after the FIRST render, and on a refresh into the
+       * path that first render is deliberately the menu — the store hands back
+       * its server snapshot during hydration so the markup matches. Without
+       * this guard the effect saw "menu, but marked", stripped the parameter,
+       * and the restore that was about to happen on the very next render found
+       * nothing left to read. The screen ate its own evidence.
+       *
+       * Only a real navigation clears it now, which is also what it means:
+       * the parameter says "put me back on the path", and nobody has navigated
+       * away from anything until `chosen` is set.
+       */
       url.searchParams.delete(LEARN_PARAM);
       window.history.replaceState(window.history.state, '', url);
     }
-  }, [screen]);
+  }, [screen, chosen]);
   const [difficulty, setDifficulty] = useState<Difficulty>('rival');
 
   /**
