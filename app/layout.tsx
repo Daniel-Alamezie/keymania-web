@@ -39,11 +39,20 @@ export const metadata: Metadata = {
    * anybody to read.
    */
   verification: { google: 'duvYI8nbtED1XNGCzc-aiQK4iVVfXg948RR4IrVTHz8' },
-  title: 'KeyMania — type fast, strike hard',
+  /**
+   * The title is the blue line in a search result, so it is written for
+   * somebody reading a list of ten of them rather than for the tab.
+   *
+   * The old one led with the tagline and never said what the site was. Nobody
+   * searches "strike hard"; they search "typing game", and the phrase was
+   * missing entirely, so the result had to be recognised rather than found.
+   * Brand first because the name is short, then the category, then the hook.
+   */
+  title: 'KeyMania: the typing game where words are weapons',
   description:
-    'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent.',
+    'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent. Free, with a twelve module course if you are still learning.',
   openGraph: {
-    title: 'KeyMania — type fast, strike hard',
+    title: 'KeyMania: the typing game where words are weapons',
     description:
       'A real-time typing duel. Every word you finish forges a blade and throws it at your opponent.',
     url: 'https://keymania.app',
@@ -57,12 +66,12 @@ export const metadata: Metadata = {
      * line of what the game is, because a shared link is often the only pitch
      * anybody reads.
      */
-    images: [{ url: '/brand/og.png', width: 1200, height: 630, alt: 'KeyMania — type fast, strike hard' }],
+    images: [{ url: '/brand/og.png', width: 1200, height: 630, alt: 'KeyMania: type fast, strike hard' }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'KeyMania — type fast, strike hard',
+    title: 'KeyMania: the typing game where words are weapons',
     description: 'A real-time typing duel. Type fast, strike hard.',
     images: ['/brand/og.png'],
   },
