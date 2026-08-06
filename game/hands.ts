@@ -61,26 +61,34 @@ export interface DrawnHand {
  * parallel columns: the fingers splay outward from the palm to reach their
  * keys, and drawing them parallel is what makes a hand read as a fork.
  *
- * The numbers are the home row's own x positions pulled a little towards the
- * middle of each hand. Home keys are at 2.25, 3.25, 4.25, 5.25 on the left and
- * 8.25 through 11.25 on the right, from `keyboard.ts`.
+ * **The knuckle line is an arc, not a shelf, and the arc is what makes the
+ * fingers different lengths.** The tips are pinned to the home row — that is
+ * the whole lesson — so the only place finger length can show is how far back
+ * each knuckle sits. A flat knuckle line means four identical fingers, and
+ * four identical fingers is most of what made the first hand read as a rake:
+ * no real hand has them, and the pinky being visibly short is one of the
+ * strongest single cues that a shape is a hand at all.
+ *
+ * So the pinky's knuckle sits closest to the keys (shortest finger), the
+ * middle's furthest (longest), with ring and index between. The differences
+ * are small in units and large in silhouette.
  */
-const KNUCKLE_Y = 5.35;
+const WRIST_Y = 6.85;
 
 const LEFT_KNUCKLES: Record<Finger, Point> = {
-  pinky: { x: 2.75, y: KNUCKLE_Y },
-  ring: { x: 3.55, y: KNUCKLE_Y },
-  middle: { x: 4.35, y: KNUCKLE_Y },
-  index: { x: 5.15, y: KNUCKLE_Y },
+  pinky: { x: 2.75, y: 5.18 },
+  ring: { x: 3.55, y: 5.38 },
+  middle: { x: 4.35, y: 5.45 },
+  index: { x: 5.15, y: 5.32 },
   /* The thumb hangs off the side of the palm rather than the knuckle line. */
   thumb: { x: 5.9, y: 5.9 },
 };
 
 const RIGHT_KNUCKLES: Record<Finger, Point> = {
-  pinky: { x: 10.75, y: KNUCKLE_Y },
-  ring: { x: 9.95, y: KNUCKLE_Y },
-  middle: { x: 9.15, y: KNUCKLE_Y },
-  index: { x: 8.35, y: KNUCKLE_Y },
+  pinky: { x: 10.75, y: 5.18 },
+  ring: { x: 9.95, y: 5.38 },
+  middle: { x: 9.15, y: 5.45 },
+  index: { x: 8.35, y: 5.32 },
   thumb: { x: 7.6, y: 5.9 },
 };
 
@@ -235,15 +243,24 @@ function palmOf(knuckles: Record<Finger, Point>, hand: Hand): Point[] {
   const outward = hand === 'left' ? -1 : 1;
   const inward = -outward;
   const { pinky, index, thumb } = knuckles;
-  const wrist = KNUCKLE_Y + 1.5;
 
+  /*
+   * The outer edge is three points, and the difference between them is the
+   * difference between a box and a hand. The old outline put its top corner a
+   * third of a unit OUTSIDE the pinky, so the palm had a square shoulder
+   * jutting past the shortest finger — the exact corner a reviewer circled.
+   * Now the shoulder tucks in at the pinky's own base, the edge bulges out
+   * below it where the pad of a real palm does, and it draws back in at the
+   * heel. Out-in, not straight down: taper is what wrists are.
+   */
   return [
-    { x: pinky.x + outward * 0.36, y: pinky.y - 0.1 },
-    { x: index.x + inward * 0.28, y: index.y - 0.14 },
-    /* The saddle between index and thumb, then the ball of the thumb. */
-    { x: thumb.x + inward * 0.02, y: thumb.y - 0.2 },
+    { x: pinky.x + outward * 0.12, y: pinky.y + 0.02 },
+    { x: pinky.x + outward * 0.42, y: pinky.y + 0.57 },
+    { x: pinky.x + outward * 0.3, y: WRIST_Y },
+    { x: index.x + inward * 0.15, y: WRIST_Y },
+    /* The ball of the thumb, then the saddle between thumb and index. */
     { x: thumb.x + inward * 0.1, y: thumb.y + 0.55 },
-    { x: index.x + inward * 0.1, y: wrist },
-    { x: pinky.x + outward * 0.3, y: wrist },
+    { x: thumb.x + inward * 0.02, y: thumb.y - 0.2 },
+    { x: index.x + inward * 0.26, y: index.y - 0.12 },
   ];
 }
