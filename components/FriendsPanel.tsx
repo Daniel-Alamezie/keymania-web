@@ -21,6 +21,14 @@ export default function FriendsPanel() {
   const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  /**
+   * Whose row is showing its two stakes, if any.
+   *
+   * One handle rather than a set: two rows open at once would be two rows
+   * mostly made of buttons, which is the crowding this reveal exists to avoid.
+   * Opening one closes the other by construction.
+   */
+  const [asking, setAsking] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -145,37 +153,63 @@ export default function FriendsPanel() {
                   * list would make the whole panel look broken.
                   */}
                 {/*
-                  * Two buttons, not one with a setting behind it.
+                  * One button, and the stakes on the second press.
                   *
-                  * The stakes are decided in the same press as the invite, so
-                  * there is nothing to open and nothing to remember. The
-                  * alternative considered was one button with the last choice
-                  * kept — which would make an invisible sticky preference
-                  * decide whether a duel counts, and being surprised by that
-                  * is the exact complaint this feature answers.
+                  * The first cut put Ranked and Friendly side by side, so the
+                  * choice cost no extra press. It also put two full-size
+                  * buttons beside a name in a narrow panel, which is the exact
+                  * thing the note on `.row` describes fixing once already: the
+                  * name was squeezed to an initial and the row was mostly
+                  * controls. A lesson this file had already learned.
                   *
-                  * Ranked first and primary: it is the ordinary ask, and the
-                  * board is what most of this game is built around.
+                  * So it reveals instead, in place and one row at a time. The
+                  * step is only paid by somebody actually inviting, and what it
+                  * buys is that the stakes are always chosen explicitly —
+                  * a remembered preference deciding whether a duel counts is
+                  * the surprise this whole feature exists to prevent.
                   */}
                 {person.presence === 'idle' && (
-                  <span className={styles.asks}>
+                  asking === person.handle ? (
+                    <span className={styles.asks}>
+                      <button
+                        type="button"
+                        className={`btn btn-primary ${styles.invite}`}
+                        autoFocus
+                        onClick={() => {
+                          setAsking(null);
+                          void sendInvite(person.handle, person.displayName);
+                        }}
+                      >
+                        Ranked
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn ${styles.invite}`}
+                        onClick={() => {
+                          setAsking(null);
+                          void sendInvite(person.handle, person.displayName, true);
+                        }}
+                      >
+                        Friendly
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.cancelAsk}
+                        aria-label="Cancel"
+                        onClick={() => setAsking(null)}
+                      >
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </span>
+                  ) : (
                     <button
                       type="button"
                       className={`btn btn-primary ${styles.invite}`}
-                      title={`Invite ${person.displayName} to a rated duel`}
-                      onClick={() => { void sendInvite(person.handle, person.displayName); }}
+                      onClick={() => setAsking(person.handle)}
                     >
-                      Ranked
+                      Invite
                     </button>
-                    <button
-                      type="button"
-                      className={`btn ${styles.invite}`}
-                      title={`Invite ${person.displayName} to a duel with nothing at stake`}
-                      onClick={() => { void sendInvite(person.handle, person.displayName, true); }}
-                    >
-                      Friendly
-                    </button>
-                  </span>
+                  )
                 )}
                 {person.presence === 'busy' && (
                   <span className={styles.playing} title={`${person.displayName} is in a game.`}>

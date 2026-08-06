@@ -360,11 +360,19 @@
  * pair had to move behind a menu first. Two full-weight buttons and a primary
  * one is not a row, it is a toolbar.
  */
-/* Two asks side by side, so the stakes are chosen in the same press as the
-   invite rather than by a setting somewhere the player cannot see. */
+/*
+ * The two stakes, revealed on the row being invited and nowhere else.
+ *
+ * They live behind a single Invite button rather than sitting beside the name
+ * permanently, for the reason the note on `.row` above already gives: two
+ * full-size buttons in a panel this narrow squeeze the name down to an initial
+ * and turn a list of people into a list of controls. One row at a time is the
+ * whole of what makes the reveal affordable.
+ */
 .asks {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 5px;
   flex: none;
 }
 
@@ -372,6 +380,21 @@
   font-size: 10px;
   padding: 5px 10px;
 }
+
+/* Backing out without choosing. Small and quiet: it is an escape hatch, not a
+   third option competing with the two that matter. */
+.cancelAsk {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cancelAsk:hover { color: var(--ink); }
 
 /* Not a button. There is nothing to press, and dressing it as one disabled
    would invite the click anyway. */
