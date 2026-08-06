@@ -175,6 +175,39 @@ paces itself against words the player never sees.
 **It touches no rating and no leaderboard**, inherited by leaving `multiplayer`
 absent, exactly as bot practice does.
 
+#### A boss is not recorded as a duel (2026-08-06)
+
+Inheriting from bot practice gave the boss the right rating behaviour and the
+wrong record behaviour: it was folded into the duelling record like any other
+bot fight. A player found boss fights in their Recent duels and asked whether
+the path was moving their rating.
+
+It was not, and never could be — practice is always `ranked: false`. But three
+things were wrong underneath the question:
+
+- Recent duels showed a win over eight home-row keys sitting next to real games.
+- Win rate and best wpm are figures about duelling. A boss is timed against the
+  curriculum's pace rather than a tier's, so its wpm is not comparable to
+  anything else on that panel.
+- It posted `difficulty: 'rookie'`, because Rookie is the arena it is built out
+  of, while the bot typed at the module's own speed. `beatBot` in the API counts
+  practice wins by difficulty, so **the home-row boss at 17 wpm was earning
+  credit for beating Rookie at 34.** That is the part that was not cosmetic.
+
+So a boss now records nowhere: not the local record, not the POST, and not
+`duel_started` or `duel_finished` either, since counting one end of the funnel
+and not the other would report bot duels as abandoned more often than they are.
+The path's own `learn_boss` event carries the module and the pace. The rule
+lives in `saveResult`, where "where does a finished duel go" is already decided
+and where it can be tested, rather than in the arena.
+
+The same inheritance was lying on screen. The arena names its opponent after the
+bot tier, so every boss introduced itself as ROOKIE, a 34 wpm bot, in front of a
+fight running at 17. `BossBank` now carries a `label`, and the plate, the caption
+and the start button all read from the boss rather than the tier. A player being
+told they are fighting Rookie is a player who reasonably expects a Rookie's
+consequences.
+
 ### Finger guidance
 
 `game/fingers.ts` maps every key the curriculum teaches to the finger that owns
@@ -385,8 +418,35 @@ inside the app — seeing the top of it would mean earning 36 stars.
 
 ### The menu entry, and its copy
 
-Learn sits directly under Play, full width, same weight as Weekly. Practice and
-Survival stay as the pair beneath.
+Learn sits under Play, top-left of a two-by-two grid. Play stays the hero; the
+four modes beneath it fall into two rows that pair by what the player is there
+for:
+
+|                   |                            |
+| ----------------- | -------------------------- |
+| **Learn to type** | **Practice** — no stakes   |
+| **Weekly**        | **Survival** — stakes      |
+
+**Revised 2026-08-06.** Learn and Weekly each ran full width under Play, which
+made three near-identical bars down the column and said they were three of a
+kind. They are not. The borders already carry the grouping — Weekly runs gold,
+Survival runs warm — so the bottom row reads as the one with consequences before
+a word of it is read.
+
+A player suggested putting Learn beside Practice and was right about the
+pairing. Their mock also promoted Weekly and Survival to full width above it,
+which is the half not taken: Survival at Play's width makes "one mistake ends
+it" the third-loudest thing on a page beginners land on, and Survival is the
+most niche mode here rather than the second most important. Learn keeps
+top-left, the strongest cell in a grid, because the person who needs it is the
+person least equipped to go hunting for it.
+
+On touch there is no Learn, so three modes remain, and three in a two-column
+grid strands one on a row of its own. That case keeps the old shape: Weekly full
+width, the other two across.
+
+Weekly's sub-copy shortened to "same script, resets Monday" — the old line wrapped
+to three lines at half width and made the bottom row taller than the top.
 
 The copy describes the content and never the reader: **"the whole keyboard, one
 row at a time"**. It is aimed at people who cannot yet touch type, and those are
