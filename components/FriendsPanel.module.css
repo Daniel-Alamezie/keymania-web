@@ -71,10 +71,15 @@
   grid-template-columns: minmax(min(100%, 260px), 1fr);
 }
 
+/*
+ * A row is a column now, and almost always a column of one.
+ *
+ * `.main` holds what a row has always held, laid out exactly as before. The
+ * second child only exists while somebody is being invited.
+ */
 .row {
   display: flex;
-  align-items: center;
-  gap: var(--gap-sm);
+  flex-direction: column;
   padding: 9px 11px;
   background: var(--panel-2);
   border: 2px solid transparent;
@@ -87,9 +92,26 @@
    * people. Allowing the wrap treated the symptom. Putting Remove and Block
    * behind one small menu button removed the cause, and left room for the
    * action anybody actually opens this list to take.
+   *
+   * The invite stakes ran into the same wall and are answered the same way,
+   * one step further: rather than competing for a width that was never there,
+   * they take a line of their own underneath. `.drawer` below.
    */
   position: relative;
 }
+
+/* What a row has always been. Unchanged, so nothing about the resting state
+   moved when the drawer was added. */
+.main {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  width: 100%;
+}
+
+/* The open row earns an edge, so it is obvious which one the choice belongs
+   to when the list is long. */
+.row[data-open] { border-color: var(--edge-soft); background: var(--panel); }
 
 .row:hover { border-color: var(--edge-soft); }
 
@@ -361,19 +383,42 @@
  * one is not a row, it is a toolbar.
  */
 /*
- * The two stakes, revealed on the row being invited and nowhere else.
+ * The stakes, dropped in under the name.
  *
- * They live behind a single Invite button rather than sitting beside the name
- * permanently, for the reason the note on `.row` above already gives: two
- * full-size buttons in a panel this narrow squeeze the name down to an initial
- * and turn a list of people into a list of controls. One row at a time is the
- * whole of what makes the reveal affordable.
+ * Beneath rather than beside, which is the point: the name and handle keep
+ * their own line and nothing has to be squeezed to make room. Two attempts
+ * fought over the width of that line — side by side, then behind a reveal —
+ * and both lost, because the width was never there. This stops competing for
+ * it.
+ *
+ * Two across, sharing the full width, so the choice reads as one question with
+ * two answers rather than as an action and an afterthought.
  */
-.asks {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: none;
+.drawer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  animation: drop 170ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * Down and in, from behind the line above.
+ *
+ * The row grows to its new height immediately and the content slides into the
+ * space, rather than the height itself animating: a list of people that
+ * reflows for 170ms every time somebody presses Invite is worse than one that
+ * settles at once and fills in.
+ */
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-7px); }
+}
+
+.stake {
+  width: 100%;
+  font-size: 11px;
+  padding: 7px 8px;
 }
 
 .invite {
@@ -381,20 +426,16 @@
   padding: 5px 10px;
 }
 
-/* Backing out without choosing. Small and quiet: it is an escape hatch, not a
-   third option competing with the two that matter. */
-.cancelAsk {
-  padding: 2px 4px;
-  border: 0;
-  background: none;
-  color: var(--faint);
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
+/* Held down while its drawer is open, so the button and the thing it opened
+   read as one control rather than two. */
+.invite[data-open] {
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
-.cancelAsk:hover { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  .drawer { animation: none; }
+}
 
 /* Not a button. There is nothing to press, and dressing it as one disabled
    would invite the click anyway. */

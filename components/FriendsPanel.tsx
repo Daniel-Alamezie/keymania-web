@@ -90,7 +90,7 @@ export default function FriendsPanel() {
           {data.incoming.length > 0 && (
             <Group title="Wants to be friends">
               {data.incoming.map((person) => (
-                <Row key={person.handle} person={person}>
+                <FriendRow key={person.handle} person={person}>
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -107,7 +107,7 @@ export default function FriendsPanel() {
                   >
                     Decline
                   </button>
-                </Row>
+                </FriendRow>
               ))}
             </Group>
           )}
@@ -139,7 +139,39 @@ export default function FriendsPanel() {
               </li>
             )}
             {byPresence(data.friends).map((person) => (
-              <Row key={person.handle} person={person}>
+              <FriendRow
+                key={person.handle}
+                person={person}
+                /* Only the row being invited, and only while it is. Everything
+                   else on the list keeps its single line. */
+                drawer={asking === person.handle ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`btn btn-primary ${styles.stake}`}
+                      autoFocus
+                      onClick={() => {
+                        setAsking(null);
+                        void sendInvite(person.handle, person.displayName);
+                      }}
+                    >
+                      Ranked
+                      <small className="btn-sub">rating moves</small>
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${styles.stake}`}
+                      onClick={() => {
+                        setAsking(null);
+                        void sendInvite(person.handle, person.displayName, true);
+                      }}
+                    >
+                      Friendly
+                      <small className="btn-sub">nothing at stake</small>
+                    </button>
+                  </>
+                ) : undefined}
+              >
                 {/*
                   * The one action anybody opens this list to take.
                   *
@@ -153,63 +185,24 @@ export default function FriendsPanel() {
                   * list would make the whole panel look broken.
                   */}
                 {/*
-                  * One button, and the stakes on the second press.
+                  * Invite opens the choice; the choice itself lives underneath.
                   *
-                  * The first cut put Ranked and Friendly side by side, so the
-                  * choice cost no extra press. It also put two full-size
-                  * buttons beside a name in a narrow panel, which is the exact
-                  * thing the note on `.row` describes fixing once already: the
-                  * name was squeezed to an initial and the row was mostly
-                  * controls. A lesson this file had already learned.
-                  *
-                  * So it reveals instead, in place and one row at a time. The
-                  * step is only paid by somebody actually inviting, and what it
-                  * buys is that the stakes are always chosen explicitly —
-                  * a remembered preference deciding whether a duel counts is
-                  * the surprise this whole feature exists to prevent.
+                  * One button on this line and never two, because the width for
+                  * two was never there — see `FriendRow`. Pressing it again
+                  * closes, so the button is the whole control and there is no
+                  * separate way to back out competing with the two answers.
                   */}
                 {person.presence === 'idle' && (
-                  asking === person.handle ? (
-                    <span className={styles.asks}>
-                      <button
-                        type="button"
-                        className={`btn btn-primary ${styles.invite}`}
-                        autoFocus
-                        onClick={() => {
-                          setAsking(null);
-                          void sendInvite(person.handle, person.displayName);
-                        }}
-                      >
-                        Ranked
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn ${styles.invite}`}
-                        onClick={() => {
-                          setAsking(null);
-                          void sendInvite(person.handle, person.displayName, true);
-                        }}
-                      >
-                        Friendly
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.cancelAsk}
-                        aria-label="Cancel"
-                        onClick={() => setAsking(null)}
-                      >
-                        <span aria-hidden="true">×</span>
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className={`btn btn-primary ${styles.invite}`}
-                      onClick={() => setAsking(person.handle)}
-                    >
-                      Invite
-                    </button>
-                  )
+                  <button
+                    type="button"
+                    className={`btn btn-primary ${styles.invite}`}
+                    aria-expanded={asking === person.handle}
+                    data-open={asking === person.handle || undefined}
+                    onClick={() =>
+                      setAsking((was) => (was === person.handle ? null : person.handle))}
+                  >
+                    Invite
+                  </button>
                 )}
                 {person.presence === 'busy' && (
                   <span className={styles.playing} title={`${person.displayName} is in a game.`}>
@@ -227,14 +220,14 @@ export default function FriendsPanel() {
                   * room for the one action anybody actually came here for.
                   */}
                 <RowMenu person={person} busy={busy} onRemove={remove} onBlock={block} />
-              </Row>
+              </FriendRow>
             ))}
           </Group>
 
           {data.outgoing.length > 0 && (
             <Group title="Waiting on them">
               {data.outgoing.map((person) => (
-                <Row key={person.handle} person={person}>
+                <FriendRow key={person.handle} person={person}>
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -243,7 +236,7 @@ export default function FriendsPanel() {
                   >
                     Cancel
                   </button>
-                </Row>
+                </FriendRow>
               ))}
             </Group>
           )}
@@ -381,9 +374,28 @@ const PRESENCE_LABEL: Record<NonNullable<Friend['presence']>, string> = {
   offline: 'Offline',
 };
 
-function Row({ person, children }: { person: Friend; children: React.ReactNode }) {
+/**
+ * One friend, and anything that unfolds beneath them.
+ *
+ * The drawer is a second line rather than more controls on the first, and that
+ * is the third arrangement this row has had. Two full-size buttons beside the
+ * name squeezed it to an initial — the same failure the note on `.row`
+ * describes fixing once before with Remove and Block. Putting them behind a
+ * reveal fixed the resting state and left the open one just as cramped, because
+ * the width was never there to begin with.
+ *
+ * Dropping below the name takes the width problem off the table entirely: the
+ * name and handle keep their line, and the choice gets one of its own.
+ */
+export function FriendRow({ person, children, drawer }: {
+  person: Friend;
+  children: React.ReactNode;
+  /** Unfolded under the name. Absent for a row at rest, which is most of them. */
+  drawer?: React.ReactNode;
+}) {
   return (
-    <li className={styles.row} data-presence={person.presence}>
+    <li className={styles.row} data-presence={person.presence} data-open={Boolean(drawer) || undefined}>
+      <div className={styles.main}>
       {/* The name is what you read; the handle is what identifies them. Both are
           shown because two friends can share a display name and nothing else
           would tell them apart. */}
@@ -426,6 +438,11 @@ function Row({ person, children }: { person: Friend; children: React.ReactNode }
         </span>
       </Link>
       <span className={styles.actions}>{children}</span>
+      </div>
+
+      {/* Keyed on nothing: it mounts when it opens, so the drop animation runs
+          on arrival rather than needing a state machine to trigger it. */}
+      {drawer && <div className={styles.drawer}>{drawer}</div>}
     </li>
   );
 }
