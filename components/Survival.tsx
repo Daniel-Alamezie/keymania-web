@@ -12,6 +12,7 @@ import { audio } from '@/game/audio';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
+import { isStarving } from '@/game/survivalReducer';
 import SentenceView from './SentenceView';
 import HeatBar from './HeatBar';
 import ArenaScene from './ArenaScene';
@@ -167,6 +168,21 @@ export default function Survival({
     // The forge carries on cooling, but the keyboard belongs to the dialog.
     if (pausedRef.current) return;
 
+    /**
+     * Nothing to type means nothing to judge.
+     *
+     * Stranded past the end of the script, the line holds one space, so every
+     * letter is a miss and the space bar commits an empty word. Both used to
+     * be reported: the letter ended the run as a typo the player never made,
+     * and the space achieved nothing at all. Neither is a verdict this screen
+     * has any business reaching, so the keystroke asks for the script back
+     * instead and the run waits rather than dying.
+     */
+    if (isStarving(snapshot)) {
+      onWord('', 0, 100, 0);
+      return;
+    }
+
     const expected = snapshot.sentence[snapshot.cursor];
     const correct = key === expected;
 
@@ -300,6 +316,28 @@ export default function Survival({
     }, left));
     return () => clearTimeout(id);
   }, [state.phase, state.startedAt, state.heat, state.words, onWord]);
+
+  /**
+   * Ask for the script back, without waiting for the player to work it out.
+   *
+   * The run has nothing to type, so nothing it does at the keyboard will ever
+   * reach the referee on its own, and the forge carries on cooling throughout.
+   * Left to itself that is a death with no key that could have prevented it,
+   * which is precisely what was reported three times.
+   *
+   * Repeated rather than asked once, because the reason the script ran dry is
+   * usually that a message went missing, and a single request is exactly the
+   * thing that can go missing again. It stops as soon as there is a word on
+   * screen, so a healthy run never sends one of these at all.
+   */
+  const starving = isStarving(state);
+  useEffect(() => {
+    if (!starving) return;
+    const ask = () => onWord('', 0, 100, 0);
+    ask();
+    const id = setInterval(ask, 700);
+    return () => clearInterval(id);
+  }, [starving, onWord]);
 
   /** The referee's word on every word, and on when the run ended. */
   useEffect(() => subscribe((message) => {

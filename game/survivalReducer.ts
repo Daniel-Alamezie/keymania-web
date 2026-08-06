@@ -97,6 +97,20 @@ export function initialSurvival(): SurvivalState {
   };
 }
 
+/**
+ * Nothing left to type, because the script ran out from under the run.
+ *
+ * A line with no letters on it is not a hard state to be in, it is an
+ * impossible one: every sentence the server generates has words. So this only
+ * ever means the client walked past the end of the script it holds, which
+ * happens when the top-ups the server sends stop arriving mid-run.
+ *
+ * Derived rather than stored, so it cannot fall out of step with the line
+ * actually on screen the way a second flag would.
+ */
+export const isStarving = (state: SurvivalState): boolean =>
+  state.phase === 'running' && state.sentence.trim() === '';
+
 /** Sentences carry a trailing space, so the committing key is always a space. */
 const withSpace = (sentence: string) => `${sentence} `;
 
