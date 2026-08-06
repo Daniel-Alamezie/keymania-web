@@ -129,8 +129,9 @@
  * never by colour alone, which would vanish for anyone who cannot separate
  * gold from grey.
  */
+/* The same green on the path's own nodes, so both views agree. */
 .node[data-state='done'] {
-  border-color: var(--gold-deep);
+  border-color: var(--good);
 }
 
 .node[data-state='next'] {
@@ -158,8 +159,8 @@
 }
 
 .node[data-state='done'] .pip {
-  border-color: var(--gold-deep);
-  color: var(--gold);
+  border-color: var(--good);
+  color: var(--good);
 }
 
 .node[data-state='next'] .pip {
@@ -271,10 +272,19 @@
   padding: 0;
 }
 
+/*
+ * Completed is GREEN, not a second gold.
+ *
+ * Done and next-up were two shades of the same colour, so the keyboard read
+ * as one warm mass and the thing that means "finished" was the harder of the
+ * two to find. Green is the game's own --good: a different kind of fact
+ * deserves a different colour, and this is the only state on the screen that
+ * is actually complete.
+ */
 .key[data-state='done'] {
-  border-color: var(--gold-deep);
-  background: var(--gold-deep);
-  color: var(--ink);
+  border-color: var(--good);
+  background: var(--good);
+  color: var(--bg-deep);
 }
 
 .key[data-state='next'] {
@@ -312,7 +322,7 @@
   background: var(--bg-deep);
 }
 
-.chip[data-state='done'] { background: var(--gold-deep); border-color: var(--gold-deep); }
+.chip[data-state='done'] { background: var(--good); border-color: var(--good); }
 .chip[data-state='next'] { background: var(--gold); border-color: var(--gold); }
 
 /* What the keyboard cannot say on its own: which module a lit group belongs to. */

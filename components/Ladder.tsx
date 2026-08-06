@@ -81,9 +81,14 @@ const FLAG: Record<NodeState, string> = {
  * locked is "earn your way here", unwritten is "this is not ready and no
  * amount of typing will change that". Showing an unwritten module as locked
  * would send somebody grinding for a door that does not exist, and showing it
- * as startable would open onto nothing. It says SOON and refuses the tap.
+ * as startable would open onto nothing.
+ *
+ * "SOON" alone was read as a fault, because it sat in the same column as
+ * LOCKED and looked like a state somebody had failed into. "COMING SOON" is
+ * about the game rather than the player, which is the distinction that was
+ * missing.
  */
-const SOON = 'SOON';
+const SOON = 'COMING SOON';
 
 
 /**
@@ -323,9 +328,15 @@ export default function Ladder({
             ))}
           </div>
 
+          {/*
+            * "Learned" and "next up" were two shades of gold, which made the
+            * one that means DONE the harder of the two to pick out. Completed
+            * is green now: a different colour for a different kind of fact,
+            * and the only one on this screen that is finished.
+            */}
           <div className={styles.legend}>
             <span className={styles.swatch}>
-              <span className={styles.chip} data-state="done" /> learned
+              <span className={styles.chip} data-state="done" /> completed
             </span>
             <span className={styles.swatch}>
               <span className={styles.chip} data-state="next" /> next up
@@ -348,8 +359,10 @@ export default function Ladder({
                 disabled={!startable(focus.id)}
                 onClick={() => start(focus.id)}
               >
+                {/* "Not written yet" read as though the PLAYER had not
+                    written it. It is about the module. */}
                 {!hasContent(focus.id) && nodeState(progress, focus.id) !== 'locked'
-                  ? 'Not written yet'
+                  ? 'Coming soon'
                   : nodeState(progress, focus.id) === 'done' ? 'Practise again' : 'Start'}
               </button>
             </div>

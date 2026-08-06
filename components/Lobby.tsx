@@ -97,8 +97,8 @@ export default function Lobby({
         <p className={styles.tally}>
           <strong className="pixel-font">{here} of {room}</strong>
           {spare > 0
-            ? ` — waiting for ${spare} more ${spare === 1 ? 'player' : 'players'}`
-            : ' — starting'}
+            ? `, waiting for ${spare} more ${spare === 1 ? 'player' : 'players'}`
+            : ', starting'}
         </p>
 
         {/* Empty seats are drawn rather than left out, so the room has a visible
@@ -116,7 +116,7 @@ export default function Lobby({
           {hosting
             ? waiting.visibility === 'public'
               ? 'Listed in the lobby. Share the code to pull someone in faster.'
-              : 'Private — the code is the only way in.'
+              : 'Private. The code is the only way in.'
             : 'You are in. It starts the moment the room fills.'}
         </p>
 

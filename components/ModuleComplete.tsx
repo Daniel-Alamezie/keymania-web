@@ -79,10 +79,10 @@ export default function ModuleComplete({
       .sort((a, b) => a.wpm - b.wpm);
     const cleared = [...tiers].reverse().find((tier) => wpm >= tier.wpm);
     if (cleared) {
-      return `${wpm} wpm — that clears ${cleared.label}. Try a duel.`;
+      return `${wpm} wpm. That clears ${cleared.label}, so try a duel.`;
     }
     const first = tiers[0];
-    return `${wpm} wpm. ${first.label} types at ${first.wpm} — you are ${first.wpm - wpm} away.`;
+    return `${wpm} wpm. ${first.label} types at ${first.wpm}, so you are ${first.wpm - wpm} away.`;
   }, [wpm]);
 
   return (
@@ -106,7 +106,7 @@ export default function ModuleComplete({
 
         {stars < 3 && (
           <p className={styles.note}>
-            The rest are waiting — stars only ever go up.
+            The rest are waiting, and stars only ever go up.
           </p>
         )}
 
@@ -138,8 +138,8 @@ export default function ModuleComplete({
 
         {!signedIn && (
           <p className={styles.note}>
-            The unlocks for this live on an account — sign in and this run
-            counts towards them.
+            The unlocks for this live on an account. Sign in, and this run counts
+            towards them.
           </p>
         )}
 

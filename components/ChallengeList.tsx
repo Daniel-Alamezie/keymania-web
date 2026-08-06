@@ -129,7 +129,7 @@ export default function ChallengeList({ challenges, limit, signedIn = true, cata
     return (
       <p className={styles.empty}>
         {signedIn
-          ? 'No challenges just now — new ones arrive from time to time.'
+          ? 'No challenges just now; new ones arrive from time to time.'
           : 'Sign in to earn characters by completing challenges.'}
       </p>
     );

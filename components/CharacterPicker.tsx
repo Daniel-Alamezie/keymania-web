@@ -92,7 +92,7 @@ export default function CharacterPicker({ current, onChoose, unlocked, challenge
               data-current={character.id === current || undefined}
               aria-pressed={character.id === selected}
               aria-label={isUnlocked(character.id)
-                ? `${character.name} — ${character.blurb}`
+                ? `${character.name}: ${character.blurb}`
                 : `${character.name}, locked. ${earnedBy(character.id)?.title ?? ''}`}
               onClick={() => {
                 if (!isUnlocked(character.id)) return;
@@ -141,7 +141,7 @@ export default function CharacterPicker({ current, onChoose, unlocked, challenge
         <p className={styles.hint} aria-live="polite">
           {problem ? <span className={styles.error}>{problem}</span>
             : status === 'saved' ? (
-              <span className={styles.ok}>Saved — you fight as {characterById(current).name}.</span>
+              <span className={styles.ok}>Saved. You fight as {characterById(current).name}.</span>
             )
             : dirty ? `${characterById(selected).name} selected. Save to lock it in.`
             : `You fight as ${characterById(current).name}.`}

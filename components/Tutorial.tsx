@@ -301,7 +301,7 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             <p className={styles.body}>
               Run a fingertip along the middle row of your keyboard. On
               <strong> F</strong> and on <strong>J</strong> there is a small
-              raised ridge — a bump you can feel.
+              raised ridge, a bump you can feel.
             </p>
             <p className={styles.body}>
               Every keyboard in the world has them, and they exist for one
@@ -331,7 +331,7 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             <p className={styles.body}>
               Now your <strong>right index finger</strong> on <strong>J</strong>.
             </p>
-            <p className={styles.prompt}>Take your time — nothing here is scored.</p>
+            <p className={styles.prompt}>Take your time. Nothing here is scored.</p>
           </>
         )}
 
@@ -339,11 +339,16 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
           <>
             <h1 className={`${styles.title} pixel-font`}>Eyes off the keyboard</h1>
             <p className={styles.body}>
-              Lift both hands away. Now — looking at the
-              <strong> screen</strong>, not down — find both bumps by touch
-              alone, and press <strong>F and J together</strong>.
+              Take your hands away from the keyboard. Now, without looking
+              down, find the raised bumps again with your index fingers.
             </p>
-            <p className={styles.prompt}>This is the whole trick. Everything else is reach.</p>
+            <p className={styles.body}>
+              Your <strong>left index finger</strong> should be touching
+              {' '}<strong>F</strong>, and your <strong>right index
+              finger</strong> should be touching <strong>J</strong>. Press
+              them both together.
+            </p>
+            <p className={styles.prompt}>This is the whole trick. Everything else is a reach.</p>
           </>
         )}
 
@@ -351,9 +356,8 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
           <>
             <h1 className={`${styles.title} pixel-font`}>You found home</h1>
             <p className={styles.body}>
-              Without looking. That is what the bumps buy you — your hands can
-              always find this position, and every other key is a short reach
-              away from it.
+              Without looking. That is what the bumps buy you: your hands can always
+              find this position, and every other key is a short reach from it.
             </p>
             <button className="btn btn-primary" onClick={() => beginRoll('spread-left')}>
               Where do the other fingers go?
@@ -366,12 +370,12 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             <h1 className={`${styles.title} pixel-font`}>The left hand falls into place</h1>
             <p className={styles.body}>
               Keep your index on <strong>F</strong>. The rest of the hand
-              spreads outward — middle finger on <strong>D</strong>, ring on
+              spreads outward, middle finger on <strong>D</strong>, ring on
               <strong> S</strong>, little finger on <strong>A</strong>.
             </p>
             <p className={styles.prompt}>
               Rest them there, then roll from the outside in:
-              A, S, D, F — like drumming your fingers.
+              A, S, D, F, like drumming your fingers.
             </p>
           </>
         )}
@@ -395,8 +399,8 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             <h1 className={`${styles.title} pixel-font`}>That is the position</h1>
             <p className={styles.body}>
               Eight fingers on eight keys, thumbs resting on space. This is
-              where your hands live now — every other key is a reach that
-              comes straight back here.
+              where your hands live now, and every other key is a reach that comes
+              straight back here.
             </p>
             <button className="btn btn-primary" onClick={() => setAct('walk')}>
               Meet your fingers
@@ -413,8 +417,8 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
               {HOME[at] === ' '
                 ? (
                   <>The space bar belongs to your <strong>thumbs</strong>. Use
-                    whichever is nearer — it makes no difference, as long as it is
-                    not a finger.
+                    whichever is nearer. It makes no difference, as long as it is not a
+                    finger.
                   </>
                 )
                 : <>Your <strong>{fingerLabel(HOME[at])}</strong>.</>}
@@ -429,9 +433,9 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
           <>
             <h1 className={`${styles.title} pixel-font`}>That is home</h1>
             <p className={styles.body}>
-              Come back to it after every key. It feels slower than hunting —
-              and it is the only thing that gets you past thirty words a
-              minute. The lessons keep showing you which finger to use.
+              Come back to it after every key. It feels slower than hunting, and it
+              is the only thing that gets you past thirty words a minute. The
+              lessons keep showing you which finger to use.
             </p>
 
             {/*
@@ -477,7 +481,7 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
             </div>
 
             <p className={styles.prompt}>
-              Stars only ever go up — replaying costs nothing.
+              Stars only ever go up, so replaying costs nothing.
             </p>
 
             <button className="btn btn-primary" onClick={onDone}>Start module 1</button>

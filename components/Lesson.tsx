@@ -8,7 +8,7 @@ import {
   type LessonState,
 } from '@/game/lessonReducer';
 import { useConfirmKey } from '@/game/useConfirmKey';
-import { fingerLabel } from '@/game/fingers';
+import { fingerFor, fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
 import { track } from '@/game/analytics';
 import SentenceView from './SentenceView';
@@ -195,6 +195,17 @@ export default function Lesson({
   /** The key wanted next, and the finger that owns it. */
   const next = state.sentence[state.cursor];
   const hint = next ? fingerLabel(next) : undefined;
+  /**
+   * The home key this finger is leaving, when the next key is not its own.
+   *
+   * Every module after the first is reaches, and a hint that only names the
+   * finger leaves out the half that is actually new. "Left index finger" is
+   * true for F and for G; only one of them requires moving.
+   */
+  const owner = next ? fingerFor(next) : undefined;
+  const reachFrom = owner && next && next !== ' ' && owner.home !== next
+    ? owner.home
+    : undefined;
 
   return (
     <main
@@ -273,7 +284,15 @@ export default function Lesson({
               <kbd className={`${lesson.nextKey} pixel-font`}>
                 {next === ' ' ? 'space' : next}
               </kbd>
-              {hint && <span className={lesson.hand}>{hint}</span>}
+              {hint && (
+                <span className={lesson.hand}>
+                  {hint}
+                  {/* Named as a reach when the key is not the finger's own
+                      home, since that is the whole skill a new module
+                      teaches: leave home, press, come back. */}
+                  {reachFrom && `, reaching from ${reachFrom}`}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -338,7 +357,7 @@ export default function Lesson({
 
             <p className={styles.reason}>
               {percent}% accurate.
-              {stars < MAX_STARS && ' Come back for the rest whenever you like — stars only go up.'}
+              {stars < MAX_STARS && ' Come back for the rest whenever you like; stars only go up.'}
             </p>
 
             {onNext && nextLabel && (

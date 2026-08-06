@@ -47,7 +47,7 @@ export default function PowerBar({ held, blockTick }: PowerBarProps) {
             data-active={active || undefined}
             data-blocked={(kind === 'ward' && blockTick > 0) || undefined}
             style={{ '--pw': meta.tint } as CSSProperties}
-            title={`${meta.label} — ${meta.blurb}`}
+            title={`${meta.label}: ${meta.blurb}`}
           >
             <PixelSprite name={meta.sprite} height={20} />
           </span>

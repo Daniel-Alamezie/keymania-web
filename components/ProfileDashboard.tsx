@@ -362,7 +362,7 @@ export default function ProfileDashboard() {
                     // crown would say the same thing at 300 as at 500.
                     icon={<Flame kind={ratingFlame(profile.rating ?? START_RATING)} height={19} />}
                     highlight
-                    note={ranked.duels === 0 ? 'unplayed — everyone starts here' : undefined}
+                    note={ranked.duels === 0 ? 'unplayed, everyone starts here' : undefined}
                   />
                   <Stat label="Duels" value={ranked.duels} highlight />
                   {/* "11–3", not "11W — 3L". The long form is eight characters

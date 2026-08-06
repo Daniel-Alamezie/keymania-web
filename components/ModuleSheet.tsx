@@ -118,7 +118,7 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
         <Stars earned={moduleStars} />
         <p className={styles.rule}>
           One star for finishing. 95% makes two, and opens the boss.
-          Beat the boss for the third — and the third opens the next module.
+          Beat the boss for the third, and the third opens the next module.
         </p>
       </div>
 
@@ -127,12 +127,23 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
           const result = run[i];
           const passed = Boolean(result && result.stars > 0);
           const current = i === at && !passed;
+          /**
+           * In order, and this was a real hole: every lesson was tappable, so
+           * somebody could open lesson three having never done lesson one.
+           * The lessons build on each other by design, and a curriculum you
+           * can start in the middle is not a curriculum.
+           *
+           * Passed lessons stay open, because replaying is the thing the
+           * whole feature exists to encourage.
+           */
+          const open = passed || i <= at;
           return (
             <li key={lesson.title}>
               <button
                 className={styles.row}
                 data-state={passed ? 'done' : current ? 'next' : 'todo'}
-                onClick={() => onStart(i)}
+                disabled={!open}
+                onClick={() => open && onStart(i)}
               >
                 <span className={`${styles.pip} pixel-font`} aria-hidden="true">{i + 1}</span>
                 <span className={styles.body}>
@@ -148,7 +159,7 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
                 </span>
                 {passed ? <Stars earned={result!.stars} /> : (
                   <span className={`${styles.flag} pixel-font`}>
-                    {current ? 'NEXT' : 'NOT YET'}
+                    {current ? 'NEXT' : 'FINISH THE ONE ABOVE'}
                   </span>
                 )}
               </button>
@@ -189,7 +200,7 @@ export default function ModuleSheet({ module, progress, onStart, onBack }: Modul
           ? 'Fight the boss'
           : done >= lessons.length
             ? 'Practise again'
-            : started ? `Resume — lesson ${at + 1}` : 'Start'}
+            : started ? `Resume lesson ${at + 1}` : 'Start'}
       </button>
     </main>
   );

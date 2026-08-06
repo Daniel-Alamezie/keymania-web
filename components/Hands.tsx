@@ -84,7 +84,11 @@ export default function Hands({ next }: HandsProps) {
       className={styles.hands}
       viewBox="0 0 190 112"
       role="img"
-      aria-label={wanted ? `Use your ${wanted.hand} ${wanted.finger}` : 'Hands at rest'}
+      aria-label={wanted
+        ? `Use your ${wanted.hand} ${wanted.finger}${
+          next && next !== ' ' && next !== wanted.home ? `, reaching to ${next}` : ''
+        }`
+        : 'Hands at rest'}
       shapeRendering="crispEdges"
     >
       {/* Palms, drawn first so the fingers sit on them. */}
@@ -104,15 +108,23 @@ export default function Hands({ next }: HandsProps) {
               height={digit.h}
             />
             {!isThumb && (
-              /* The home key, which is what the finger is being taught to
-                 return to rather than merely what it presses. */
+              /*
+               * The home key normally, but the key actually being ASKED for
+               * when this is the finger that has to move.
+               *
+               * Showing the home key on a lit finger was quietly wrong: asked
+               * for G, the diagram lit the left index and still said F, so it
+               * read as "press F" at the moment somebody was being taught to
+               * reach off home for the first time. The reach is the lesson in
+               * every module after the first, and this is where it is taught.
+               */
               <text
                 className={`${styles.key} pixel-font`}
                 x={digit.x + width / 2}
                 y={digit.y + digit.h - 8}
                 textAnchor="middle"
               >
-                {digit.home}
+                {live(digit) && next && next !== ' ' ? next : digit.home}
               </text>
             )}
           </g>
