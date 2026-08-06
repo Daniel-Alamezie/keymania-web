@@ -631,7 +631,13 @@ export default function Game() {
    * the second one inherits the first one's corpse.
    */
   const [run, setRun] = useState<
-    { id: number; script: string[]; countdownMs: number | undefined } | null
+    {
+      id: number;
+      script: string[];
+      countdownMs: number | undefined;
+      /** Set only on a run reclaimed after a dropped socket. */
+      resume?: { wordIndex: number; heat: number };
+    } | null
   >(null);
   /** The weekly sprint in progress, keyed exactly as survival's run is. */
   const [sprint, setSprint] = useState<
@@ -894,6 +900,16 @@ export default function Game() {
            */
           if (message.mode === 'survival') {
             setStarting(false);
+            /**
+             * Remembered, so a dropped socket can be reclaimed.
+             *
+             * This was only ever done for duels, and the omission is what made
+             * a run unrecoverable: with no room id kept, the reconnect never
+             * even asked, so the server went on holding a seat pointed at a
+             * dead connection and every word the client sent afterwards was
+             * dropped without a word back.
+             */
+            rememberDuel(message.roomId);
             setRun((previous) => ({
               id: (previous?.id ?? 0) + 1,
               script: message.script,
@@ -957,6 +973,31 @@ export default function Game() {
             setScreen('menu');
             return;
           }
+          /**
+           * A run comes back as a run, not as a duel with nobody in it.
+           *
+           * Everything below rebuilds a match: a roster, two healths, a slot.
+           * A survival room has one player and no opponent, so it has to take
+           * its own way out before any of that. The forge it comes back with
+           * is the one the server says it holds now, having kept cooling for
+           * however long the socket was gone.
+           */
+          if (message.mode === 'survival') {
+            rememberDuel(message.roomId);
+            setReclaiming(false);
+            setRun((previous) => ({
+              id: (previous?.id ?? 0) + 1,
+              script: message.script,
+              countdownMs: 0,
+              resume: {
+                wordIndex: message.words ?? 0,
+                heat: message.heat ?? 0,
+              },
+            }));
+            setScreen('survival');
+            return;
+          }
+
           /* Still live, on a new connection: keep the room parked and stop
              showing the reclaim notice. */
           rememberDuel(message.roomId);
@@ -1589,6 +1630,7 @@ export default function Game() {
         key={run.id}
         script={run.script}
         countdownMs={run.countdownMs}
+        resume={run.resume}
         subscribe={subscribe}
         onWord={(word, elapsedMs, accuracy, typos) =>
           send({ action: 'survivalWord', word, elapsedMs, accuracy, typos })}

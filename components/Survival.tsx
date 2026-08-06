@@ -6,7 +6,7 @@ import {
 import {
   currentWord, initialSurvival, survivalReducer, survivalWpm,
 } from '@/game/survivalReducer';
-import { secondsLeft } from '@/game/heat';
+import { coolingFor, secondsLeft } from '@/game/heat';
 import { useConfirmKey } from '@/game/useConfirmKey';
 import { audio } from '@/game/audio';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
@@ -37,6 +37,15 @@ export interface SurvivalConfig {
    * how a player learns to press it four more times.
    */
   starting: boolean;
+  /**
+   * Where a reclaimed run picks up. Absent for a fresh one.
+   *
+   * A survival run outlives its socket: API Gateway caps a connection at two
+   * hours and a phone locking ends one sooner than that. Without this, coming
+   * back meant starting again, and before that it meant not coming back at
+   * all, because nothing remembered a run's room to reclaim.
+   */
+  resume?: { wordIndex: number; heat: number };
 }
 
 /**
@@ -54,7 +63,7 @@ export interface SurvivalConfig {
  * with the reasons kept, and the two unify after this has actually been played.
  */
 export default function Survival({
-  script, countdownMs, subscribe, onWord, onExit, onAgain, starting,
+  script, countdownMs, subscribe, onWord, onExit, onAgain, starting, resume,
 }: SurvivalConfig) {
   /**
    * Armed from the script in the initialiser rather than in an effect.
@@ -66,8 +75,33 @@ export default function Survival({
    */
   const [state, dispatch] = useReducer(
     survivalReducer,
-    script,
-    (from) => survivalReducer(initialSurvival(), { type: 'begin', script: from }),
+    { script, resume },
+    (from) => {
+      const begun = survivalReducer(initialSurvival(), { type: 'begin', script: from.script });
+      if (!from.resume) return begun;
+
+      /**
+       * A reclaimed run does not count itself back in.
+       *
+       * The countdown exists so a fresh run does not start under somebody's
+       * fingers. This run started minutes ago; three seconds of ceremony while
+       * the forge is already burning would be three seconds of heat spent
+       * watching a number, and the forge does not pause for it.
+       */
+      let at = begun;
+      while (at.phase === 'countdown') at = survivalReducer(at, { type: 'countdown' });
+
+      /* The referee's script and place, then the forge it actually holds. */
+      at = survivalReducer(at, {
+        type: 'resync', script: from.script, wordIndex: from.resume.wordIndex,
+      });
+      return survivalReducer(at, {
+        type: 'confirm',
+        heat: from.resume.heat,
+        cooling: coolingFor(from.resume.wordIndex),
+        words: from.resume.wordIndex,
+      });
+    },
   );
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);

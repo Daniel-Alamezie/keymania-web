@@ -323,6 +323,19 @@ export type ServerMessage =
     type: 'rejoined';
     roomId: string;
     status: 'playing' | 'over';
+    /**
+     * Which kind of game is being reclaimed.
+     *
+     * Optional because a server from before this existed sends none, and the
+     * client reads its absence as a duel, which is what every such room was.
+     * Without it a survival run came back through the duel path and was
+     * rebuilt as a match with one player and no opponent.
+     */
+    mode?: 'duel' | 'survival' | 'weekly';
+    /** Survival only: the forge as the server has it, having kept cooling. */
+    heat?: number;
+    /** Survival only: words the referee has actually validated. */
+    words?: number;
     slot: number;
     script: string[];
     powers: Record<number, PowerKind>;
