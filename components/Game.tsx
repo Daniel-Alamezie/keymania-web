@@ -1099,10 +1099,17 @@ export default function Game() {
       }}
     >
       {trainingHere ? 'Learn to type' : 'Practice'}
+      {/* Three doors, three items, and not one word spent restating the
+          label. "The keyboard from scratch" was the first draft and it said
+          exactly what "Learn to type" already says, which left only the tail
+          carrying new information. The word doing the most work here is
+          "bots": that is what somebody hunting for their old Practice button
+          is actually scanning for, and "a warm-up" alone named the door they
+          are least likely to want. */}
       <small className="btn-sub">
         {trainingHere
-          ? 'the keyboard from scratch, or a warm-up'
-          : 'warm up, or take on a bot'}
+          ? 'from scratch, a warm-up, or six bots'
+          : 'warm up, or take on one of six bots'}
       </small>
     </button>
   );
@@ -1836,7 +1843,7 @@ export default function Game() {
           */}
         <div className={styles.modes}>
           {learnMode}
-          {modeTab('weekly', 'Weekly', 'same script, resets Monday')}
+          {modeTab('weekly', 'Weekly', 'same script for everyone, resets Monday')}
           {modeTab('survival', 'Survival', 'one mistake ends it')}
         </div>
 
