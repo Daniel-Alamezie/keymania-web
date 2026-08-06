@@ -340,7 +340,7 @@ export default function ProfileDashboard() {
                   )}
                 </dl>
                 <p className={styles.muted}>
-                  Speed counts wherever you earn it — practice is still typing. Records
+                  Speed counts wherever you earn it; practice is still typing. Records
                   below are kept apart, so a run of bot wins never flatters the one that
                   decides the board.
                 </p>
@@ -388,7 +388,7 @@ export default function ProfileDashboard() {
                 </dl>
                 {ranked.duels === 0 && (
                   <p className={styles.muted}>
-                    Nothing here yet. Beat another player and this fills in — it is the only
+                    Nothing here yet. Beat another player and this fills in; it is the only
                     record that reaches the leaderboard.
                   </p>
                 )}
@@ -701,7 +701,7 @@ function NameEditor({ current, suggestion, onSave }: {
       <h2 className={`${styles.heading} pixel-font`}>Display name</h2>
       <p className={styles.muted}>
         What opponents and the leaderboard call you. Changing it here changes it
-        everywhere — including duels already on the board.
+        everywhere, including duels already on the board.
       </p>
 
       <form className={styles.nameRow} onSubmit={submit}>
@@ -777,7 +777,7 @@ function HandleEditor({ current, onSave }: {
       <h2 className={`${styles.heading} pixel-font`}>Handle</h2>
       <p className={styles.muted}>
         How other players find you, and the only name that is yours alone. Your
-        first change is free; after that it settles for about a fortnight —
+        first change is free; after that it settles for about a fortnight,
         unlike your display name, which you can change whenever you like.
       </p>
 

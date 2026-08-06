@@ -42,7 +42,7 @@ const PAGES = [
     title: 'A typo shatters the streak',
     body: (
       <>
-        A wrong key never moves you forward — you have to fix it, which costs
+        A wrong key never moves you forward; you have to fix it, which costs
         time. Your combo drops straight back to zero.
       </>
     ),
@@ -53,7 +53,7 @@ const PAGES = [
     body: (
       <>
         Roughly one word in nine glows gold. Type it correctly and its power
-        fires immediately — there is nothing else to press.
+        fires immediately; there is nothing else to press.
       </>
     ),
     visual: <PowerRow />,

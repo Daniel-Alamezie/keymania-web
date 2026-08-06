@@ -71,7 +71,7 @@ export default function CharacterPicker({ current, onChoose, unlocked, challenge
     <section className={styles.section}>
       <h2 className={`${styles.heading} pixel-font`}>Character</h2>
       <p className={styles.muted}>
-        Who you fight as. Opponents see this too — it is drawn in the arena, not
+        Who you fight as. Opponents see this too; it is drawn in the arena, not
         just here.
       </p>
 

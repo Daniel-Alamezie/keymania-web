@@ -143,7 +143,7 @@ export default function ChallengeList({ challenges, limit, signedIn = true, cata
 
       {shown.length === 0 && (
         <p className={styles.empty}>
-          All of them. New challenges arrive with new seasons — and the weekly
+          All of them. New challenges arrive with new seasons, and the weekly
           resets every Monday.
         </p>
       )}
