@@ -128,6 +128,13 @@ interface Match {
    * plate showed until now.
    */
   ratings: number[] | undefined;
+  /**
+   * Played for nothing, decided when the room was opened.
+   *
+   * Kept on the match rather than looked up at the end, because by then the
+   * lobby is gone and there is nothing left to ask.
+   */
+  friendly: boolean | undefined;
   /** What each seat is wearing, parallel to the roster. */
   cosmetics: (PublicCosmetics | undefined)[] | undefined;
   /**
@@ -746,6 +753,9 @@ export default function Game() {
           setWaiting({
             code: message.roomId,
             visibility: message.visibility,
+            // The server's answer, not the one we asked for. If the two ever
+            // disagree, the room is what the server wrote.
+            friendly: message.friendly === true,
             // You are the only one in it, and always slot 0.
             players: [message.you],
             // Absent from an older server release, where every room was a duel.
@@ -768,6 +778,10 @@ export default function Game() {
             // the room, not how the room was listed, and only the host was ever
             // told that.
             visibility: previous?.visibility ?? null,
+            /* Taken from the message rather than carried over, unlike the
+               listing: a joiner has no previous state to carry, and the stakes
+               are the one thing they most need to be told. */
+            friendly: message.friendly === true,
             players: message.players,
             capacity: message.capacity,
           }));
@@ -824,6 +838,7 @@ export default function Game() {
             // default fighters and made the picker look broken.
             characters: message.characters,
             ratings: message.ratings,
+            friendly: message.friendly,
             cosmetics: message.cosmetics,
             countdownMs: message.countdownMs,
           });
@@ -860,6 +875,7 @@ export default function Game() {
             powers: message.powers ?? {},
             characters: message.characters,
             ratings: message.ratings,
+            friendly: message.friendly,
             cosmetics: message.cosmetics,
             countdownMs: message.countdownMs,
             // The board as the server holds it, applied after the reset that
@@ -1192,13 +1208,14 @@ export default function Game() {
     name: string,
     visibility: 'public' | 'private',
     capacity: RoomSize,
+    friendly: boolean,
   ) => {
     const token = await duelToken();
     if (!token) {
       setError('Your session expired. Sign in again to duel.');
       return;
     }
-    send({ action: 'createRoom', name, visibility, token, capacity });
+    send({ action: 'createRoom', name, visibility, token, capacity, friendly });
   }, [send]);
 
 
@@ -1329,6 +1346,7 @@ export default function Game() {
             powers: match.powers,
             characters: match.characters,
             ratings: match.ratings,
+            friendly: match.friendly,
             cosmetics: match.cosmetics,
             countdownMs: match.countdownMs,
             resume: match.resume,
@@ -1735,7 +1753,8 @@ export default function Game() {
           rooms={rooms}
           waiting={waiting}
           error={error}
-          onCreate={(name, visibility, capacity) => void hostRoom(name, visibility, capacity)}
+          onCreate={(name, visibility, capacity, friendly) =>
+            void hostRoom(name, visibility, capacity, friendly)}
           onJoin={(roomId, name) => { setError(null); void enterRoom(roomId, name); }}
           onRefresh={() => send({ action: 'listRooms' })}
           onBack={leave}

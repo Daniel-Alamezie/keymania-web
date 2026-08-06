@@ -13,7 +13,12 @@ interface LobbyProps {
   /** Set once you are in a room — hosting it or having joined it. */
   waiting: WaitingRoom | null;
   error: string | null;
-  onCreate: (name: string, visibility: 'public' | 'private', capacity: RoomSize) => void;
+  onCreate: (
+    name: string,
+    visibility: 'public' | 'private',
+    capacity: RoomSize,
+    friendly: boolean,
+  ) => void;
   onJoin: (roomId: string, name: string) => void;
   onRefresh: () => void;
   onBack: () => void;
@@ -36,6 +41,34 @@ const NAME_KEY = 'keymania.name';
  */
 const FOUR_PLAYER_READY = true;
 
+/**
+ * Playing other people.
+ *
+ * **Restructured 2026-08-06, around adding friendly duels.** The old screen
+ * asked four questions before anything could happen — your name, two players
+ * or four, public or private, and only then host-or-join — with the open-rooms
+ * list last, below all of it. Stakes would have been a fifth. So the fix was
+ * not to find somewhere to put a new toggle; it was to stop asking so much.
+ *
+ * Three changes, in order of how much they help:
+ *
+ *  - **Joining leads.** It is the fastest route to an actual game and it was at
+ *    the bottom. Hosting is the fallback for when there is nothing to join,
+ *    which is what "Host one and wait" was always admitting.
+ *  - **Hosting is one group with one button.** "Host public" and "Host private"
+ *    duplicated the choice grid directly above them, so visibility was asked
+ *    twice in two different shapes. Now it is a row like the others and there
+ *    is a single commit.
+ *  - **The name stops being a question.** This screen is only reachable when
+ *    signed in — human duels need an account to be rateable — so everybody
+ *    arriving already has a name. The field is an override now, folded away
+ *    behind the line that states it.
+ *
+ * Every row in the list is labelled with its stakes, ranked and friendly
+ * alike. Labelling only the friendly ones would be tidier and would leave the
+ * more consequential state as the unmarked default, which is the wrong way
+ * round: the whole point of the feature is knowing before you commit.
+ */
 export default function Lobby({
   status, configured, rooms, waiting, error,
   onCreate, onJoin, onRefresh, onBack, accountName,
@@ -47,10 +80,22 @@ export default function Lobby({
     if (typeof window === 'undefined') return '';
     try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; }
   });
+  const [renaming, setRenaming] = useState(false);
   const [code, setCode] = useState('');
   // A duel is the default: it is the one that starts as soon as a single other
   // person turns up.
   const [capacity, setCapacity] = useState<RoomSize>(2);
+  /**
+   * Ranked by default.
+   *
+   * Friendly is the gentler option and there is a case for leading with it, but
+   * defaulting to it would quietly make rated human duels a thing you opt into,
+   * and the board is what most of this game is built around. Somebody who wants
+   * no stakes is looking for that; somebody who wants a normal duel should not
+   * have to notice a toggle to get one.
+   */
+  const [friendly, setFriendly] = useState(false);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
 
   const remember = (value: string) => {
     setName(value);
@@ -85,6 +130,17 @@ export default function Lobby({
         <h2 className={`${styles.heading} pixel-font`}>
           {room > 2 ? 'Free-for-all' : 'Waiting for a challenger'}
         </h2>
+
+        {/*
+          * What this is worth, stated to everybody in the room.
+          *
+          * Unlike the listing, which only the host chose and only the host is
+          * told. Stakes are different because they affect the joiner too, and
+          * somebody handed a code in a chat has no other way to find out.
+          */}
+        <p className={styles.stakes} data-friendly={waiting.friendly || undefined}>
+          {waiting.friendly ? 'Friendly · nothing at stake' : 'Ranked · counts on the board'}
+        </p>
 
         {/*
           * The count first, because it is the only question anybody in here has.
@@ -140,70 +196,79 @@ export default function Lobby({
     <div className={`panel ${styles.lobby}`}>
       <h2 className={`${styles.heading} pixel-font`}>Play other players</h2>
 
-      <label className={styles.nameRow}>
-        <span className="eyebrow">Your name</span>
-        <input
-          className="field"
-          value={name}
-          maxLength={16}
-          placeholder={accountName || 'Challenger'}
-          onChange={(e) => remember(e.target.value)}
-        />
-      </label>
+      {/*
+        * Who you are, stated rather than asked.
+        *
+        * This screen needs an account to reach, so the answer is already known
+        * and a blank field at the top of it was a question nobody had to be
+        * asked. The override survives because a player who wants a different
+        * name in the arena should still be able to have one.
+        */}
+      {renaming ? (
+        <label className={styles.nameRow}>
+          <span className="eyebrow">Your name</span>
+          <input
+            className="field"
+            value={name}
+            maxLength={16}
+            autoFocus
+            placeholder={accountName || 'Challenger'}
+            onChange={(e) => remember(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setRenaming(false); }}
+            onBlur={() => setRenaming(false)}
+          />
+        </label>
+      ) : (
+        <p className={styles.playingAs}>
+          Playing as <strong>{displayName}</strong>
+          <button className={styles.inlineLink} onClick={() => setRenaming(true)}>change</button>
+        </p>
+      )}
 
-      {/* Size is chosen before hosting, not after: it decides how many people
-          the room waits for, and a room cannot change its mind once open. */}
-      <fieldset className={styles.sizes}>
-        <legend className="eyebrow">Players</legend>
-        <div className={styles.row}>
-          {ROOM_SIZES.map((size) => {
-            const locked = size === 4 && !FOUR_PLAYER_READY;
-            return (
-              <button
-                key={size}
-                type="button"
-                className={`btn ${styles.grow}`}
-                data-selected={size === capacity || undefined}
-                aria-pressed={size === capacity}
-                disabled={locked}
-                title={locked ? 'The four-way arena is still being built' : undefined}
-                onClick={() => setCapacity(size)}
-              >
-                {size === 2 ? 'Duel' : 'Free-for-all'}
-                <small className="btn-sub">{locked ? 'soon' : `${size} players`}</small>
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
+      {/* ---- Joining, first, because it is the fastest way into a game ---- */}
 
-      <p className={styles.note}>
-        {capacity === 2
-          ? FOUR_PLAYER_READY
-            ? 'One on one. Starts the moment someone joins.'
-            : 'One on one. Four-player free-for-all is on the way.'
-          : 'Four fighters, last one standing. Your blade always flies at whoever is furthest ahead, so leading makes you the target.'}
-      </p>
-
-      <div className={styles.row}>
-        <button className="btn" onClick={() => onCreate(displayName, 'public', capacity)}>
-          Host public
-          <small className="btn-sub">listed in the lobby</small>
-        </button>
-        <button className="btn" onClick={() => onCreate(displayName, 'private', capacity)}>
-          Host private
-          <small className="btn-sub">code only</small>
-        </button>
+      <div className={styles.listHead}>
+        <span className="eyebrow">Open games</span>
+        <button className={styles.refresh} onClick={onRefresh} aria-label="Refresh">⟳</button>
       </div>
 
-      <div className={styles.divider}><span>or join</span></div>
+      <ul className={styles.list}>
+        {status !== 'open' && <li className={styles.empty}>Connecting…</li>}
+        {status === 'open' && rooms.length === 0 && (
+          <li className={styles.empty}>Nothing open right now. Host one below.</li>
+        )}
+        {rooms.map((room) => {
+          const size = room.capacity ?? 2;
+          const here = room.players ?? 1;
+          return (
+            <li key={room.roomId} className={styles.room}>
+              <span className={styles.host}>{room.host}</span>
+              {/* Both states labelled, not just the unusual one. Leaving ranked
+                  as the unmarked default would put the more consequential
+                  answer in the absence of a badge. */}
+              <span className={styles.chip} data-friendly={room.friendly || undefined}>
+                {room.friendly ? 'FRIENDLY' : 'RANKED'}
+              </span>
+              {/* Occupancy matters now: joining a four-way may still mean
+                  waiting, where joining a duel never does. */}
+              <span className={styles.seats} title={size === 2 ? 'Duel' : 'Free-for-all'}>
+                {here}/{size}
+              </span>
+              <span className={`${styles.roomCode} pixel-font`}>{room.roomId}</span>
+              <button className="btn btn-ghost" onClick={() => onJoin(room.roomId, displayName)}>
+                {here + 1 >= size ? 'Fight' : 'Join'}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
       <div className={styles.row}>
         <input
           className={`field ${styles.codeInput}`}
           value={code}
           maxLength={5}
-          placeholder="CODE"
+          placeholder="OR ENTER A CODE"
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           onKeyDown={(e) => { if (e.key === 'Enter' && code) onJoin(code, displayName); }}
         />
@@ -216,35 +281,115 @@ export default function Lobby({
         </button>
       </div>
 
-      <div className={styles.listHead}>
-        <span className="eyebrow">Open duels</span>
-        <button className={styles.refresh} onClick={onRefresh} aria-label="Refresh">⟳</button>
+      {/* ---- Hosting, second, and all of it in one place ---- */}
+
+      <div className={styles.divider}><span>or host your own</span></div>
+
+      <div className={styles.options}>
+        {/* Size is chosen before hosting, not after: it decides how many people
+            the room waits for, and a room cannot change its mind once open. */}
+        <fieldset className={styles.choice}>
+          <legend className="eyebrow">Players</legend>
+          <div className={styles.row}>
+            {ROOM_SIZES.map((size) => {
+              const locked = size === 4 && !FOUR_PLAYER_READY;
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  className={`btn ${styles.grow}`}
+                  data-selected={size === capacity || undefined}
+                  aria-pressed={size === capacity}
+                  disabled={locked}
+                  title={locked ? 'The four-way arena is still being built' : undefined}
+                  onClick={() => setCapacity(size)}
+                >
+                  {size === 2 ? 'Duel' : 'Free-for-all'}
+                  <small className="btn-sub">{locked ? 'soon' : `${size} players`}</small>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.choice}>
+          <legend className="eyebrow">Stakes</legend>
+          <div className={styles.row}>
+            <button
+              type="button"
+              className={`btn ${styles.grow}`}
+              data-selected={!friendly || undefined}
+              aria-pressed={!friendly}
+              onClick={() => setFriendly(false)}
+            >
+              Ranked
+              {/* "Counts on the board" is the truer line and wrapped to three
+                  at half width, making this row taller than the two around it.
+                  Under a legend that already says Stakes, the short one loses
+                  nothing. */}
+              <small className="btn-sub">rating moves</small>
+            </button>
+            <button
+              type="button"
+              className={`btn ${styles.grow}`}
+              data-selected={friendly || undefined}
+              aria-pressed={friendly}
+              onClick={() => setFriendly(true)}
+            >
+              Friendly
+              <small className="btn-sub">nothing at stake</small>
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.choice}>
+          <legend className="eyebrow">Who can join</legend>
+          <div className={styles.row}>
+            <button
+              type="button"
+              className={`btn ${styles.grow}`}
+              data-selected={visibility === 'public' || undefined}
+              aria-pressed={visibility === 'public'}
+              onClick={() => setVisibility('public')}
+            >
+              Anyone
+              <small className="btn-sub">listed above</small>
+            </button>
+            <button
+              type="button"
+              className={`btn ${styles.grow}`}
+              data-selected={visibility === 'private' || undefined}
+              aria-pressed={visibility === 'private'}
+              onClick={() => setVisibility('private')}
+            >
+              Invite only
+              <small className="btn-sub">code only</small>
+            </button>
+          </div>
+        </fieldset>
       </div>
 
-      <ul className={styles.list}>
-        {status !== 'open' && <li className={styles.empty}>Connecting…</li>}
-        {status === 'open' && rooms.length === 0 && (
-          <li className={styles.empty}>No open duels. Host one and wait.</li>
-        )}
-        {rooms.map((room) => {
-          const size = room.capacity ?? 2;
-          const here = room.players ?? 1;
-          return (
-            <li key={room.roomId} className={styles.room}>
-              <span className={styles.host}>{room.host}</span>
-              {/* Occupancy matters now: joining a four-way may still mean
-                  waiting, where joining a duel never does. */}
-              <span className={styles.roster} title={size === 2 ? 'Duel' : 'Free-for-all'}>
-                {here}/{size}
-              </span>
-              <span className={`${styles.roomCode} pixel-font`}>{room.roomId}</span>
-              <button className="btn btn-ghost" onClick={() => onJoin(room.roomId, displayName)}>
-                {here + 1 >= size ? 'Fight' : 'Join'}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {/*
+        * One line describing the room about to be made.
+        *
+        * Three toggles is three things to hold in your head, so the screen
+        * holds them for you and says what pressing Host will actually produce.
+        */}
+      <p className={styles.note}>
+        {capacity === 2
+          ? 'One on one, starting the moment someone joins. '
+          : 'Four fighters, last one standing. Your blade always flies at whoever is furthest ahead, so leading makes you the target. '}
+        {friendly
+          ? 'No rating moves and nothing reaches the board, however many you play.'
+          : 'Rated, and the result goes on the board.'}
+      </p>
+
+      <button
+        className={`btn btn-primary ${styles.hostBtn}`}
+        onClick={() => onCreate(displayName, visibility, capacity, friendly)}
+      >
+        Host it
+      </button>
 
       {error && <p className={styles.error}>{error}</p>}
       <button className="btn btn-ghost" onClick={onBack}>Back</button>

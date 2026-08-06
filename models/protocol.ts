@@ -23,6 +23,8 @@ export type ServerMessage =
     type: 'roomCreated';
     roomId: string;
     visibility: Visibility;
+    /** Played for nothing. Optional: an older server does not send it. */
+    friendly?: boolean;
     capacity?: RoomSize;
     slot: number;
     you: string;
@@ -160,7 +162,14 @@ export type ServerMessage =
     expected: number;
 
   }
-  | { type: 'roomFilling'; roomId: string; players: string[]; capacity: number }
+  | {
+    type: 'roomFilling';
+    roomId: string;
+    players: string[];
+    capacity: number;
+    /** Played for nothing. The joiner's only chance to learn it. */
+    friendly?: boolean;
+  }
   | {
     type: 'matchStart';
     /**
@@ -172,6 +181,15 @@ export type ServerMessage =
      * become mid-match and a survival run is not something to fall into.
      */
     mode?: 'duel' | 'survival' | 'weekly';
+    /**
+     * Played for nothing.
+     *
+     * Carried into the arena because it is needed at the END, not the start: a
+     * friendly duel produces no rating message, and a result screen that simply
+     * shows nothing where a number belongs reads as a bug rather than as a
+     * choice the player made two screens ago.
+     */
+    friendly?: boolean;
     roomId: string;
     script: string[];
     /** Charged words keyed by flat word index. */
@@ -283,6 +301,14 @@ export type ServerMessage =
     characters: CharacterId[];
     ratings: number[];
     /**
+     * Played for nothing.
+     *
+     * On the rejoin as well as the start, because a refresh mid-duel rebuilds
+     * the match from this message alone — without it, coming back would turn a
+     * friendly duel into one that claims a rating at the end.
+     */
+    friendly?: boolean;
+    /**
      * What each seat is wearing. Carried here too, or a duel picked back up
      * after a dropped socket would silently lose every badge on screen — the
      * rejoin's whole promise is that nothing about the duel changed.
@@ -317,6 +343,11 @@ export type ClientMessage =
     token: string;
     /** How many players the room waits for. Omitted means a duel. */
     capacity?: RoomSize;
+    /**
+     * Open this room for nothing: no rating moves and no result reaches the
+     * board. Omitted means ranked, which is what every older client sends.
+     */
+    friendly?: boolean;
     /**
      * A room of one, refereed against the clock rather than an opponent.
      *

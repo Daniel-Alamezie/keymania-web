@@ -880,6 +880,23 @@
 
 .swing[data-up] .swingDelta { color: var(--good); }
 
+/*
+ * A friendly duel, in the space the rating change would have taken.
+ *
+ * Same box as the swing, deliberately quieter: it belongs to the same beat of
+ * the result screen and answers the same question, but the answer is "nothing
+ * happened", and it should not compete with the score for attention. Silence
+ * would have been cheaper and would have read as the number going missing.
+ */
+.friendly {
+  margin: 0;
+  padding: 8px 14px;
+  border: 2px dashed var(--edge);
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
 .swingNow { font-size: 12px; color: var(--muted); }
 
 .swingBonus {

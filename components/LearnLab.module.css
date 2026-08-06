@@ -40,6 +40,11 @@
 
 .card:hover { border-color: var(--gold); }
 
+/* The scene currently being looked at. The learn bench fires and forgets, so
+   it has no use for this; the lobby bench swaps between states and needs to
+   say which one is on screen. */
+.card[data-active] { border-color: var(--gold); background: var(--panel-2); }
+
 .card strong { font-size: 12px; letter-spacing: 0.06em; font-weight: 400; }
 
 .card span { font-size: 11px; color: var(--muted); line-height: 1.5; }

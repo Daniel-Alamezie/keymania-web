@@ -56,6 +56,9 @@ export function previewMatch({ players, mySlot = 0 }: PreviewOptions): Multiplay
      * that is otherwise unreachable without four accounts at once.
      */
     ratings: Array.from({ length: size }, (_, i) => 300 + i * 17),
+    /* Ranked, so the preview shows the plates with something at stake — which
+       is the arrangement worth checking. */
+    friendly: false,
     countdownMs: 3000,
     subscribe: () => () => {},
     onWord: () => {},

@@ -121,9 +121,21 @@
   from { transform: translateX(-8px); opacity: 0; }
 }
 
-/* Size picker. The chosen one is bordered like a primary button so the choice
-   survives a glance — hosting is a one-way door. */
-.sizes {
+/* ---------- Hosting ----------
+ *
+ * Three questions in one block with one commit, replacing a size picker
+ * followed by two Host buttons that asked visibility a second time in a
+ * different shape. The chosen option in each row is bordered like a primary
+ * button so the answers survive a glance — hosting is a one-way door.
+ */
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.choice {
   margin: 0;
   padding: 0;
   border: none;
@@ -131,6 +143,10 @@
   flex-direction: column;
   gap: 6px;
 }
+
+/* The one thing this whole block is building towards, so it carries the weight
+   the two competing Host buttons used to split between them. */
+.hostBtn { width: 100%; }
 
 .grow { flex: 1; }
 .grow[data-selected] {
@@ -146,6 +162,82 @@
 
 .host { flex: 1; font-size: 13px; }
 .roomCode { font-size: 11px; color: var(--faint); letter-spacing: 0.15em; }
+
+/*
+ * What a listed room is worth, on the row.
+ *
+ * Both states are labelled rather than only the unusual one. Marking friendly
+ * alone would be tidier and would leave the more consequential answer as the
+ * absence of a badge, which is exactly backwards: somebody scanning this list
+ * for a game with no stakes is also somebody who must not join a rated one by
+ * mistake.
+ *
+ * Gold for ranked, because gold is what this game already means by "counts".
+ */
+.chip {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid var(--gold-deep, var(--edge));
+  color: var(--gold);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.chip[data-friendly] {
+  border-color: var(--edge);
+  color: var(--muted);
+}
+
+/* ---------- Who you are ----------
+ *
+ * A statement rather than a field. This screen needs an account to reach, so
+ * the name is already known and asking for it was a question with a
+ * pre-filled answer sitting at the top of the screen.
+ */
+.playingAs {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.playingAs strong { color: var(--ink); font-weight: normal; }
+
+.inlineLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inlineLink:hover { color: var(--gold); }
+
+/*
+ * The stakes, in the waiting room.
+ *
+ * Told to joiners as well as hosts, unlike the listing. Somebody handed a code
+ * in a chat has no other way to find out what the next few minutes are worth,
+ * and finding out afterwards is the one thing this feature must not produce.
+ */
+.stakes {
+  margin: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--gold-deep, var(--edge));
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.stakes[data-friendly] {
+  border-color: var(--edge);
+  color: var(--muted);
+}
 
 .empty {
   padding: 14px;

@@ -60,6 +60,14 @@ export interface MultiplayerConfig {
    * which moves nothing, and from a server that predates the field.
    */
   ratings: number[] | undefined;
+  /**
+   * Played for nothing, by the host's choice when the room was opened.
+   *
+   * Needed at the end rather than the start: no rating message arrives, and an
+   * empty space where the figure belongs would read as the server having
+   * dropped it rather than as a decision somebody made two screens ago.
+   */
+  friendly: boolean | undefined;
   /** What each seat is wearing, parallel to the roster. See HealthBar. */
   cosmetics: (PublicCosmetics | undefined)[] | undefined;
   /** The server's own countdown. The client must not assume its own. */
@@ -1606,7 +1614,20 @@ export default function Duel({
               * measurement of how you typed — it is what happened to you as a
               * result. And absent entirely for a bot duel, which genuinely does
               * not move it, so the silence there is honest rather than missing.
+              *
+              * A FRIENDLY DUEL IS DIFFERENT, and is the one case where silence
+              * would not be honest. It is a real duel against a real person,
+              * refereed exactly like a rated one, so the number is expected —
+              * and its absence would read as the server having dropped it
+              * rather than as the choice made when the room was opened. So it
+              * says so, in the place the figure would have been.
               */}
+            {isMulti && multiplayer?.friendly && !swing && (
+              <p className={styles.friendly}>
+                Friendly duel. Nothing moved, and nothing was on the line.
+              </p>
+            )}
+
             {swing && (
               <p className={styles.swing} data-up={swing.delta >= 0 || undefined}>
                 <span className={`${styles.swingDelta} pixel-font`}>

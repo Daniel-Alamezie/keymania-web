@@ -28,6 +28,18 @@ export interface WaitingRoom {
    * chose. The copy adapts rather than guessing.
    */
   visibility: Visibility | null;
+  /**
+   * Whether this room is played for nothing.
+   *
+   * Told to hosts and joiners alike, unlike `visibility`. A joiner chose the
+   * stakes no more than they chose the listing, but the difference is that
+   * stakes affect them: somebody handed a code in a chat has no other way to
+   * know whether the next few minutes count.
+   *
+   * Optional because a server that predates the feature sends nothing, and
+   * absent has to keep meaning ranked.
+   */
+  friendly?: boolean;
   /** Everyone in so far, in slot order. Slot 0 is the host. */
   players: string[];
   capacity: number;
@@ -44,4 +56,12 @@ export interface RoomSummary {
    */
   players?: number;
   capacity?: RoomSize;
+  /**
+   * Played for nothing. Shown on the row, so nobody joins a game and finds out
+   * afterwards what it was worth.
+   *
+   * Optional for the same reason as everything else here: an older server does
+   * not send it, and absent means ranked.
+   */
+  friendly?: boolean;
 }
