@@ -69,6 +69,21 @@
   stroke-width: 0.04;
 }
 
+/*
+ * Claimed, quietly. The trail a roll or a walk leaves behind it.
+ *
+ * Deliberately a different register from the target: while a roll is in
+ * progress the NEXT key must be the loudest thing on the board, and the keys
+ * already rolled should read as done rather than as three more instructions.
+ * Same family as the held shift, because both mean "this one is accounted
+ * for".
+ */
+.cap[data-marked] {
+  fill: var(--player-shade);
+  stroke: var(--player);
+  stroke-width: 0.03;
+}
+
 /* Held, not pressed. A capital is two fingers, and the second one is this. */
 .cap[data-shift] {
   fill: var(--player-shade);

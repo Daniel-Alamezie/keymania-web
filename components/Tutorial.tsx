@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Hands from './Hands';
+import RetroKeyboard from './RetroKeyboard';
 import { fingerLabel } from '@/game/fingers';
 import { audio } from '@/game/audio';
 import { track } from '@/game/analytics';
@@ -17,12 +17,13 @@ import styles from './Tutorial.module.css';
  * ridge on F and on J, and most people have never consciously noticed the
  * thing their index fingers have been resting on for years. It is the single
  * most physical fact in touch typing — the whole skill hangs off being able
- * to find home without looking — so it gets the whole screen: two giant keys
- * that visibly answer the real presses, then a beat where both must be found
- * together with eyes on the screen. Felt, not read.
+ * to find home without looking — so it plays out on the drawn board, whose F
+ * and J visibly sink under the real presses, then a beat where both must be
+ * found together with eyes on the screen. Felt, not read.
  *
  * **Act two is the walk**: each finger named and pressed once, on the same
- * hand diagram the lessons use afterwards.
+ * board and hands the lessons use afterwards — the tutorial introduces the
+ * exact object the learner is about to live on, not a stand-in for it.
  *
  * Nothing here is worth a star, and that is the design. It is information,
  * not an exercise: it stores nothing, cannot be failed, and cannot be rushed.
@@ -59,10 +60,9 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
   const [act, setAct] = useState<Act>('story');
   const [at, setAt] = useState(0);
 
-  /** The giant keys mirror the real ones: down while held, lit once found. */
+  /** The drawn board mirrors the real one: F and J sink while held. */
   const [fDown, setFDown] = useState(false);
   const [jDown, setJDown] = useState(false);
-  const [found, setFound] = useState({ f: false, j: false });
   /** How far through the current hand's roll. */
   const [rollAt, setRollAt] = useState(0);
 
@@ -126,12 +126,12 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
       if (phase === 'story') return;
 
       if (phase === 'find-f') {
-        if (key === 'f') { e.preventDefault(); audio.key(0); setFound((s) => ({ ...s, f: true })); setAct('find-j'); }
+        if (key === 'f') { e.preventDefault(); audio.key(0); setAct('find-j'); }
         return;
       }
 
       if (phase === 'find-j') {
-        if (key === 'j') { e.preventDefault(); audio.key(1); setFound((s) => ({ ...s, j: true })); setAct('both'); }
+        if (key === 'j') { e.preventDefault(); audio.key(1); setAct('both'); }
         return;
       }
 
@@ -232,67 +232,42 @@ export default function Tutorial({ onDone, onExit }: TutorialProps) {
         </span>
       </header>
 
-      {/* Act one's stage: two keys, drawn big enough to be the whole story.
-          They answer the real keyboard — down while held, lit once found. */}
-      {inActOne && (
-        <div className={styles.keys} aria-hidden="true">
-          <div
-            className={`${styles.bigKey} pixel-font`}
-            data-down={fDown || undefined}
-            data-lit={found.f || undefined}
-            data-hint={(act === 'find-f' || act === 'both') || undefined}
-          >
-            F
-            <i className={styles.bump} />
-          </div>
-          <div
-            className={`${styles.bigKey} pixel-font`}
-            data-down={jDown || undefined}
-            data-lit={found.j || undefined}
-            data-hint={(act === 'find-j' || act === 'both') || undefined}
-          >
-            J
-            <i className={styles.bump} />
-          </div>
-        </div>
-      )}
-
-      {/* Act two's stage: the home row itself, as keycaps, one hand rolled
-          into place at a time. The bumps stay drawn on F and J — the row is
-          act one's landmarks with the rest of the hand grown around them. */}
-      {inSpread && (
-        <div className={styles.keyRow} aria-hidden="true">
-          {LEFT_ROLL.map((key, i) => (
-            <div
-              key={key}
-              className={`${styles.rowKey} pixel-font`}
-              data-lit={(act !== 'spread-left' || i < rollAt) || undefined}
-              data-hint={(act === 'spread-left' && i === rollAt) || undefined}
-            >
-              {key}
-              {key === 'f' && <i className={styles.bumpSmall} />}
-            </div>
-          ))}
-          <span className={styles.splitGap} />
-          {RIGHT_ROLL.map((key, i) => (
-            <div
-              key={key}
-              className={`${styles.rowKey} pixel-font`}
-              data-lit={(act === 'placed' || (act === 'spread-right' && i < rollAt)) || undefined}
-              data-hint={(act === 'spread-right' && i === rollAt) || undefined}
-            >
-              {key}
-              {key === 'j' && <i className={styles.bumpSmall} />}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {act === 'walk' && (
-        <div className={styles.stage}>
-          <Hands next={wanted} />
-        </div>
-      )}
+      {/*
+        * One stage for every act: the same board the lessons type on.
+        *
+        * This replaced three separate props — two giant F/J keys, a lone home
+        * row, and a schematic pair of hands — and the replacement is the
+        * point, not a tidy-up. The tutorial's job is to introduce the object
+        * the learner is about to live on, and it was introducing three
+        * stand-ins for it instead. Now the thing they find home on is the
+        * thing that walks their fingers ten seconds later, bumps drawn on F
+        * and J where the real ones are.
+        *
+        * The board still answers the real keys — F and J sink while held —
+        * because feeling the bump and seeing the response is one moment, and
+        * it is the moment act one exists for.
+        */}
+      <div className={styles.stage} aria-hidden="true">
+        <RetroKeyboard
+          width={620}
+          pressed={[fDown && 'f', jDown && 'j'].filter(Boolean) as string[]}
+          {...(act === 'story' || act === 'both' ? { highlight: ['f', 'j'] }
+            : act === 'find-f' ? { next: 'f' }
+              : act === 'find-j' ? { next: 'j', marked: ['f'] }
+                : act === 'home' ? { marked: ['f', 'j'] }
+                  : act === 'spread-left' ? {
+                    next: LEFT_ROLL[rollAt],
+                    marked: LEFT_ROLL.slice(0, rollAt),
+                  }
+                    : act === 'spread-right' ? {
+                      next: RIGHT_ROLL[rollAt],
+                      marked: [...LEFT_ROLL, ...RIGHT_ROLL.slice(0, rollAt)],
+                    }
+                      : act === 'placed' ? { marked: [...'asdfjkl;'] }
+                        : finished ? { marked: HOME }
+                          : { next: wanted, marked: HOME.slice(0, at) })}
+        />
+      </div>
 
       <div className={styles.card}>
         {act === 'story' && (
