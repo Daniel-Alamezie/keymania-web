@@ -171,6 +171,459 @@ const HOME_ROW_FULL_BOSS = [
 ];
 
 /**
+ * Module 3: e and i, the two letters you cannot write English without.
+ *
+ * Both are top-row reaches from the middle fingers, and they are taught
+ * together because they are the fastest possible payoff: with e and i added
+ * to the home row the vocabulary stops being a curiosity and starts being
+ * language. This is the module where a beginner first types a sentence that
+ * could appear in a book.
+ */
+const TOP_COMMON_LESSONS: Lesson[] = [
+  {
+    title: 'Reaching up',
+    script: [
+      'ddd eee ddd eee',
+      'kkk iii kkk iii',
+      'de de ed ed ki ki ik ik',
+      'die die lie lie fed fed',
+    ],
+  },
+  {
+    title: 'Words at last',
+    script: [
+      'he she his did',
+      'like life side hide',
+      'field shield desk fish',
+      'idea glide silk shelf',
+    ],
+  },
+  {
+    title: 'Real sentences',
+    script: [
+      'she had a shield',
+      'he said his desk is a field',
+      'she said he likes his desk',
+      'his idea did slide aside',
+    ],
+  },
+];
+
+const TOP_COMMON_BOSS = [
+  'he', 'she', 'his', 'did', 'die', 'lie', 'fed', 'led', 'lid', 'kid',
+  'like', 'life', 'side', 'hide', 'idea', 'aide', 'glide', 'slide',
+  'field', 'shield', 'desk', 'fish', 'dish', 'silk', 'shelf', 'skid',
+  'safe', 'sale', 'gale', 'half', 'flash', 'glass', 'salad', 'flask',
+];
+
+/**
+ * Module 4: r, u, t and y, the rest of the index fingers' top row.
+ *
+ * Four keys at once, which is more than any module so far, and it works
+ * because they are two mirrored pairs: the left index reaches to r and t,
+ * the right to u and y. Learning them as pairs is learning one movement
+ * twice rather than four movements once.
+ */
+const TOP_ROW_LESSONS: Lesson[] = [
+  {
+    title: 'Four more reaches',
+    script: [
+      'fff rrr fff ttt',
+      'jjj uuu jjj yyy',
+      'fr ft ju jy rf tf uj yj',
+      'rug rut jut yet try',
+    ],
+  },
+  {
+    title: 'Longer words',
+    script: [
+      'true trust the that',
+      'their study first sight',
+      'guard right light detail',
+      'artist rusty daylight',
+    ],
+  },
+  {
+    title: 'Sentences that flow',
+    script: [
+      'the artist likes the light',
+      'trust it if it feels right',
+      'they staged a really great fight',
+      'a study that starts at daylight',
+    ],
+  },
+];
+
+const TOP_ROW_BOSS = [
+  'true', 'trust', 'the', 'that', 'their', 'they', 'this', 'try', 'rest',
+  'first', 'sight', 'light', 'right', 'guard', 'guilt', 'study', 'sturdy',
+  'artist', 'rusty', 'street', 'staff', 'still', 'result',
+];
+
+/**
+ * Module 5: w, o, q and p, the outer corners of the top row.
+ *
+ * The hardest reaches on the keyboard so far, because they belong to the
+ * ring and little fingers, which are the weakest and the least willing to
+ * move alone. Slower than the last module on purpose: this is the one where
+ * a hand that has not really been resting on home starts to fail, and the
+ * fix is going back rather than pushing on.
+ */
+const TOP_EDGES_LESSONS: Lesson[] = [
+  {
+    title: 'The corners',
+    script: [
+      'sss www lll ooo',
+      'aaa qqq ;;; ppp',
+      'sw wo lo op aq pq',
+      'was who low top pop',
+    ],
+  },
+  {
+    title: 'Everyday words',
+    script: [
+      'what work word world',
+      'people power output',
+      'quiet quality request',
+      'suppose without report',
+    ],
+  },
+  {
+    title: 'Whole thoughts',
+    script: [
+      'the world is full of quiet people',
+      'a word is worth what it does',
+      'we like to work without a fight',
+      'you should type slowly at first',
+    ],
+  },
+];
+
+const TOP_EDGES_BOSS = [
+  'was', 'who', 'low', 'top', 'pop', 'what', 'work', 'word', 'world',
+  'people', 'power', 'output', 'quiet', 'quality', 'request', 'group',
+  'suppose', 'without', 'report', 'proper', 'polite', 'writer',
+];
+
+/**
+ * Module 6: c, n, v and m, the common half of the bottom row.
+ *
+ * The first downward reaches, and they are awkward in a way the top row is
+ * not: the hand has to drop rather than stretch, and the wrist wants to
+ * follow it. The exercises are short for that reason. This is also the
+ * halfway point of the whole path.
+ */
+const BOTTOM_COMMON_LESSONS: Lesson[] = [
+  {
+    title: 'Reaching down',
+    script: [
+      'ddd ccc jjj nnn',
+      'fff vvv jjj mmm',
+      'dc cd jn nj fv vf jm mj',
+      'can van man cent',
+    ],
+  },
+  {
+    title: 'Words with weight',
+    script: [
+      'come move name mind',
+      'never change common',
+      'moment machine convince',
+      'account improve announce',
+    ],
+  },
+  {
+    title: 'Sentences',
+    script: [
+      'come and move the machine',
+      'never mind the common name',
+      'in a moment we can improve it',
+      'my mind can change in an instant',
+    ],
+  },
+];
+
+const BOTTOM_COMMON_BOSS = [
+  'can', 'van', 'man', 'come', 'move', 'name', 'mind', 'never', 'change',
+  'common', 'moment', 'machine', 'account', 'improve', 'announce', 'cent',
+  'nice', 'once', 'novel', 'income', 'connect', 'comment', 'convince',
+];
+
+/**
+ * Module 7: b, x, z and the comma and full stop.
+ *
+ * The last of the letters, and the first punctuation. The full stop matters
+ * more than it looks: it is where sentences end, and until now nothing the
+ * player typed could actually finish. From here the exercises read as
+ * writing rather than as lists of words.
+ */
+const BOTTOM_ROW_LESSONS: Lesson[] = [
+  {
+    title: 'The last letters',
+    script: [
+      'fff bbb sss xxx',
+      'aaa zzz kkk ,,, lll ...',
+      'fb bf sx xs az za',
+      'box zip buzz, six, both.',
+    ],
+  },
+  {
+    title: 'Everything together',
+    script: [
+      'about before between',
+      'because maybe puzzle',
+      'expect explain example',
+      'sizeable, exactly, zebra.',
+    ],
+  },
+  {
+    title: 'Writing, properly',
+    script: [
+      'the box was exactly the size we expected.',
+      'maybe, before we begin, explain it again.',
+      'a puzzle is a question, but a better one.',
+      'both of them left, quietly, before dawn.',
+    ],
+  },
+];
+
+const BOTTOM_ROW_BOSS = [
+  'box', 'zip', 'six', 'both', 'buzz', 'about', 'before', 'between',
+  'because', 'maybe', 'puzzle', 'expect', 'explain', 'example', 'exactly',
+  'zebra', 'blaze', 'begin', 'bright', 'sizeable', 'nobody', 'combine',
+];
+
+/**
+ * Module 8: capitals, and the shift that does not break the rhythm.
+ *
+ * No new keys, and the hardest habit on the path. The rule is one line long
+ * and almost nobody follows it: shift with the hand that is NOT typing the
+ * letter. Doing it the other way works, feels easier, and permanently caps
+ * somebody's speed, because a hand cannot hold shift and stay on home.
+ *
+ * The lessons alternate hands deliberately, so the wrong habit is the
+ * uncomfortable one.
+ */
+const CAPITALS_LESSONS: Lesson[] = [
+  {
+    title: 'The opposite hand',
+    script: [
+      'Aa Ss Dd Ff',
+      'Jj Kk Ll Hh',
+      'Qq Ww Ee Rr Tt',
+      'Yy Uu Ii Oo Pp',
+    ],
+  },
+  {
+    title: 'Names and places',
+    script: [
+      'Anna Ben Clara David',
+      'Egypt France Greece India',
+      'Monday Tuesday Friday',
+      'James Kelly Laura Mark',
+    ],
+  },
+  {
+    title: 'Sentences with shape',
+    script: [
+      'The Quiet House stood in Kent.',
+      'My name is Ada, and I like Tuesdays.',
+      'Peter and Zoe walked to the North.',
+      'In March, London felt like Paris.',
+    ],
+  },
+];
+
+const CAPITALS_BOSS = [
+  'The', 'And', 'But', 'She', 'They', 'When', 'Where', 'What', 'That',
+  'Anna', 'Ben', 'Clara', 'David', 'James', 'Kelly', 'Laura', 'Mark',
+  'Monday', 'Friday', 'London', 'Paris', 'North', 'Quiet', 'House',
+];
+
+/**
+ * Module 9: the number row, which nobody practises.
+ *
+ * The most abandoned module on the path, and the reason a milestone sits on
+ * it. Numbers are a long reach for every finger, they are typed rarely
+ * enough that the habit never forms by accident, and almost everybody looks
+ * down for them, which undoes the entire path in one glance.
+ *
+ * Short lines, and a lot of them: the only cure is repetition of the reach
+ * itself, and a long line of digits is just a place to lose your hand.
+ */
+const NUMBERS_LESSONS: Lesson[] = [
+  {
+    title: 'The long reach',
+    script: [
+      'aaa 111 sss 222 ddd 333',
+      'fff 444 fff 555 jjj 666',
+      'jjj 777 kkk 888 lll 999',
+      ';;; 000 ;;; 000',
+    ],
+  },
+  {
+    title: 'Numbers in the wild',
+    script: [
+      '12 34 56 78 90',
+      'a 24 hour day, a 7 day week',
+      '365 days, 52 weeks, 12 months',
+      'room 101, flat 4b, number 9',
+    ],
+  },
+  {
+    title: 'Mixed writing',
+    script: [
+      'She was born in 1994, in flat 12.',
+      'The train leaves at 7 and takes 45 minutes.',
+      'Add 250 grams of flour and 3 eggs.',
+      'In 2026 the answer was still 42.',
+    ],
+  },
+];
+
+const NUMBERS_BOSS = [
+  '12', '34', '56', '78', '90', '365', '101', '2026', '1994', '42',
+  'the', 'and', 'day', 'week', 'month', 'year', 'room', 'flat', 'number',
+  'train', 'minutes', 'flour', 'eggs', 'answer', 'born', 'takes',
+];
+
+/**
+ * Module 10: apostrophes, quotes and the rest of the punctuation.
+ *
+ * Almost all of this belongs to the little fingers, which is why it is the
+ * module that most exposes a lazy right hand. The apostrophe especially:
+ * it is one key away from home and people reach it with the wrong finger
+ * for years.
+ */
+const PUNCTUATION_LESSONS: Lesson[] = [
+  {
+    title: 'The little finger again',
+    script: [
+      ";;; ''' ;;; '''",
+      'it\'s that\'s we\'re they\'re',
+      'a-b c-d e-f: g-h!',
+      'what? why! how: so-so',
+    ],
+  },
+  {
+    title: 'Punctuation in use',
+    script: [
+      'don\'t can\'t won\'t shouldn\'t',
+      'well-known, self-made, half-hour',
+      'Ask: what, why, and when?',
+      'He said "no" and left.',
+    ],
+  },
+  {
+    title: 'Written properly',
+    script: [
+      'She said, "It\'s the only way."',
+      'Don\'t ask why; ask what\'s next.',
+      'It was a well-made, half-hearted excuse!',
+      'Who\'s coming? Nobody, apparently.',
+    ],
+  },
+];
+
+const PUNCTUATION_BOSS = [
+  "it's", "that's", "we're", "they're", "don't", "can't", "won't",
+  "what's", "who's", 'well-known', 'self-made', 'half-hour', 'so-so',
+  'the', 'and', 'said', 'ask', 'next', 'only', 'way', 'excuse', 'nobody',
+];
+
+/**
+ * Module 11: awkward runs, the words that make hands stumble.
+ *
+ * No new keys. What this teaches is the thing nobody thinks to practise:
+ * same-hand strings, doubled letters and the reaches that follow each other
+ * badly. `minimum` is four right-hand reaches in a row; `committee` is two
+ * doubles back to back. Everybody slows down here, and knowing that is
+ * half the lesson.
+ */
+const AWKWARD_LESSONS: Lesson[] = [
+  {
+    title: 'Same hand, again and again',
+    script: [
+      'minimum minimum minimum',
+      'you your yours',
+      'pump plump lump',
+      'seat sees sass adds',
+    ],
+  },
+  {
+    title: 'Doubles and stumbles',
+    script: [
+      'committee address success',
+      'balloon bookkeeper accommodate',
+      'necessary occurrence embarrass',
+      'parallel possession assessment',
+    ],
+  },
+  {
+    title: 'All at once',
+    script: [
+      'The committee agreed a minimum, unanimously.',
+      'Success requires accommodating a few failures.',
+      'A parallel address, in a nearby street.',
+      'It was, unquestionably, an awkward occurrence.',
+    ],
+  },
+];
+
+const AWKWARD_BOSS = [
+  'minimum', 'committee', 'address', 'success', 'balloon', 'parallel',
+  'necessary', 'occurrence', 'embarrass', 'possession', 'assessment',
+  'awkward', 'nearby', 'street', 'agreed', 'failures', 'unanimously',
+];
+
+/**
+ * Module 12: rhythm and endurance, which is the whole path repeated.
+ *
+ * No new keys, and nothing new to learn. What this measures is whether the
+ * habit survives length: everybody can be accurate for one line, and the
+ * difference between forty words a minute and sixty is entirely whether the
+ * hand goes home between reaches when nobody is watching.
+ *
+ * The lines are longer than anywhere else on the path on purpose. Evenness
+ * beats bursts, and a burst is exactly what a long line exposes.
+ */
+const RHYTHM_LESSONS: Lesson[] = [
+  {
+    title: 'Keeping it even',
+    script: [
+      'The quick brown fox jumps over the lazy dog.',
+      'Pack my box with five dozen liquor jugs.',
+      'How vexingly quick daft zebras jump!',
+      'Sphinx of black quartz, judge my vow.',
+    ],
+  },
+  {
+    title: 'Longer stretches',
+    script: [
+      'Typing well is mostly a matter of not stopping.',
+      'The hands know the way once you stop watching them.',
+      'Speed is what accuracy looks like after a while.',
+      'A steady pace beats a fast one that keeps breaking.',
+    ],
+  },
+  {
+    title: 'The last stretch',
+    script: [
+      'You have learned every key on this keyboard, in order.',
+      'What is left is not knowledge; it is only practice.',
+      'Go and duel somebody. That is what all of this was for.',
+      'The path ends here, but the typing does not.',
+    ],
+  },
+];
+
+const RHYTHM_BOSS = [
+  'quick', 'brown', 'jumps', 'lazy', 'steady', 'pace', 'typing', 'hands',
+  'know', 'stop', 'watching', 'speed', 'accuracy', 'practice', 'keyboard',
+  'learned', 'order', 'duel', 'somebody', 'ends', 'here', 'matter',
+];
+
+/**
  * What has been written.
  *
  * Partial, and the gaps are the point: a module with no content cannot be
@@ -180,6 +633,16 @@ const HOME_ROW_FULL_BOSS = [
 export const CURRICULUM: Partial<Record<ModuleId, ModuleContent>> = {
   'home-row': { lessons: HOME_ROW_LESSONS, bossWords: HOME_ROW_BOSS, bossWpm: 17 },
   'home-row-full': { lessons: HOME_ROW_FULL_LESSONS, bossWords: HOME_ROW_FULL_BOSS, bossWpm: 19 },
+  'top-common': { lessons: TOP_COMMON_LESSONS, bossWords: TOP_COMMON_BOSS, bossWpm: 21 },
+  'top-row': { lessons: TOP_ROW_LESSONS, bossWords: TOP_ROW_BOSS, bossWpm: 23 },
+  'top-edges': { lessons: TOP_EDGES_LESSONS, bossWords: TOP_EDGES_BOSS, bossWpm: 24 },
+  'bottom-common': { lessons: BOTTOM_COMMON_LESSONS, bossWords: BOTTOM_COMMON_BOSS, bossWpm: 26 },
+  'bottom-row': { lessons: BOTTOM_ROW_LESSONS, bossWords: BOTTOM_ROW_BOSS, bossWpm: 27 },
+  capitals: { lessons: CAPITALS_LESSONS, bossWords: CAPITALS_BOSS, bossWpm: 28 },
+  numbers: { lessons: NUMBERS_LESSONS, bossWords: NUMBERS_BOSS, bossWpm: 29 },
+  punctuation: { lessons: PUNCTUATION_LESSONS, bossWords: PUNCTUATION_BOSS, bossWpm: 30 },
+  awkward: { lessons: AWKWARD_LESSONS, bossWords: AWKWARD_BOSS, bossWpm: 31 },
+  rhythm: { lessons: RHYTHM_LESSONS, bossWords: RHYTHM_BOSS, bossWpm: 33 },
 };
 
 /** A module's content, or undefined if it has not been written yet. */

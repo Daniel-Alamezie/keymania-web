@@ -130,13 +130,23 @@ export default function Lesson({
     if (pausedRef.current) return;
 
     /**
-     * Lowercased to match the sprint, which means a module teaching capitals
-     * cannot be scored on this screen as it stands. Modules 1 to 7 are all
-     * lower case, so this holds until `capitals`; task #89 is where it has to
-     * be revisited rather than discovered.
+     * Case matters only when the lesson is teaching it.
+     *
+     * Everything used to be lower-cased, borrowed from the sprint, which made
+     * module 8 unscoreable: a script asking for "A" could never be satisfied,
+     * because the A the player typed arrived as "a". But simply comparing
+     * exactly would punish the opposite habit, somebody with caps lock on
+     * during the home row, on a screen whose whole rule is that stray presses
+     * cost nothing.
+     *
+     * So the script decides. A lower-case expectation accepts either case,
+     * because case is not what that lesson is about. An upper-case one is
+     * exact, because it is the entire point: shift, held with the opposite
+     * hand, is what module 8 teaches.
      */
-    const key = raw.toLowerCase();
     const expected = snapshot.sentence[snapshot.cursor];
+    const teachingCase = expected !== expected.toLowerCase();
+    const key = teachingCase ? raw : raw.toLowerCase();
 
     if (key !== expected) {
       audio.miss();
