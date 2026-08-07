@@ -12,6 +12,7 @@ import {
 } from '@/game/typingTest';
 import { randomSentence } from '@/game/sentences';
 import { DEFAULT_LAYOUT, type LayoutId } from '@/game/keyboard';
+import { useConfirmKey } from '@/game/useConfirmKey';
 import { audio } from '@/game/audio';
 import { track } from '@/game/analytics';
 import SentenceView from './SentenceView';
@@ -226,6 +227,9 @@ export default function TypingTest(
   const clock = Math.ceil(remaining / 1000);
   const best = bestAt(seconds);
 
+  /* Space starts another go from the result card, exactly as the sprint does. */
+  useConfirmKey(phase === 'done' ? again : null);
+
   /* ---------------------------------------------------------------- */
 
   if (phase === 'choosing') {
@@ -304,9 +308,20 @@ export default function TypingTest(
           >
             {clock}
           </span>
-          <span className={test.clockLabel}>
-            {phase === 'ready' ? 'type to start' : clock === 1 ? 'second left' : 'seconds left'}
-          </span>
+
+          {/* The sprint's draining bar. Running, it is the same shape as the
+              weekly; before the first keystroke it sits full, which is why the
+              label below only appears then. */}
+          <div className={test.track} aria-hidden="true">
+            <div
+              className={test.fill}
+              style={{ width: `${(remaining / (seconds * 1000)) * 100}%` }}
+            />
+          </div>
+
+          {phase === 'ready' && (
+            <span className={test.clockLabel}>type to start</span>
+          )}
 
           <span className={warm.line}>
             {state.words} {state.words === 1 ? 'word' : 'words'}
@@ -342,33 +357,25 @@ export default function TypingTest(
       )}
 
       {phase === 'done' && result && (
-        <div className={warm.card} role="dialog" aria-label="Typing test result">
-          <h2 className={`${warm.cardTitle} pixel-font`}>
-            {result.wpm} words a minute
-          </h2>
-
-          <dl className={warm.stats}>
-            <div>
-              <dt>Speed</dt>
-              <dd className="pixel-font">{result.wpm}</dd>
-            </div>
-            <div>
-              <dt>Words</dt>
-              <dd className="pixel-font">{result.words}</dd>
-            </div>
-            <div>
-              <dt>Accuracy</dt>
-              <dd className="pixel-font">{result.accuracy}%</dd>
-            </div>
-          </dl>
-
-          <p className={beaten ? warm.record : test.quiet}>
-            {beaten
-              ? `A new best over ${seconds} seconds.`
-              : `Your best over ${seconds} seconds is ${bestAt(seconds)} wpm.`}
-          </p>
-
-          <div className={warm.actions}>
+        /* The sprint's result: an overlay over the arena with a centred panel,
+           rather than the warm-up's inline card, so finishing a test and
+           finishing a sprint land the same way. */
+        <div className={styles.overlay}>
+          <div className={`panel ${styles.result}`}>
+            <h1 className={`${styles.resultTitle} pixel-font`}>
+              {result.wpm} words a minute
+            </h1>
+            {beaten && (
+              <p className={`${test.newBest} pixel-font`}>NEW BEST</p>
+            )}
+            <p className={styles.reason}>
+              {result.words} words, {result.accuracy}% accurate.
+            </p>
+            {!beaten && bestAt(seconds) > 0 && (
+              <p className={styles.stat}>
+                Your best over {seconds} seconds: {bestAt(seconds)} wpm
+              </p>
+            )}
             <button className="btn btn-primary" onClick={again}>
               Go again
             </button>
@@ -378,6 +385,9 @@ export default function TypingTest(
             <button className="btn btn-ghost" onClick={onExit}>
               Done for now
             </button>
+            <p className={styles.shortcut}>
+              or hit <kbd className="kbd">SPACE</kbd>
+            </p>
           </div>
         </div>
       )}

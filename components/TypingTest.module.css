@@ -132,8 +132,15 @@
  * other. Dim until the test is actually running, because a full clock that
  * has not started and a full clock that has stopped look identical otherwise.
  */
+/*
+ * Sized and coloured to the weekly sprint's clock, so the two timed screens
+ * read as one family. The only thing kept from the warm-up lineage is the dim
+ * at rest, because unlike the weekly this test has no countdown to count you
+ * in: a full clock that has not started and one that has stopped look
+ * identical otherwise, and the dim is what tells them apart.
+ */
 .clock {
-  font-size: 40px;
+  font-size: 34px;
   line-height: 1;
   color: var(--faint);
   transition: color 160ms ease;
@@ -144,15 +151,13 @@
 .clock[data-live] { color: var(--ink); }
 
 /*
- * The last five seconds.
- *
- * Colour only, no pulse. A throbbing clock in the corner of the eye is the
- * one thing guaranteed to cost somebody the words they are reading, which on
- * a screen whose only job is reading words would be a strange thing to spend
- * urgency on.
+ * The last five seconds, in the sprint's own late colour rather than a
+ * different red. Colour only, no pulse: a throbbing clock in the corner of the
+ * eye is the one thing guaranteed to cost somebody the words they are reading.
  */
-.clock[data-low] { color: var(--bad); }
+.clock[data-low] { color: var(--opponent); }
 
+/* Shown only before the clock starts, since there is no countdown to say so. */
 .clockLabel {
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -160,11 +165,34 @@
   color: var(--muted);
 }
 
-/* The result card's line when there is no new record to announce. */
-.quiet {
+/*
+ * The draining bar, identical to the sprint's.
+ *
+ * This is the sprint's signature "time is going" cue, and its absence was what
+ * most made the test read as a different screen. Copied rather than shared
+ * because the two components keep their own module files; the values are the
+ * weekly's and a test pins that they stay in step.
+ */
+.track {
+  width: 180px;
+  max-width: 60vw;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--edge-soft);
+}
+
+.fill {
+  height: 100%;
+  background: var(--gold);
+  /* Stepped by the display tick, not animated: a pixel game's clock jumps. */
+}
+
+/* The record flash on the result card, matching the sprint's NEW WEEKLY BEST. */
+.newBest {
   margin: 0;
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
 }
 
 @media (prefers-reduced-motion: reduce) {
