@@ -1,0 +1,173 @@
+/*
+ * The typing test's own pieces.
+ *
+ * The running screen borrows Survival's shell and the warm-up's result card,
+ * exactly as the warm-up and the lesson do. What is here is the length picker,
+ * which nothing else has, and the clock, which stands where the warm-up puts
+ * its streak and has to say the opposite thing.
+ */
+
+/* ---------- Picking a length ---------- */
+
+.chooser {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-lg, 24px);
+  padding: 24px 20px 40px;
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.chooserHead {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.back {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.back:hover { color: var(--ink); }
+
+.title {
+  margin: 0;
+  font-size: clamp(22px, 5vw, 34px);
+  color: var(--gold);
+}
+
+.note {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/*
+ * Three lengths, equal weight.
+ *
+ * A row on anything wider than a phone and a column below that, rather than
+ * three cards squeezed to a third of a 360px screen: the number is the whole
+ * control, and a number too small to read is a button nobody can choose
+ * between.
+ */
+.lengths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.length {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 12px;
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  /* The same weighted bottom edge the result tiles use, so the two read as
+     the same family of object. */
+  border-bottom-width: 4px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.length:hover,
+.length:focus-visible {
+  border-color: var(--gold);
+  background: var(--panel);
+}
+
+/* The one previously chosen, so returning here does not look like a blank
+   slate when a length is already in mind. */
+.length[data-picked] { border-color: var(--player-deep); }
+
+.lengthValue {
+  font-size: 30px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.lengthUnit {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Each length's own record, on the button that runs it. */
+.lengthBest {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* ---------- The clock ---------- */
+
+/*
+ * Where the warm-up puts its streak, saying the opposite thing.
+ *
+ * That number climbs and means keep going; this one falls and means hurry,
+ * which is the entire difference between the two modes standing next to each
+ * other. Dim until the test is actually running, because a full clock that
+ * has not started and a full clock that has stopped look identical otherwise.
+ */
+.clock {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--faint);
+  transition: color 160ms ease;
+  /* Tabular figures, or the whole gauge jitters as the digits change. */
+  font-variant-numeric: tabular-nums;
+}
+
+.clock[data-live] { color: var(--ink); }
+
+/*
+ * The last five seconds.
+ *
+ * Colour only, no pulse. A throbbing clock in the corner of the eye is the
+ * one thing guaranteed to cost somebody the words they are reading, which on
+ * a screen whose only job is reading words would be a strange thing to spend
+ * urgency on.
+ */
+.clock[data-low] { color: var(--bad); }
+
+.clockLabel {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The result card's line when there is no new record to announce. */
+.quiet {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clock { transition: none; }
+  .length { transition: none; }
+}

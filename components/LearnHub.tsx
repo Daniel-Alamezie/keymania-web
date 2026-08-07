@@ -3,6 +3,9 @@
 import { completedCount, MODULE_IDS, nextModuleId, moduleById } from '@/game/learnPath';
 import { flameLabel, flameStage, flameHeat } from '@/game/flame';
 import { bestServerSnapshot, bestSnapshot, subscribeBest } from '@/game/warmupBest';
+import {
+  bestOverall, subscribeTests, testsServerSnapshot, testsSnapshot,
+} from '@/game/typingTest';
 import { useSyncExternalStore } from 'react';
 import PathFlame from './PathFlame';
 import styles from './LearnHub.module.css';
@@ -20,6 +23,7 @@ export interface LearnHubProps {
   progress?: string;
   onPath: () => void;
   onWarmup: () => void;
+  onTest: () => void;
   onBots: () => void;
   onBack: () => void;
 }
@@ -40,9 +44,13 @@ export interface LearnHubProps {
  * still said Practice.
  */
 export default function LearnHub({
-  progress, onPath, onWarmup, onBots, onBack,
+  progress, onPath, onWarmup, onTest, onBots, onBack,
 }: LearnHubProps) {
   const best = useSyncExternalStore(subscribeBest, bestSnapshot, bestServerSnapshot);
+  /* The fastest across all three lengths, so the door has one line rather
+     than three. Which length it came from is the test screen's business. */
+  useSyncExternalStore(subscribeTests, testsSnapshot, testsServerSnapshot);
+  const topSpeed = bestOverall();
 
   const done = completedCount(progress);
   const next = nextModuleId(progress);
@@ -56,7 +64,16 @@ export default function LearnHub({
         <h1 className={`${styles.title} pixel-font`}>
           {progress === undefined ? 'Practice' : 'Learn to type'}
         </h1>
-        <p className={styles.note}>Nothing here is ranked, timed or on the board.</p>
+        {/*
+          * This said "ranked, timed or on the board" until the typing test
+          * arrived, at which point one third of it became false: the test is
+          * timed, deliberately and prominently. The promise worth keeping is
+          * the one about consequences, not the one about clocks, so the line
+          * now says only what is still true of every door behind it.
+          */}
+        <p className={styles.note}>
+          Nothing here is ranked, recorded against you, or on the board.
+        </p>
       </header>
 
       <div className={styles.doors}>
@@ -101,6 +118,28 @@ export default function LearnHub({
             </span>
             <span className={styles.doorState}>
               {best > 0 ? `Best streak, ${best} words` : 'Nothing to beat yet'}
+            </span>
+          </span>
+        </button>
+
+        {/*
+          * Between the warm-up and the bots, because that is where it falls on
+          * the same scale the other three are ordered by: how much it asks of
+          * you. The warm-up asks nothing, this asks you to be measured, and an
+          * opponent asks you to be measured by somebody else.
+          */}
+        <button className={styles.door} data-door="test" onClick={onTest}>
+          <span className={styles.art} aria-hidden="true">
+            <span className={`${styles.glyph} pixel-font`}>30</span>
+          </span>
+          <span className={styles.doorBody}>
+            <strong className={`${styles.doorTitle} pixel-font`}>Typing test</strong>
+            <span className={styles.doorNote}>
+              Thirty, forty-five or sixty seconds. Find out how fast you
+              actually type.
+            </span>
+            <span className={styles.doorState}>
+              {topSpeed > 0 ? `Best, ${topSpeed} wpm` : 'Nothing to beat yet'}
             </span>
           </span>
         </button>

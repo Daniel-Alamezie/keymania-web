@@ -155,6 +155,21 @@ export type GameEvent =
    */
   | { name: 'warmup_started' }
   | { name: 'warmup_finished'; words: number; best_streak: number; accuracy: number }
+  /**
+   * The typing test, which is the one practice screen that produces a number
+   * somebody might quote.
+   *
+   * `seconds` is on both events because the three lengths are three different
+   * tests, and an average speed taken across all of them would describe
+   * nobody: a thirty second burst flatters a sixty second run every time.
+   *
+   * Started fires on the first keystroke rather than on opening the screen,
+   * which is where the clock genuinely begins. The gap between doors opened
+   * and tests actually begun is then a real number rather than an artefact of
+   * where the event was placed.
+   */
+  | { name: 'typing_test_started'; seconds: number }
+  | { name: 'typing_test_finished'; seconds: number; wpm: number; accuracy: number }
   | { name: 'handler_crashed'; messageType: string; error: string };
 
 /**

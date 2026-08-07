@@ -29,6 +29,7 @@ import Ladder from './Ladder';
 import LearnHub from './LearnHub';
 import Bots from './Bots';
 import Warmup from './Warmup';
+import TypingTest from './TypingTest';
 import Lesson from './Lesson';
 import ModuleSheet from './ModuleSheet';
 import ModuleComplete from './ModuleComplete';
@@ -87,7 +88,7 @@ type Mode = 'survival' | 'weekly' | null;
  * also how a player experiences it: Back from a room goes to the hub, and Back
  * from the hub goes to the menu.
  */
-type Door = 'path' | 'warmup' | 'bots' | null;
+type Door = 'path' | 'warmup' | 'test' | 'bots' | null;
 
 /**
  * How long a chosen bot burns before the duel takes the screen.
@@ -1680,6 +1681,10 @@ export default function Game() {
       return <Warmup onExit={() => setDoor(null)} layout={boardLayout} />;
     }
 
+    if (door === 'test') {
+      return <TypingTest onExit={() => setDoor(null)} layout={boardLayout} />;
+    }
+
     if (door === 'bots') {
       return (
         <Bots
@@ -1699,6 +1704,7 @@ export default function Game() {
           progress={learn?.path}
           onPath={() => setDoor('path')}
           onWarmup={() => setDoor('warmup')}
+          onTest={() => setDoor('test')}
           onBots={() => setDoor('bots')}
           onBack={() => setScreen('menu')}
         />
