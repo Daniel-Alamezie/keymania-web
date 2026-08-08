@@ -54,6 +54,37 @@ function londonMomentEpoch(year: number, month: number, day: number, hour: numbe
   return guess;
 }
 
+/** ISO week of a calendar date, from the standard Thursday rule. */
+function isoWeekOf(year: number, month: number, day: number): { year: number; week: number } {
+  const date = Date.UTC(year, month - 1, day);
+  const dayOfWeek = (new Date(date).getUTCDay() + 6) % 7;
+  const thursday = new Date(date + (3 - dayOfWeek) * 86_400_000);
+  const isoYear = thursday.getUTCFullYear();
+  const jan4 = Date.UTC(isoYear, 0, 4);
+  const jan4Day = (new Date(jan4).getUTCDay() + 6) % 7;
+  const firstThursday = jan4 + (3 - jan4Day) * 86_400_000;
+  const week = 1 + Math.round((thursday.getTime() - firstThursday) / (7 * 86_400_000));
+  return { year: isoYear, week };
+}
+
+/**
+ * Which challenge week a moment falls in, e.g. "2026-W32".
+ *
+ * The same subtraction lib/weekly.ts does on the server: step the London
+ * wall-clock back twelve hours and the noon boundary becomes midnight, after
+ * which it is plain ISO week arithmetic. Here it seasons the practice
+ * generator, so the warm-up and the typing test change texture on the same
+ * Monday the weekly script does. Nothing scored hangs off the client's copy:
+ * if a clock-skewed browser disagrees with the server for an hour, the cost
+ * is flavour, not fairness.
+ */
+export function weekId(at = Date.now()): string {
+  const clock = londonParts(at);
+  const shifted = new Date(Date.UTC(clock.year, clock.month - 1, clock.day, clock.hour - 12));
+  const iso = isoWeekOf(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
+  return `${iso.year}-W${String(iso.week).padStart(2, '0')}`;
+}
+
 /** The epoch of the next Monday-noon-London boundary strictly after `at`. */
 export function nextRollover(at = Date.now()): number {
   // Walk to the coming Monday on the London calendar. Today counts if its

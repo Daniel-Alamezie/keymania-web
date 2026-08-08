@@ -9,7 +9,20 @@
  *
  * Sentences are assembled from templates and word banks so a session never
  * meaningfully repeats.
+ *
+ * ## Seasons
+ *
+ * Mirrors the API's weekly season: a deterministic third of every bank, keyed
+ * on the same Monday-noon-London week id, is drawn roughly three times as
+ * often, and eight of the signature lines are live per week. Without this
+ * half, duels and survival would change texture every Monday while the
+ * warm-up and the typing test kept the flat year-round voice, two rooms of
+ * the same house speaking differently. Weighted rather than excluded for the
+ * reason the API's copy documents: shrinking a week's vocabulary is the
+ * word-repetition bug wearing a feature's name.
  */
+
+import { weekId } from './weeklyClock';
 
 const DETERMINERS = ['the', 'a', 'this', 'that', 'every', 'some', 'one', 'no'];
 
@@ -107,32 +120,117 @@ const SIGNATURE = [
 
 const pick: Pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-export function randomSentence(exclude?: string): string {
-  /**
-   * Trimmed before comparing, because the duel's sentences carry their
-   * committing trailing space and the corpus's do not. Without this the
-   * exclusion never matched anything: `freshSentence(current)` passed
-   * "…fast one " while every candidate was "…fast one", so the same sentence
-   * could roll in twice in a row — rarely, which is worse than reliably,
-   * because it survived until a test happened to hit the repeat.
-   */
+/** One line in five is hand-written, so practice keeps some character. */
+const SIGNATURE_RATE = 0.2;
+
+/** How many of the signature lines are live in any one week. */
+const LIVE_SIGNATURE = 8;
+
+/** Same 31-multiplier hash the server's weekly pickers use. */
+const hashOf = (text: string): number => {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = ((hash * 31 + text.charCodeAt(i)) >>> 0);
+  return hash;
+};
+
+/** xorshift32 from a seed; zero nudged off itself because xorshift sticks there. */
+const rngFrom = (seed: number) => {
+  let x = seed >>> 0 || 1;
+  return () => {
+    x ^= x << 13; x >>>= 0;
+    x ^= x >>> 17; x >>>= 0;
+    x ^= x << 5; x >>>= 0;
+    return x / 4294967296;
+  };
+};
+
+/** A seeded Fisher-Yates, taking the front of the shuffle as the season. */
+function inSeason(bank: string[], wid: string, salt: string, keep: number): string[] {
+  const rand = rngFrom(hashOf(`${wid}:${salt}`));
+  const copy = [...bank];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, keep);
+}
+
+const third = (n: number) => Math.round(n / 3);
+
+/** What a given week emphasises. Exported for the tests and nothing else. */
+export interface Season {
+  adjectives: string[];
+  nouns: string[];
+  verbs: string[];
+  tails: string[];
+  signature: string[];
+}
+
+export function seasonFor(wid: string): Season {
+  return {
+    adjectives: inSeason(ADJECTIVES, wid, 'adjectives', third(ADJECTIVES.length)),
+    nouns: inSeason(NOUNS, wid, 'nouns', third(NOUNS.length)),
+    verbs: inSeason(VERBS, wid, 'verbs', third(VERBS.length)),
+    tails: inSeason(TAILS, wid, 'tails', third(TAILS.length)),
+    signature: inSeason(SIGNATURE, wid, 'signature', LIVE_SIGNATURE),
+  };
+}
+
+interface WeekBanks {
+  wid: string;
+  weighted: Map<readonly string[], string[]>;
+  signature: string[];
+}
+
+/** One week's banks, kept until the week changes. See the API copy's note. */
+let week: WeekBanks | null = null;
+
+function banksFor(wid: string): WeekBanks {
+  if (week?.wid === wid) return week;
+  const season = seasonFor(wid);
+  week = {
+    wid,
+    weighted: new Map<readonly string[], string[]>([
+      [ADJECTIVES, [...ADJECTIVES, ...season.adjectives, ...season.adjectives]],
+      [NOUNS, [...NOUNS, ...season.nouns, ...season.nouns]],
+      [VERBS, [...VERBS, ...season.verbs, ...season.verbs]],
+      [TAILS, [...TAILS, ...season.tails, ...season.tails]],
+    ]),
+    signature: season.signature,
+  };
+  return week;
+}
+
+/** A sentence in a given week's voice. Exported so the tests can fix the week. */
+export function sentenceFor(wid: string, exclude?: string): string {
+  const banks = banksFor(wid);
+  const seasoned: Pick = (list) => {
+    const weighted = banks.weighted.get(list as readonly string[]);
+    return (weighted ? pick(weighted) : pick(list)) as never;
+  };
   const avoid = exclude?.trim();
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const sentence = Math.random() < 0.2 ? pick(SIGNATURE) : pick(TEMPLATES)(pick);
+    const sentence = Math.random() < SIGNATURE_RATE
+      ? pick(banks.signature)
+      : pick(TEMPLATES)(seasoned);
     if (sentence !== avoid) return sentence;
   }
 
-  /**
-   * The fallback is guaranteed different, not merely likely.
-   *
-   * The old one returned an unguarded pick, so exclusion was probabilistic
-   * even when the comparison worked — five bad draws and a repeat slipped
-   * out. Filtering the fixed list cannot fail: SIGNATURE holds several
-   * sentences, so removing one always leaves something to return.
-   */
-  const pool = SIGNATURE.filter((sentence) => sentence !== avoid);
+  /* Guaranteed different, exactly as before the seasons: the week's live
+     lines minus the excluded one always leave several to return. */
+  const pool = banks.signature.filter((sentence) => sentence !== avoid);
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+export function randomSentence(exclude?: string): string {
+  /**
+   * The trim-before-comparing and the guaranteed-different fallback both live
+   * in `sentenceFor` now, unchanged in behaviour; this wrapper only supplies
+   * the current week. Kept as the public name because every caller wants
+   * "now", and only the tests want to time travel.
+   */
+  return sentenceFor(weekId(), exclude);
 }
 
 /**
