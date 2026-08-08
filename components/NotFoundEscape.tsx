@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { audio } from '@/game/audio';
+import Embers from './Embers';
 import styles from './NotFoundEscape.module.css';
 
 /**
@@ -14,6 +15,15 @@ import styles from './NotFoundEscape.module.css';
  * the word and the door opens. Somebody who arrived from a stale link and
  * would otherwise have bounced instead spends four seconds doing the exact
  * thing the game is for, and leaves knowing what the site does.
+ *
+ * Three pieces, each doing a different job:
+ *
+ *  - **The number, as keycaps that came loose.** A keycap is what this game is
+ *    made of, so it is recognisable before a word is read, and caps knocked off
+ *    their skirts say "not here" without saying anything.
+ *  - **The word, typed.** The part that turns a dead end into a demonstration.
+ *  - **The embers, behind.** The menu's own ambient field, so this reads as a
+ *    room in the same building rather than an error page bolted on.
  *
  * **The typing is never a gate.** The button is there from the first frame and
  * goes home on one click. A 404 that will not let you leave until you perform
@@ -28,6 +38,21 @@ import styles from './NotFoundEscape.module.css';
 
 /** Short, real, and thematically the point. Six keys is about two seconds. */
 const WORD = 'escape';
+
+/**
+ * The number, and how each cap behaves.
+ *
+ * `tilt` is the angle it came to rest at. `every` is how often it rattles, and
+ * the three are deliberately not multiples of each other: equal periods would
+ * drift into step within a few cycles and start reading as a machine ticking
+ * rather than three loose keys. `after` staggers the first one so they do not
+ * all go off together on load.
+ */
+const CAPS = [
+  { char: '4', tilt: -13, every: 5.2, after: 1.1 },
+  { char: '0', tilt: 7, every: 6.7, after: 2.4 },
+  { char: '4', tilt: -4, every: 5.9, after: 3.6 },
+];
 
 export default function NotFoundEscape({ full = false }: { full?: boolean }) {
   const router = useRouter();
@@ -68,7 +93,34 @@ export default function NotFoundEscape({ full = false }: { full?: boolean }) {
 
   const screen = (
     <div className={styles.body} data-out={out || undefined}>
-      <p className={`${styles.code} pixel-font`}>404</p>
+      {/*
+        * Keycaps knocked off their skirts, and never quite settling.
+        *
+        * They drop in once, then rattle every few seconds, each on its own
+        * clock. Loose is a thing a key keeps being, so a single landing would
+        * only ever be an entrance; the occasional twitch is what makes them
+        * read as still broken. The gaps between are long on purpose, because
+        * the word below is the thing actually being asked for and a number
+        * moving constantly beside it would take the attention meant for it.
+        */}
+      <div className={styles.caps} role="img" aria-label="404, page not found">
+        {CAPS.map((cap, at) => (
+          <span
+            key={`${cap.char}${at}`}
+            className={`${styles.cap} pixel-font`}
+            aria-hidden="true"
+            style={{
+              ['--tilt' as string]: `${cap.tilt}deg`,
+              ['--every' as string]: `${cap.every}s`,
+              ['--after' as string]: `${cap.after}s`,
+              ['--drop' as string]: `${at * 90}ms`,
+            }}
+          >
+            {cap.char}
+          </span>
+        ))}
+      </div>
+
       <p className={styles.say}>You have typed your way somewhere that is not here.</p>
 
       {/*
@@ -105,6 +157,12 @@ export default function NotFoundEscape({ full = false }: { full?: boolean }) {
   );
 
   /* The lab drops this into its own stage; the real page has to fill the
-     viewport itself. Same component either way rather than two that drift. */
-  return full ? <main className={styles.screen}>{screen}</main> : screen;
+     viewport itself, and only the real page gets the ember field, which is
+     fixed to the viewport and would otherwise leak across the whole lab. */
+  return full ? (
+    <main className={styles.screen}>
+      <Embers />
+      {screen}
+    </main>
+  ) : screen;
 }

@@ -11,14 +11,20 @@
  */
 
 .screen {
+  position: relative;
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px 20px;
 }
 
+/*
+ * Above the ember field, which fixes itself to the viewport at z-index 2 so
+ * the motes drift behind the words rather than across them.
+ */
 .body {
   position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -31,20 +37,74 @@
 /* The way out, taken. The screen steps back before the route changes. */
 .body[data-out] { opacity: 0.35; }
 
-.code {
-  margin: 0;
-  font-size: clamp(40px, 11vw, 68px);
-  line-height: 1;
-  letter-spacing: 0.08em;
-  color: var(--edge);
-}
-
 .say {
-  margin: 0;
+  margin: 4px 0 0;
   max-width: 34ch;
   font-size: 13px;
   line-height: 1.6;
   color: var(--muted);
+}
+
+/* ---------------- the number, as caps that came loose ---------------- */
+
+.caps {
+  display: flex;
+  gap: clamp(8px, 2.4vw, 14px);
+  padding-bottom: 4px;
+}
+
+/*
+ * A cap knocked off its skirt, and never quite settling.
+ *
+ * Two animations, in this order on purpose. `land` throws it in once; `rattle`
+ * then loops forever. Both drive `transform`, and when two animations touch the
+ * same property the one declared LAST wins, so the rattle takes over cleanly
+ * the moment it starts. Its rest frame is the same `rotate(var(--tilt))` the
+ * landing ends on, which is what makes the handover invisible.
+ */
+.cap {
+  display: grid;
+  place-items: center;
+  width: clamp(48px, 13vw, 72px);
+  height: clamp(54px, 14vw, 80px);
+  background: var(--panel-2);
+  border: 3px solid var(--edge);
+  /* The skirt every key in this game stands on. */
+  border-bottom-width: 7px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: clamp(24px, 6.5vw, 36px);
+  transform: rotate(var(--tilt));
+  animation:
+    land 760ms cubic-bezier(0.2, 0.9, 0.3, 1) var(--drop) both,
+    rattle var(--every) ease-in-out var(--after) infinite;
+}
+
+/* Falls in straight, overshoots, and rocks to its angle. Dropped rather than
+   faded, because these came off something. */
+@keyframes land {
+  0% { transform: translateY(-38px) rotate(0deg); opacity: 0; }
+  40% { opacity: 1; }
+  62% { transform: translateY(4px) rotate(calc(var(--tilt) * 1.25)); }
+  82% { transform: translateY(-2px) rotate(calc(var(--tilt) * 0.85)); }
+  100% { transform: translateY(0) rotate(var(--tilt)); opacity: 1; }
+}
+
+/*
+ * The twitch of something loose.
+ *
+ * Still for the first nine tenths of every cycle, then a short hard shudder and
+ * back. The stillness is the whole effect: a key that shakes constantly is a
+ * decoration, and a key that shakes once every few seconds is a key that is not
+ * screwed down. Sharp steps rather than a smooth wobble, because this game does
+ * not do easing on impacts.
+ */
+@keyframes rattle {
+  0%, 88% { transform: translate(0, 0) rotate(var(--tilt)); }
+  90% { transform: translate(-3px, 1px) rotate(calc(var(--tilt) + 2.5deg)); }
+  92% { transform: translate(3px, -1px) rotate(calc(var(--tilt) - 2.5deg)); }
+  94% { transform: translate(-2px, 0) rotate(calc(var(--tilt) + 1.5deg)); }
+  96%, 100% { transform: translate(0, 0) rotate(var(--tilt)); }
 }
 
 /* ---------------- the word ---------------- */
@@ -52,7 +112,7 @@
 .word {
   display: flex;
   gap: clamp(4px, 1.4vw, 9px);
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   font-size: clamp(26px, 7vw, 40px);
   line-height: 1;
 }
@@ -114,4 +174,7 @@
 @media (prefers-reduced-motion: reduce) {
   .word[data-miss], .letter[data-next] { animation: none; }
   .body { transition: none; }
+  /* Neither thrown nor twitching: the caps are simply already at their angles.
+     The tilt stays, because a still photograph of loose keys is still loose. */
+  .cap { animation: none; }
 }
