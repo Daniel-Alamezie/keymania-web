@@ -1,0 +1,263 @@
+/*
+ * Three takes on the 404, side by side.
+ *
+ * Dev only. The point is to see them together at the size they will actually
+ * run at, because a 404 is judged in the half second before somebody decides
+ * whether to press the button back, and that is not a thing to guess at.
+ */
+
+.page {
+  min-height: 100vh;
+  padding: 24px 20px 60px;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.head { display: flex; flex-direction: column; gap: 6px; }
+.title { margin: 0; font-size: 22px; color: var(--gold); }
+.note { margin: 0; font-size: 12px; color: var(--muted); max-width: 60ch; line-height: 1.6; }
+
+.option { display: flex; flex-direction: column; gap: 8px; }
+
+.label {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.labelName { color: var(--ink); }
+
+/* Each concept sits in a box the shape of a real screen, so none of them get
+   flattered by being cropped to their best bit. */
+.stage {
+  position: relative;
+  overflow: hidden;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  border: 2px solid var(--edge-soft);
+}
+
+/* ---------------- shared bits of a 404 screen ---------------- */
+
+.body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.say { margin: 0; font-size: 13px; color: var(--muted); }
+.sub { margin: 0; font-size: 11px; color: var(--faint); }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+
+/* ---------------- A. the miss ---------------- */
+
+/*
+ * A 404 said in the game's own language: a word that was not in the script.
+ *
+ * The stream runs as it does in a duel, the bad word wears the miss colour and
+ * takes the same flinch, and the caret sits under it waiting for a key that is
+ * never going to be right.
+ */
+.stream {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: clamp(20px, 5vw, 34px);
+  white-space: nowrap;
+}
+
+.done { color: var(--faint); }
+.ahead { color: var(--edge); }
+
+.bad {
+  position: relative;
+  color: var(--opponent);
+  animation: flinch 2.6s steps(1, end) infinite;
+}
+
+/* Two hard jumps and back, which is what a typo does to the line in a duel. */
+@keyframes flinch {
+  0%, 84% { transform: translateX(0); }
+  86% { transform: translateX(-4px); }
+  88% { transform: translateX(4px); }
+  90% { transform: translateX(-2px); }
+  92%, 100% { transform: translateX(0); }
+}
+
+.caret {
+  display: inline-block;
+  width: 0.62em;
+  height: 1.05em;
+  background: var(--gold);
+  vertical-align: -0.14em;
+  animation: blink 1s steps(1, end) infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------------- B. the forge goes cold ---------------- */
+
+/*
+ * The other honest reading: this page is a run that ended. The number cools
+ * from the forge's gold to the dead grey of a spent ember and back, slowly,
+ * so the screen breathes rather than pulses.
+ */
+.cold {
+  margin: 0;
+  font-size: clamp(56px, 16vw, 104px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  animation: cool 5s ease-in-out infinite;
+}
+
+@keyframes cool {
+  0%, 100% { color: var(--gold); }
+  55% { color: var(--edge); }
+}
+
+/* The ash still rising off it. Slow, sparse, and behind everything. */
+.ash {
+  position: absolute;
+  bottom: -12px;
+  width: 5px;
+  height: 5px;
+  background: var(--opponent);
+  opacity: 0;
+  animation: rise 4.5s linear infinite;
+}
+
+@keyframes rise {
+  0% { transform: translateY(0); opacity: 0; }
+  14% { opacity: 0.7; }
+  100% { transform: translateY(-320px); opacity: 0; }
+}
+
+/* ---------------- C. the keycaps ---------------- */
+
+/*
+ * The most literally on brand of the three: the number as three caps on a
+ * board, typed in front of you. The middle one never comes back up, because
+ * that is the key this page is missing.
+ */
+.caps { display: flex; gap: 12px; }
+
+.cap {
+  display: grid;
+  place-items: center;
+  width: clamp(52px, 14vw, 78px);
+  height: clamp(58px, 15vw, 86px);
+  background: var(--panel-2);
+  border: 3px solid var(--edge);
+  /* The skirt every key in this game stands on. */
+  border-bottom-width: 7px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: clamp(26px, 7vw, 40px);
+  animation: press 3s ease-in-out infinite;
+}
+
+/* Struck left to right, the way somebody types it. */
+.cap:nth-child(2) { animation-delay: 0.18s; }
+.cap:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes press {
+  0%, 10% { transform: translateY(0); border-bottom-width: 7px; }
+  16% { transform: translateY(4px); border-bottom-width: 3px; }
+  26%, 100% { transform: translateY(0); border-bottom-width: 7px; }
+}
+
+/*
+ * The one that stays down.
+ *
+ * Held rather than animated back, dimmed, and wearing the miss colour: the key
+ * is pressed and nothing is happening, which is the whole feeling of a page
+ * that is not there.
+ */
+.cap[data-dead] {
+  transform: translateY(4px);
+  border-bottom-width: 3px;
+  border-color: var(--edge-soft);
+  background: var(--panel);
+  color: var(--opponent);
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bad, .caret, .cold, .ash, .cap { animation: none; }
+  .cold { color: var(--gold); }
+}
+
+/* ---------------- E. the board at rest ---------------- */
+
+.restCode {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 46px);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--edge);
+}
+
+/* The board sits quiet and slightly back, so it reads as scenery the hands
+   happen to be resting on rather than a control asking to be used. */
+.board {
+  opacity: 0.85;
+  pointer-events: none;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* ---------------- F. keys come loose ---------------- */
+
+.scatter {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 6px;
+}
+
+/*
+ * A cap knocked off its skirt and still settling.
+ *
+ * It falls, overshoots, and rocks to a stop rather than easing politely into
+ * place: these are meant to have come off something, and a gentle landing
+ * would read as decoration instead of damage.
+ */
+.loose {
+  display: grid;
+  place-items: center;
+  width: clamp(50px, 13vw, 74px);
+  height: clamp(56px, 14vw, 82px);
+  background: var(--panel-2);
+  border: 3px solid var(--edge);
+  border-bottom-width: 7px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: clamp(24px, 6.5vw, 38px);
+  transform: rotate(var(--tilt));
+  animation: settle 4.5s ease-in-out infinite;
+}
+
+@keyframes settle {
+  0% { transform: translateY(-16px) rotate(0deg); }
+  12% { transform: translateY(0) rotate(var(--tilt)); }
+  16% { transform: translateY(-5px) rotate(calc(var(--tilt) * 0.6)); }
+  22% { transform: translateY(0) rotate(var(--tilt)); }
+  25%, 100% { transform: translateY(0) rotate(var(--tilt)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loose { animation: none; }
+}
