@@ -29,6 +29,19 @@ export default function SignInLink({
   return (
     <LoginLink
       className={className}
+      /**
+       * Not a link a crawler should follow.
+       *
+       * This renders an anchor to `/api/auth/login`, which robots.txt already
+       * disallows along with the rest of the proxy. Blocking it is right, but
+       * Googlebot still finds the href, still queues it, and still files the
+       * refusal under "blocked by robots.txt" in Search Console every time.
+       * Saying so on the link itself means it is never queued, which turns a
+       * standing complaint into nothing at all.
+       *
+       * `LoginLink` spreads anchor attributes, so this lands on the real `<a>`.
+       */
+      rel="nofollow"
       onClick={() => {
         track({ name: 'signin_started', from });
         markSignInStarted(from);
