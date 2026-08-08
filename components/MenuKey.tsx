@@ -7,7 +7,10 @@ import SignInLink from './SignInLink';
 import PixelSprite from './PixelSprite';
 import { useAccount } from '@/game/useAccount';
 import { audio, useSoundEnabled } from '@/game/audio';
-import { forgetProfile, resolveDisplayName, useDisplayName } from '@/game/serverProfile';
+import {
+  forgetProfile, resolveDisplayName, servableEarnedIds, useDisplayName, useServerProfile,
+} from '@/game/serverProfile';
+import { useUnseenCosmetics } from '@/game/seenCosmetics';
 import { forgetDuelToken } from '@/game/duelToken';
 import styles from './MenuKey.module.css';
 
@@ -35,6 +38,11 @@ export default function MenuKey({ onSettings }: { onSettings: () => void }) {
   const saved = useDisplayName();
   const shown = resolveDisplayName(saved, displayName);
   const soundOn = useSoundEnabled();
+  const { profile } = useServerProfile();
+  // Unlocks owned but not yet looked at, same count the desktop chip shows.
+  // The whole bar is hidden on phones, so without this the nudge never reaches
+  // the players most likely to be on one.
+  const unseen = useUnseenCosmetics(servableEarnedIds(profile?.cosmetics));
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -86,7 +94,11 @@ export default function MenuKey({ onSettings }: { onSettings: () => void }) {
         className={styles.key}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={shown ? `Menu for ${shown}` : 'Menu'}
+        aria-label={
+          shown
+            ? `Menu for ${shown}${unseen > 0 ? `, ${unseen} new to see` : ''}`
+            : 'Menu'
+        }
         onClick={() => setOpen((was) => !was)}
       >
         {avatar ? (
@@ -97,6 +109,8 @@ export default function MenuKey({ onSettings }: { onSettings: () => void }) {
         ) : (
           <span className={styles.initial}>{shown ? shown.charAt(0).toUpperCase() : '?'}</span>
         )}
+        {/* The nudge, when the bar it normally lives in is folded away. */}
+        {unseen > 0 && <span className={styles.dot} aria-hidden="true" />}
       </button>
 
       {open && (

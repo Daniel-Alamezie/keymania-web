@@ -602,6 +602,28 @@ export function useChallenges(): ChallengeProgress[] {
 }
 
 /**
+ * The earned ids that are actually shown, which is not the same as what is
+ * owned.
+ *
+ * `earned` holds every id on the record; `catalogue` is what the server chose
+ * to serve. They differ whenever a kind is withheld behind a flag, and titles
+ * sat earned-but-invisible for months while TITLES_LIVE was off. Anything that
+ * counts an unlock, or marks one seen, has to count against this rather than
+ * `earned`, or it clears a badge for a thing nobody could look at and then
+ * fails to show one on the day the flag flips.
+ *
+ * One copy of the intersection, shared by the profile grid and the menu's
+ * unlock dot, so the count on the chip and the count in the panel cannot drift.
+ */
+export function servableEarnedIds(
+  cosmetics: ServerProfile['cosmetics'] | undefined,
+): string[] | undefined {
+  if (!cosmetics?.earned?.length) return undefined;
+  const servable = new Set(cosmetics.catalogue?.map((item) => item.id) ?? []);
+  return cosmetics.earned.filter((id) => servable.has(id));
+}
+
+/**
  * The whole cosmetic catalogue, for anything that has to turn an id into a name.
  *
  * A reward is stored as an id everywhere — on the challenge, on the record, in

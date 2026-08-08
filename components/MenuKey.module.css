@@ -25,6 +25,7 @@
  * as something with height rather than as a flat tile.
  */
 .key {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,6 +42,26 @@
   font-family: inherit;
   cursor: pointer;
   transition: background 140ms ease, border-color 140ms ease;
+}
+
+/*
+ * The unlock nudge on a phone.
+ *
+ * A dot rather than a number: the key is small and the count already lives one
+ * tap in, on the profile itself. This only has to say "there is something",
+ * and the gold says "worth collecting" in the game's own reward colour. The
+ * panel-coloured ring lifts it off the cap so it does not read as a stray
+ * pixel on the key.
+ */
+.dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--panel);
 }
 
 /*

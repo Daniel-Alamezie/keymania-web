@@ -13,36 +13,91 @@
 
 .action { text-decoration: none; }
 
-/* This is an anchor, so it needs its colour stated. Left to inherit it picks up
-   the browser's default link blue, which is close to unreadable on the panel. */
-.who {
+/*
+ * The identity keycap.
+ *
+ * One pressable object holding the profile link and sign out, rather than a
+ * flat chip with a bare underlined link floating beside it. The heavier bottom
+ * edge is the same trick every `.kbd` uses to read as a key with height, which
+ * is the game's own vocabulary and sits better here than a plain rectangle.
+ */
+.chip {
+  display: flex;
+  align-items: stretch;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  border-bottom-width: 4px;
+  border-radius: 4px;
+  color: var(--ink);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.chip:hover { border-color: var(--edge); background: var(--panel-2); }
+
+/* Something owned and unseen: the whole key wears the reward colour so the eye
+   is pulled to it, not just the dot. Clears itself once the profile is opened. */
+.chip[data-unlock] { border-color: var(--gold); }
+
+.identity {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 10px 5px 6px;
-  background: var(--panel);
-  border: 2px solid var(--edge-soft);
-  color: var(--ink);
+  padding: 4px 8px 4px 5px;
+  color: inherit;
   text-decoration: none;
-  transition: border-color 140ms ease, background 140ms ease;
-}
-.who:hover {
-  border-color: var(--gold);
-  background: var(--panel-2);
 }
 
-.avatar { border-radius: 50%; image-rendering: auto; }
+/* Holds the avatar so the badge can sit off its corner without shifting the row. */
+.face { position: relative; display: flex; }
+
+.avatar { border-radius: 50%; image-rendering: auto; display: block; }
 
 .initial {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: var(--player-deep);
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
 }
+
+/*
+ * The unlock count, on the avatar's corner.
+ *
+ * Gold on the game's own reward colour, with a panel-coloured ring so it reads
+ * as a separate chip sitting on top of the avatar rather than a smudge on it.
+ */
+.badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--gold);
+  border: 2px solid var(--panel);
+  color: var(--bg);
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* A hairline between identity and sign out, so the one key still reads as two
+   distinct actions. */
+.divider { width: 2px; background: var(--edge-soft); }
+
+.out {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.out:hover { color: var(--bad); }
 
 .name {
   font-size: 12px;
@@ -66,17 +121,6 @@
   50% { opacity: 0.45; }
 }
 
-.signOut {
-  background: transparent;
-  border: none;
-  color: var(--faint);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.signOut:hover { color: var(--bad); }
 
 /*
  * Folded into the menu key on a phone.

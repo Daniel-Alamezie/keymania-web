@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import SignInLink from './SignInLink';
 import {
-  currentSpeed, EMPTY_TALLY, HANDLE_MAX, NAME_MAX, trend, useServerProfile, winRate,
+  currentSpeed, EMPTY_TALLY, HANDLE_MAX, NAME_MAX, servableEarnedIds, trend, useServerProfile, winRate,
   type DuelResult,
 } from '@/game/serverProfile';
 import { useAccount } from '@/game/useAccount';
@@ -127,12 +127,10 @@ export default function ProfileDashboard() {
    * seen before it can be seen, and anything that becomes visible later is
    * news on the day it arrives.
    */
-  const earnedIds = useMemo(() => {
-    const cosmetics = profile?.cosmetics;
-    if (!cosmetics?.earned?.length) return undefined;
-    const servable = new Set(cosmetics.catalogue?.map((item) => item.id) ?? []);
-    return cosmetics.earned.filter((id) => servable.has(id));
-  }, [profile?.cosmetics]);
+  const earnedIds = useMemo(
+    () => servableEarnedIds(profile?.cosmetics),
+    [profile?.cosmetics],
+  );
 
   const unseen = useUnseenCosmetics(earnedIds);
 
