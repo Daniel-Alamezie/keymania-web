@@ -19,6 +19,7 @@ is read:
     1K    one feather each side
     2K    two feathers, banner tails, larger jewel
     3K    three feathers, banner tails, gold star
+    5K    the same, in gold, with a flame standing on the point
 
 THE GRID IS 32x32, AND THAT IS ARITHMETIC RATHER THAN TASTE.
 
@@ -78,6 +79,12 @@ TIERS = {
     '3k':  dict(base=(0xcf, 0xc6, 0xee), shade=(0x8d, 0x81, 0xc4), hi=(0xf8, 0xf5, 0xff),
                 gem=(0xff, 0xd6, 0x6e), gem_lo=(0x9a, 0x72, 0x1c),
                 wings=3, ribbon=True, crest='star'),
+    # The apex. Gold wings on a white body, because there is no brighter white
+    # to escalate into; see the note above FLAME.
+    '5k':  dict(base=(0xf4, 0xf1, 0xff), shade=(0xb0, 0xa6, 0xd8), hi=(0xff, 0xff, 0xff),
+                gem=(0xff, 0xd6, 0x6e), gem_lo=(0xc2, 0x92, 0x28),
+                wing_hi=(0xff, 0xd6, 0x6e), wing_lo=(0xc2, 0x92, 0x28),
+                wings=3, ribbon=True, crest='star', flame=True),
 }
 
 # Half-widths of a point-up hex, 18 wide and 22 tall. The slopes step two
@@ -175,6 +182,26 @@ RIBBON = [
 ]
 RIBBON_AT = (16, 22)
 
+# The apex's flame, standing on the medallion's point.
+#
+# Accretion ran out of width at 3K, whose wings already reach both edges of
+# the grid, so the only axis left for a fifth silhouette is height. A flame is
+# also the right mark rather than an arbitrary one: the leaderboard's fire
+# already means a rating specifically, which is the distinction the white
+# flame badge's own note is careful to draw.
+#
+# Narrow and pointed, and never wider than the apex it stands on. A first pass
+# six cells wide put shoulders either side of a six-cell apex and read as a
+# bottle stopper.
+FLAME = [
+    '.F..',
+    '.FF.',
+    'FFF.',
+    'FFFF',
+    'FFFF',
+]
+FLAME_AT = (14, 0)
+
 
 def wing_cells(root, length):
     """A solid swept feather, four cells deep at the root and two at the tip."""
@@ -208,6 +235,18 @@ def build(t):
                     if 0 <= X < G and 0 <= Y < G and px[X, Y][3] == 0:
                         put(X, Y, OUTLINE)
 
+    if t.get('flame'):
+        # First of all, so the medallion lands on its foot and hides the join.
+        ox, oy = FLAME_AT
+        drawn = set()
+        for y, row in enumerate(FLAME):
+            for x, ch in enumerate(row):
+                if ch == '.':
+                    continue
+                put(ox + x, oy + y, WHITE if y >= 3 else t['gem'])
+                drawn.add((ox + x, oy + y))
+        edge(drawn)
+
     if t['ribbon']:
         ox, oy = RIBBON_AT
         for mirror in (False, True):
@@ -223,7 +262,9 @@ def build(t):
             edge(drawn)
 
     for (root, length) in WINGS.get(t['wings'], []):
-        pal = {'W': t['hi'], 'w': t['base']}
+        # Wings take the body's tones unless a tier says otherwise, which only
+        # the apex does: gold feathers are what stop it reading as a brighter 3K.
+        pal = {'W': t.get('wing_hi', t['hi']), 'w': t.get('wing_lo', t['base'])}
         drawn = set()
         for (x, y), tone in wing_cells(root, length).items():
             for mirror in (False, True):
@@ -263,6 +304,7 @@ ANIM = {
     '1k':  dict(sweep='core', glint=1),
     '2k':  dict(sweep='all', glint=1),
     '3k':  dict(sweep='all', glint=2),
+    '5k':  dict(sweep='all', glint=2),
 }
 
 
