@@ -9,31 +9,42 @@ volumes, and four hand-drawn files would drift from each other the moment
 anybody touched one -- a stray pixel on the 2K badge that the 1K badge never
 got. So the ladder is generated, and the tier table below is the whole design.
 
-The shape is a medallion: a point-up hexagon with a bright metal rim, a seam,
-and a darker inner face carrying a crest. What separates the tiers is not
-decoration for its own sake but accretion -- each rung keeps everything the one
-below it had and adds a part, so the ladder is legible as a silhouette before
-any colour is read:
+The shape is a medallion: a point-up hexagon with a lit upper edge, a shaded
+lower one, and a jewel on the face. What separates the tiers is not decoration
+for its own sake but accretion -- each rung keeps everything the one below it
+had and adds a part, so the ladder is legible as a silhouette before any colour
+is read:
 
-    500   bare medallion, small diamond
-    1K    a single quill each side, faceted gem
-    2K    two quills, banner tails, gem
-    3K    three quills, banner tails, gold star
+    500   bare medallion, small jewel
+    1K    one feather each side
+    2K    two feathers, banner tails, larger jewel
+    3K    three feathers, banner tails, gold star
 
-Nothing here is anti-aliased and nothing is drawn with a curve primitive. Every
-layer is built as a dict of cells and then run through `trace`, which walks the
-1px hard outline the game's sprites all wear. That outline is what keeps a badge
-readable at 18px on a leaderboard row, which is the size that actually matters.
+THE GRID IS 32x32, AND THAT IS ARITHMETIC RATHER THAN TASTE.
 
-The banner tails are the game's own deep violet rather than the heraldic red
-they would be anywhere else. That is deliberate: the palette is closed, and a
-new hue entering it for one badge would age the other forty.
+These are drawn at 16, 18, 20, 26, 28, 32 and 48 px, under
+`image-rendering: pixelated` -- which DROPS pixels rather than blending them.
+So the logical grid wants to divide the sizes that matter most:
 
-The animation follows the house grammar, which was measured off crown.png and
-founder.png rather than invented -- a long still, a short move, a sparkle, loop
-forever. See STILL_MS and friends. The shine deliberately skips outline pixels,
-so the hard edge never breaks and the sweep reads as light crossing metal
-instead of a white shape sliding over the sprite.
+    32 -> 16px   exactly 2:1        32 -> 32px   exactly 1:1
+    24 -> 32px   0.75:1, a ragged upscale in the cosmetics picker
+    57 -> 16px   3.56:1, keeping roughly one pixel in thirteen
+
+The first version of these badges was drawn at 57 and looked fine at full size
+and like wet paper anywhere else: at 16px its 1px rim and seam survived or
+vanished on the sampling phase alone. 32 is also what founder.png uses, so it
+is a resolution this game has already proved.
+
+The rule that follows from the grid: NOTHING THINNER THAN TWO CELLS, except
+the outline, which has to be one and is dark enough to survive being thinned.
+Any 1px interior detail is a coin flip at 16px, and phase is not something the
+art can control.
+
+The animation follows the house grammar, measured off crown.png and founder.png
+rather than invented -- a long still, a short move, a sparkle, loop forever. The
+shine deliberately skips outline pixels, so the hard edge never breaks and the
+sweep reads as light crossing metal instead of a white shape sliding over the
+sprite.
 
 Adding a tier is one entry in TIERS plus one in ANIM. Re-running is safe and
 idempotent: it only ever writes the files it names.
@@ -45,234 +56,192 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 BADGES = os.path.join(HERE, '..', 'public', 'badges', 'animated')
 
-# The logical grid. Odd, so the hexagon has a true centre column to be
-# symmetrical about; everything else is measured off CX.
-G = 57
-CX = 28
-OUT_SIZE = 114
+G = 32
+OUT_SCALE = 4          # 128px, the same as founder.png
+LX, RX = 15, 16        # the medallion's two centre columns
 
-OUTLINE = (0x10, 0x0c, 0x1c)
-WHITE = (0xf8, 0xf5, 0xff)
-RIB = (0x3d, 0x31, 0x80)      # banner tails, in the game's own deep violet
-RIB_FAR = (0x24, 0x1c, 0x4a)  # the far tail, one step back
+OUTLINE = (0x1e, 0x16, 0x34)   # the outline the drawn badges use
+WHITE = (0xff, 0xff, 0xff)
+RIB = (0x5b, 0x49, 0xb4)       # banner tails, in the game's own violet
+RIB_FAR = (0x39, 0x2d, 0x78)
 
-# Five tones per tier plus the crest's two, the same ramp depth every other
-# badge in this game uses. `hi2` is the shine's trailing highlight.
 TIERS = {
-    '500': dict(base=(0x6f, 0x63, 0xa8), shade=(0x55, 0x49, 0x8a),
-                hi=(0xa2, 0x94, 0xdc), hi2=(0xcf, 0xc6, 0xee),
-                gem_hi=(0xe6, 0xdf, 0xf8), gem_lo=(0x8a, 0x7f, 0xc4),
-                quills=0, ribbon=False, crest='diamond'),
-    '1k':  dict(base=(0x1b, 0x86, 0xc8), shade=(0x0b, 0x6f, 0xa4),
-                hi=(0x38, 0xbd, 0xf8), hi2=(0x9a, 0xdf, 0xff),
-                gem_hi=(0x9a, 0xdf, 0xff), gem_lo=(0x0b, 0x6f, 0xa4),
-                quills=1, ribbon=False, crest='gem'),
-    '2k':  dict(base=(0xd9, 0xad, 0x3c), shade=(0xa9, 0x7f, 0x20),
-                hi=(0xff, 0xd6, 0x6e), hi2=(0xff, 0xe9, 0xad),
-                gem_hi=(0xff, 0xe9, 0xad), gem_lo=(0xa9, 0x7f, 0x20),
-                quills=2, ribbon=True, crest='gem'),
-    '3k':  dict(base=(0xcf, 0xc6, 0xee), shade=(0xa2, 0x94, 0xdc),
-                hi=(0xf8, 0xf5, 0xff), hi2=(0xff, 0xff, 0xff),
-                gem_hi=(0xff, 0xd6, 0x6e), gem_lo=(0xa9, 0x7f, 0x20),
-                quills=3, ribbon=True, crest='star'),
+    '500': dict(base=(0x6f, 0x63, 0xa8), shade=(0x4a, 0x3f, 0x7d), hi=(0xa2, 0x94, 0xdc),
+                gem=(0xe6, 0xdf, 0xf8), gem_lo=(0x8a, 0x7f, 0xc4),
+                wings=0, ribbon=False, crest='diamond'),
+    '1k':  dict(base=(0x1b, 0x86, 0xc8), shade=(0x0a, 0x5c, 0x8c), hi=(0x5c, 0xcb, 0xf8),
+                gem=(0xc8, 0xef, 0xff), gem_lo=(0x0a, 0x5c, 0x8c),
+                wings=1, ribbon=False, crest='diamond'),
+    '2k':  dict(base=(0xd9, 0xad, 0x3c), shade=(0x9a, 0x72, 0x1c), hi=(0xff, 0xd6, 0x6e),
+                gem=(0xff, 0xef, 0xc0), gem_lo=(0x9a, 0x72, 0x1c),
+                wings=2, ribbon=True, crest='gem'),
+    '3k':  dict(base=(0xcf, 0xc6, 0xee), shade=(0x8d, 0x81, 0xc4), hi=(0xf8, 0xf5, 0xff),
+                gem=(0xff, 0xd6, 0x6e), gem_lo=(0x9a, 0x72, 0x1c),
+                wings=3, ribbon=True, crest='star'),
 }
 
+# Half-widths of a point-up hex, 18 wide and 22 tall. The slopes step two
+# cells per row so that they still read as slopes when every other row goes.
+HEX = {}
+for _y in range(4, 26):
+    if _y <= 7:
+        HEX[_y] = 3 + (_y - 4) * 2
+    elif _y >= 22:
+        HEX[_y] = 9 - (_y - 21) * 2
+    else:
+        HEX[_y] = 9
 
-def trace(cells):
-    """Wrap a set of toned cells in the 1px outline every sprite here wears."""
-    out = dict(cells)
-    for (x, y) in list(cells):
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                if (x + dx, y + dy) not in cells:
-                    out.setdefault((x + dx, y + dy), 'o')
+
+def hex_inside():
+    cells = set()
+    for y, h in HEX.items():
+        if h <= 0:
+            continue
+        for x in range(LX - h + 1, RX + h):
+            cells.add((x, y))
+    return cells
+
+
+def hex_cells():
+    """Outline, then a two-cell band inside it: lit above the waist, shaded below."""
+    inside = hex_inside()
+    out = {}
+    for (x, y) in inside:
+        ring = 9
+        for r in (1, 2, 3):
+            if any((x + dx * r, y + dy * r) not in inside
+                   for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1),
+                                  (1, 1), (-1, -1), (1, -1), (-1, 1))):
+                ring = r
+                break
+        if ring == 1:
+            out[(x, y)] = 'o'
+        elif ring <= 3:
+            out[(x, y)] = 's' if y > 15 else 'h'
+        else:
+            out[(x, y)] = 'b'
     return out
 
 
-def place(px, cells, palette, ox=0, oy=0, mirror=False):
-    """Stamp cells at an offset, optionally mirrored about the grid's centre."""
-    for (x, y), tone in cells.items():
-        X = (ox + x) if not mirror else (G - 1 - (ox + x))
-        Y = oy + y
-        if 0 <= X < G and 0 <= Y < G:
-            px[X, Y] = palette[tone] + (255,)
+# Eight cells wide and one tone. An earlier pass split them bright-over-dark,
+# which inside a rounded face reads unmistakably as an open mouth; the darker
+# cells are now a footing on the last row and nothing more.
+CRESTS = {
+    'diamond': [
+        '...GG...',
+        '..GGGG..',
+        '.GGGGGG.',
+        'GGGGGGGG',
+        '.GGGGGG.',
+        '..GGGG..',
+        '...gg...',
+    ],
+    'gem': [
+        '..GGGG..',
+        '.GGGGGG.',
+        'GGGGGGGG',
+        'GGGGGGGG',
+        '.GGGGGG.',
+        '..GGGG..',
+        '...gg...',
+    ],
+    'star': [
+        '...GG...',
+        '...GG...',
+        'GGGGGGGG',
+        '.GGGGGG.',
+        '..GGGG..',
+        '.GGGGGG.',
+        '.gg..gg.',
+    ],
+}
+CREST_AT = (12, 11)
+
+# (root y, length) per feather, rear first. Drawn back to front so the front
+# feather's outline draws the line between them.
+WINGS = {
+    1: [(17, 7)],
+    2: [(15, 8), (19, 7)],
+    3: [(12, 8), (16, 8), (20, 7)],
+}
+WING_X = 22        # the root, two cells under the flank, so the join never shows
+
+RIBBON = [
+    'rrrrrrr',
+    'rrrrrrr',
+    'rrrrrrr',
+    'rrrrrrr',
+    'rr...rr',
+]
+RIBBON_AT = (16, 22)
 
 
-# ---------------- the medallion: point-up hex, rim, inner face ----------------
-
-TOP, BOT = 9, 43
-MAXH = 13
-
-
-def hex_half(y, top=TOP, bot=BOT, maxh=MAXH):
-    """Half-width of a point-up hexagon at row y, or -1 outside it."""
-    if y < top or y > bot:
-        return -1
-    rise = min(y - top, bot - y)
-    return min(1 + rise * 2, maxh)
-
-
-def core_cells(t):
-    cells = {}
-    for y in range(TOP, BOT + 1):
-        h = hex_half(y)
-        ih = hex_half(y, TOP + 4, BOT - 4, MAXH - 5)
-        for x in range(CX - h, CX + h + 1):
-            inner = ih >= 0 and CX - ih <= x <= CX + ih
-            if inner:
-                # The face: lit at the crown, falling to shade at the point.
-                if y < TOP + 8:
-                    cells[(x, y)] = 'f_hi'
-                elif y > BOT - 12:
-                    cells[(x, y)] = 'f_lo'
-                else:
-                    cells[(x, y)] = 'f'
-            else:
-                # The rim: bright metal above, duller below.
-                cells[(x, y)] = 'r' if y < (TOP + BOT) // 2 else 'r_lo'
-    # A 1px seam where rim meets face, so the two read as separate layers
-    # rather than one shape with a colour change in the middle.
-    for y in range(TOP, BOT + 1):
-        ih = hex_half(y, TOP + 4, BOT - 4, MAXH - 5)
-        if ih < 0:
-            continue
-        above = hex_half(y - 1, TOP + 4, BOT - 4, MAXH - 5)
-        below = hex_half(y + 1, TOP + 4, BOT - 4, MAXH - 5)
-        for x in range(CX - ih, CX + ih + 1):
-            if x in (CX - ih, CX + ih) or above < 0 or below < 0 \
-               or x < CX - above or x > CX + above or x < CX - below or x > CX + below:
-                cells[(x, y)] = 'seam'
-    return trace(cells)
-
-
-# ---------------- the crests ----------------
-
-def diamond_cells(r=4):
-    cells = {}
-    for dy in range(-r, r + 1):
-        for dx in range(-r, r + 1):
-            if abs(dx) + abs(dy) <= r:
-                cells[(dx, dy)] = 'g_hi' if dy < 0 else 'g_lo'
-    cells[(-1, -1)] = 'spark'
-    return trace(cells)
-
-
-def gem_cells(r=5):
-    cells = {}
-    for dy in range(-r, r + 1):
-        h = min(r - abs(abs(dy) - 1) if abs(dy) > r - 2 else r - 1, r - 1)
-        h = max(h, 1)
-        for dx in range(-h, h + 1):
-            cells[(dx, dy)] = 'g_hi' if dy < 0 else 'g_lo'
-    cells[(-1, -2)] = 'spark'
-    return trace(cells)
-
-
-def star_cells():
-    art = [
-        '....#....',
-        '...###...',
-        '...###...',
-        '#########',
-        '.#######.',
-        '..#####..',
-        '..##.##..',
-        '.##...##.',
-    ]
-    cells = {}
-    for y, row in enumerate(art):
-        for x, ch in enumerate(row):
-            if ch == '#':
-                cells[(x - 4, y - 3)] = 'g_hi' if y < 4 else 'g_lo'
-    cells[(-1, -2)] = 'spark'
-    return trace(cells)
-
-
-CRESTS = {'diamond': diamond_cells, 'gem': gem_cells, 'star': star_cells}
-
-
-# ---------------- the wings ----------------
-
-def quill_cells(length, thickness, slope):
-    """One feather: swept columns, thinning outward, scalloped underneath.
-
-    The scallop is what makes a wing rather than a fin. Without it the shape
-    reads as a horn, which is where several earlier attempts died.
-    """
+def wing_cells(root, length):
+    """A solid swept feather, four cells deep at the root and two at the tip."""
     cells = {}
     for i in range(length):
-        top = -round(i * slope)
-        thick = max(3, thickness - round(i * 0.35))
-        scallop = 2 if (i % 4 == 3 and i < length - 2) else 0
-        for dy in range(thick - scallop):
-            if dy == 0:
-                tone = 'w_hi'
-            elif dy < thick - 3:
-                tone = 'w'
-            else:
-                tone = 'w_lo'
-            cells[(i, top + dy)] = tone
-    return trace(cells)
+        top = root - i
+        depth = 4 if i < length - 3 else (3 if i < length - 1 else 2)
+        for dy in range(depth):
+            cells[(i, top + dy)] = 'W' if dy == 0 else 'w'
+    return cells
 
-
-# (length, start thickness, upward slope, vertical drop). Rear quill first, so
-# the front one paints over it and its outline cuts the feather line. They
-# overlap on purpose: drawn apart they read as three separate spikes.
-QUILL_SETS = {
-    1: [(9, 6, 0.6, 1)],
-    2: [(12, 8, 0.7, 0), (8, 6, 0.45, 4)],
-    3: [(16, 8, 0.8, 0), (12, 7, 0.6, 4), (8, 6, 0.4, 8)],
-}
-
-
-def draw_wings(px, t, count):
-    pal = {'o': OUTLINE, 'w_hi': t['hi2'], 'w': t['base'], 'w_lo': t['shade']}
-    for length, thick, slope, drop in QUILL_SETS[count]:
-        cells = quill_cells(length, thick, slope)
-        place(px, cells, pal, ox=CX + 9, oy=23 + drop)
-        place(px, cells, pal, ox=CX + 9, oy=23 + drop, mirror=True)
-
-
-# ---------------- the banner tails ----------------
-
-def strap_cells(length=12, width=6):
-    cells = {}
-    for y in range(length):
-        for x in range(width):
-            notch = length - 1 - y
-            if notch < 3 and abs(x - width // 2) <= (2 - notch):
-                continue
-            cells[(x, y)] = 'rb'
-    return trace(cells)
-
-
-def draw_ribbon(px):
-    cells = strap_cells()
-    place(px, cells, {'o': OUTLINE, 'rb': RIB}, ox=CX + 5, oy=39)
-    place(px, cells, {'o': OUTLINE, 'rb': RIB_FAR}, ox=CX + 5, oy=39, mirror=True)
-
-
-# ---------------- assembly ----------------
 
 def build(t):
     """One tier, still, on the logical grid."""
     img = Image.new('RGBA', (G, G), (0, 0, 0, 0))
     px = img.load()
-    # Back to front: tails, then wings, then the medallion over both joins,
-    # then the crest. Each layer swallows the seam of the one behind it.
+    inside = hex_inside()
+
+    def put(x, y, colour):
+        if 0 <= x < G and 0 <= y < G:
+            px[x, y] = colour + (255,)
+
+    def edge(drawn):
+        """Outline a loose part, but never where the medallion will cover it."""
+        for (x, y) in list(drawn):
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    X, Y = x + dx, y + dy
+                    if (X, Y) in drawn or (X, Y) in inside:
+                        continue
+                    if 0 <= X < G and 0 <= Y < G and px[X, Y][3] == 0:
+                        put(X, Y, OUTLINE)
+
     if t['ribbon']:
-        draw_ribbon(px)
-    if t['quills']:
-        draw_wings(px, t, t['quills'])
-    place(px, core_cells(t), {
-        'o': OUTLINE, 'seam': OUTLINE,
-        'r': t['hi'], 'r_lo': t['base'],
-        'f': t['base'], 'f_hi': t['hi'], 'f_lo': t['shade'],
-    })
-    place(px, CRESTS[t['crest']](), {
-        'o': OUTLINE, 'g_hi': t['gem_hi'], 'g_lo': t['gem_lo'],
-        'spark': (0xff, 0xff, 0xff),
-    }, ox=CX, oy=26)
+        ox, oy = RIBBON_AT
+        for mirror in (False, True):
+            colour = RIB_FAR if mirror else RIB
+            drawn = set()
+            for y, row in enumerate(RIBBON):
+                for x, ch in enumerate(row):
+                    if ch == '.':
+                        continue
+                    X = (ox + x) if not mirror else (G - 1 - (ox + x))
+                    put(X, oy + y, colour)
+                    drawn.add((X, oy + y))
+            edge(drawn)
+
+    for (root, length) in WINGS.get(t['wings'], []):
+        pal = {'W': t['hi'], 'w': t['base']}
+        drawn = set()
+        for (x, y), tone in wing_cells(root, length).items():
+            for mirror in (False, True):
+                X = (WING_X + x) if not mirror else (G - 1 - (WING_X + x))
+                put(X, y, pal[tone])
+                drawn.add((X, y))
+        edge(drawn)
+
+    pal = {'o': OUTLINE, 'b': t['base'], 's': t['shade'], 'h': t['hi']}
+    for (x, y), tone in hex_cells().items():
+        put(x, y, pal[tone])
+
+    ox, oy = CREST_AT
+    for y, row in enumerate(CRESTS[t['crest']]):
+        for x, ch in enumerate(row):
+            if ch == '.':
+                continue
+            put(ox + x, oy + y, t['gem'] if ch == 'G' else t['gem_lo'])
     return img
 
 
@@ -280,12 +249,12 @@ def build(t):
 
 # Measured off crown.png and founder.png: a long still, a move at roughly nine
 # frames a second, then a three-frame sparkle. Matching it is the point -- these
-# badges sit next to those on a profile and should beat in the same rhythm.
+# sit next to those on a profile and should beat in the same rhythm.
 STILL_MS = 1100
 SWEEP_MS = 110
 GLINT_MS = (100, 140, 100)
 
-GLINT_AT = (CX - 1, 24)
+GLINT_AT = (14, 13)
 
 # Motion accretes with the art, so it is itself a rank signal. 500 gets no
 # sweep at all: it is the entry badge and should be the quietest thing on a row.
@@ -297,10 +266,6 @@ ANIM = {
 }
 
 
-def in_core(x, y):
-    return abs(x - CX) <= 13 and TOP <= y <= BOT
-
-
 def sweep_frame(base, t, c, region):
     """The badge with a shine band at diagonal position c.
 
@@ -310,18 +275,19 @@ def sweep_frame(base, t, c, region):
     """
     img = base.copy()
     px = img.load()
+    inside = hex_inside()
     for y in range(G):
         for x in range(G):
             p = px[x, y]
             if p[3] == 0 or p[:3] == OUTLINE:
                 continue
-            if region == 'core' and not in_core(x, y):
+            if region == 'core' and (x, y) not in inside:
                 continue
             d = x - y
             if d == c or d == c + 1:
                 px[x, y] = WHITE + (255,)
             elif d == c - 1 or d == c + 2:
-                px[x, y] = t['hi2'] + (255,)
+                px[x, y] = t['hi'] + (255,)
     return img
 
 
@@ -350,7 +316,7 @@ def frames_for(name):
     base = build(t)
     frames, delays = [base], [STILL_MS]
     if spec['sweep']:
-        for c in range(-24, 32, 7):
+        for c in range(-18, 26, 5):
             frames.append(sweep_frame(base, t, c, spec['sweep']))
             delays.append(SWEEP_MS)
     frames.extend(glint_frames(base, spec['glint']))
@@ -359,13 +325,14 @@ def frames_for(name):
 
 
 def main():
+    size = G * OUT_SCALE
     for name in TIERS:
         frames, delays = frames_for(name)
-        scaled = [f.resize((OUT_SIZE, OUT_SIZE), Image.NEAREST) for f in frames]
+        scaled = [f.resize((size, size), Image.NEAREST) for f in frames]
         path = os.path.join(BADGES, f'rating-{name}.png')
         scaled[0].save(path, save_all=True, append_images=scaled[1:],
                        duration=delays, loop=0)
-        print(f'rating-{name}.png  {len(frames)} frames  {os.path.getsize(path)} bytes')
+        print(f'rating-{name}.png  {size}px  {len(frames)} frames  {os.path.getsize(path)} bytes')
 
 
 if __name__ == '__main__':
