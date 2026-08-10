@@ -50,6 +50,13 @@ export interface EarnedCosmetic {
   value?: string;
   /** The founder's position, on that entry alone. */
   number?: number;
+  /**
+   * The weeks won, on the crown alone.
+   *
+   * Sent whatever the player is wearing, unlike the copy on `PublicCosmetics`:
+   * the cabinet is about what a mark cost, not about what is on today.
+   */
+  weeks?: number[];
 }
 
 /**

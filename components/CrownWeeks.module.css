@@ -39,6 +39,64 @@
 .wrap[data-size='large'] { margin-left: 2px; }
 .wrap[data-size='large'] .count { font-size: 12px; }
 
+/*
+ * In the cabinet, the count is the founder number's twin again — `.tileNo`
+ * next door is 9px with a 3px margin, and the two tiles sit in the same row.
+ *
+ * `static`, so the panel measures from the tile rather than from here. The
+ * card scrolls, which makes it clip sideways as well, and a panel hung off
+ * this element starts a third of the way into the tile — far enough right
+ * that on the last tile of a shelf it would run out through the card's edge.
+ * From the tile's own left edge it has the tile's width back.
+ */
+.wrap[data-size='tile'] {
+  position: static;
+  margin-left: 3px;
+}
+
+.wrap[data-size='tile'] .count { font-size: 9px; }
+
+/*
+ * Centred on the tile, and narrow enough that centring always fits.
+ *
+ * A tile wraps, so the same crown can be the leftmost thing on a row or the
+ * rightmost, and there is no anchor that survives both: hung off the left it
+ * ran 65px past the right of a 375px screen and gave the whole profile a
+ * horizontal scrollbar, and hung off the right it would do the same going the
+ * other way. Centred, the worst overhang is half the difference between the
+ * panel and the tile — so the panel is capped at a width where that half is
+ * smaller than the card's own margin, and no position can push it out.
+ *
+ * The heading goes with the width. The tile underneath is captioned "Crown"
+ * already, which is what the heading was saying, and losing it is what buys
+ * the room for the part that is new.
+ */
+.wrap[data-size='tile'] .panel {
+  /*
+   * Clear of the tile, not just of the art.
+   *
+   * The panel measures from the badge art, and eight pixels below that is
+   * exactly where the tile's own caption sits — so it opened straight over the
+   * word "Crown", which is the label this panel drops its own heading in
+   * favour of. 28px is the caption, its gap and the tile's lower padding: the
+   * distance from the bottom of the art to the bottom of the tile.
+   */
+  top: calc(100% + 28px + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  /*
+   * `max-content`, not the shrink-to-fit an absolute box gets by default.
+   * Shrink-to-fit measures against the containing block, which here is a 40px
+   * run of badge art, so dropping the min-width alone stacked the chips one
+   * per line into a 53px column. This asks for the width the chips want and
+   * then caps it.
+   */
+  min-width: 0;
+  width: max-content;
+  max-width: 104px;
+  padding: 8px;
+}
+
 /* ---------- the panel ---------- */
 
 /*

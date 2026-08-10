@@ -211,7 +211,7 @@ export default function PublicProfile({ handle }: { handle: string }) {
                * the weeks instead of running them into a sentence.
                */
               data-tip={
-                (profile.cosmetics.crownWeeks?.length ?? 0) > 1
+                profile.cosmetics.crownWeeks?.length
                   ? undefined
                   : badgeTooltip(profile.cosmetics)
               }
@@ -408,6 +408,16 @@ export default function PublicProfile({ handle }: { handle: string }) {
                           {item.number !== undefined && (
                             <span className={styles.tileNo}>{item.number}</span>
                           )}
+                          {/*
+                            * The crown's weeks, on the tile that cost them.
+                            *
+                            * A cabinet is where somebody has stopped to look,
+                            * so this lists a single win too — "Week 1" is the
+                            * whole of a first champion's record and there is
+                            * nowhere else it is written down. The count above
+                            * it still waits for a second.
+                            */}
+                          <CrownWeeks weeks={item.weeks} size="tile" />
                         </span>
                       )}
                       {/*

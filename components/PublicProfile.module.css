@@ -62,6 +62,12 @@
   opacity: 1;
 }
 
+/* Same arrangement in the cabinet: the tile is the target, not the count. */
+.shelfItem:hover [data-crown-panel] {
+  visibility: visible;
+  opacity: 1;
+}
+
 .badgeNo {
   font-size: 9px;
   line-height: 1;

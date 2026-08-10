@@ -11,36 +11,43 @@ import styles from './CrownWeeks.module.css';
  * player who won one in July wear an identical mark, which quietly makes the
  * fourth win worth nothing.
  *
- * Two things fix that, and they are for two different readers. The count is
- * for somebody scanning: `×4` beside the mark, legible at a glance and without
- * stopping. The list is for somebody who has stopped, and it is the half that
- * makes it feel like a record rather than a score, because "weeks 1, 4, 9 and
- * 10" is a story about a year and "4" is not.
+ * Two answers, for two different readers, and they are **not the same rule**.
  *
- * **Shown from two upwards.** A `×1` beside every crown is noise, and worse
- * than noise: it turns a first win into a tally, which is precisely the
- * opposite of what a first win should feel like. A single win still gets its
- * week named on hover, from the badge's own tooltip.
+ * The count is for somebody scanning: `×4` beside the mark, legible without
+ * stopping. It needs two wins to mean anything — a `×1` on every crown turns a
+ * first win into a tally, which is the opposite of what a first win should
+ * feel like.
+ *
+ * The list is for somebody who has already stopped, and one win is worth
+ * naming to them. "Week 1" is the whole of a first champion's record and the
+ * only place it is written down; withholding it until a second win would mean
+ * the cabinet had nothing to say about the rarest thing in it. Where it
+ * appears is decided by room, not by the number of wins.
  */
 export default function CrownWeeks({ weeks, size = 'small' }: {
   weeks: number[] | undefined;
-  /** `large` on a profile, where there is room to read; `small` on a row. */
-  size?: 'small' | 'large';
+  /**
+   * `small` on a board row, `large` on a profile heading, `tile` in the
+   * collection cabinet. Only the first has no room for a panel.
+   */
+  size?: 'small' | 'large' | 'tile';
 }) {
-  if (!weeks || weeks.length < 2) return null;
+  if (!weeks || weeks.length === 0) return null;
+
+  const counted = weeks.length > 1;
 
   /**
-   * The panel is the profile's alone, and that is a containment decision
-   * rather than a taste one.
+   * No panel on a board row, and that is a containment decision rather than a
+   * taste one.
    *
-   * A board row lives inside a scrolling window — see FullBoard's row window —
-   * so a panel escaping the row is clipped by it, and a row near the top edge
-   * would open onto nothing. The row already answers the same question a
-   * different way: its badge carries `badgeTooltip`, which names the weeks in
-   * a sentence. Two hover treatments on one mark, one of them clipped, is
-   * worse than the one that works everywhere.
+   * A row lives inside a scrolling window — see FullBoard's row window — so a
+   * panel escaping the row is clipped by it, and a row near the top edge would
+   * open onto nothing. The row answers a smaller question a different way: its
+   * badge tooltip says "Champion ×4".
    */
-  const listed = size === 'large';
+  const listed = size !== 'small';
+
+  if (!counted && !listed) return null;
 
   return (
     /*
@@ -57,35 +64,39 @@ export default function CrownWeeks({ weeks, size = 'small' }: {
       data-size={size}
       {...(listed ? { tabIndex: 0, role: 'note', 'aria-label': championSummary(weeks) } : {})}
     >
-      {/* No pixel face: the founder number beside it does not use one either,
-          and at this size the pixel face measures half again as wide for the
-          same two characters — which is the whole margin the slot has. */}
-      <span className={styles.count} aria-hidden={listed ? 'true' : undefined}>
-        {/* The multiplication sign, not a bare number. Beside a badge that
-            already sits next to a founder's position, "3" would read as
-            third; "×3" cannot. */}
-        ×{weeks.length}
-      </span>
+      {counted && (
+        /* No pixel face: the founder number beside it does not use one either,
+           and at this size the pixel face measures half again as wide for the
+           same two characters — which is the whole margin the slot has. */
+        <span className={styles.count} aria-hidden={listed ? 'true' : undefined}>
+          {/* The multiplication sign, not a bare number. Beside a badge that
+              already sits next to a founder's position, "3" would read as
+              third; "×3" cannot. */}
+          ×{weeks.length}
+        </span>
+      )}
 
       {listed && (
         /*
          * `data-crown-panel` is a handle for the surface around it.
          *
-         * The mark somebody reaches for is the crown, not the two characters
-         * beside it, and the crown belongs to the profile rather than to this
-         * component. That stylesheet opens the panel from its own badge on
-         * hover, and needs something stable to name — a hashed class from this
-         * module is not it.
+         * The mark somebody reaches for is the crown, and the crown is drawn
+         * by the profile rather than by this component. That stylesheet opens
+         * the panel from its own badge on hover, and needs something stable to
+         * name — a hashed class from this module is not it.
          */
         <span className={styles.panel} data-crown-panel aria-hidden="true">
-          <span className={styles.panelTitle}>Weekly champion</span>
+          {/* Dropped in the cabinet, where the tile below is already captioned
+              "Crown" and the width it costs is the width that keeps the panel
+              on screen. See the stylesheet. */}
+          {size !== 'tile' && <span className={styles.panelTitle}>Weekly champion</span>}
           <span className={styles.chips}>
             {weeks.map((week) => (
               <span key={week} className={`${styles.chip} pixel-font`}>{week}</span>
             ))}
           </span>
           <span className={styles.panelNote}>
-            {weeks.length} weeks won
+            {weeks.length === 1 ? 'won once' : `${weeks.length} weeks won`}
           </span>
         </span>
       )}
