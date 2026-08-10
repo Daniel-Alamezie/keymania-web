@@ -16,6 +16,7 @@ import chip from './CountryChip.module.css';
 import { EMPTY_TALLY, useHandle, winRate } from '@/game/serverProfile';
 import { formatPlayTime, type PublicProfile as Profile } from '@/models/profile';
 import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
+import CrownWeeks from './CrownWeeks';
 import { countryName } from '@/models/countries';
 import { useUiSounds } from './SoundToggle';
 import styles from './PublicProfile.module.css';
@@ -198,11 +199,31 @@ export default function PublicProfile({ handle }: { handle: string }) {
             * in front of it is a mark on the person.
             */}
           {profile.cosmetics?.badge && (
-            <span className={styles.badge} data-tip={badgeTooltip(profile.cosmetics)}>
+            <span
+              className={styles.badge}
+              /*
+               * The panel speaks for the badge when there is one.
+               *
+               * Both are hover treatments anchored to the same 26px mark, so
+               * both opened at once and the tooltip landed across the panel's
+               * heading — two answers to one question, one of them on top of
+               * the other. The panel is the better answer here: it separates
+               * the weeks instead of running them into a sentence.
+               */
+              data-tip={
+                (profile.cosmetics.crownWeeks?.length ?? 0) > 1
+                  ? undefined
+                  : badgeTooltip(profile.cosmetics)
+              }
+            >
               <img src={badgeSrc(profile.cosmetics.badge)} alt="" width={26} height={26} />
               {profile.cosmetics.badgeNumber !== undefined && (
                 <span className={styles.badgeNo}>{profile.cosmetics.badgeNumber}</span>
               )}
+              {/* The weeks behind the crown. This is the surface with room to
+                  open a panel, and the one somebody arrives at wanting to know
+                  who they are looking at. */}
+              <CrownWeeks weeks={profile.cosmetics.crownWeeks} size="large" />
             </span>
           )}
           {profile.displayName}

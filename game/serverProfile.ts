@@ -280,9 +280,9 @@ type SavedCosmetics = { earned: string[]; title?: string; badge?: string; nameCo
  *
  * The response describes a whole appearance, so it is read as one.
  *
- * The catalogue and the founder number come the other way, from what is
- * already held. Neither is part of this response and neither can change by
- * equipping anything.
+ * The catalogue, the founder number and the weeks won come the other way, from
+ * what is already held. None is part of this response and none can change by
+ * equipping anything — a crown put on is still the same wins behind it.
  */
 export function foldSavedCosmetics(
   held: ServerProfile['cosmetics'],
@@ -292,6 +292,7 @@ export function foldSavedCosmetics(
   return {
     catalogue: held?.catalogue ?? [],
     founderNumber: held?.founderNumber,
+    crownWeeks: held?.crownWeeks,
     earned: saved.earned,
     title: saved.title,
     badge: saved.badge,

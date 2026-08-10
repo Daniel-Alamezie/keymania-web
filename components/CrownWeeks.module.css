@@ -1,0 +1,127 @@
+/*
+ * The crown's count, and the panel behind it.
+ *
+ * Sits inside whatever badge slot it is given, and lets that slot decide the
+ * spacing wherever it has an opinion. A board row's slot is a flex box with a
+ * 2px gap and needs nothing from here; a profile's badge has no gap and hands
+ * its founder number a 2px margin instead, so the large size matches it.
+ */
+
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  /* No outline ring of its own; the panel opening is the focus feedback, and
+     a ring around two characters reads as a broken button. */
+  outline: none;
+  cursor: default;
+}
+
+/*
+ * Deliberately the founder number's recipe, down to the size.
+ *
+ * That slot on a board row is a fixed 34px — an 18px mark, a 2px gap, and
+ * exactly enough tail for three digits at 8px — and it is fixed so that every
+ * name on the board starts at the same x. Measured at 9px in a pixel face,
+ * `×4` came out 19px and pushed 5px past the edge into the gap before the
+ * name; `×12` would have reached the name itself. Two marks share that tail
+ * and no row can wear both, so they are sized as one thing.
+ */
+.count {
+  font-size: 8px;
+  line-height: 1;
+  color: var(--gold);
+  /* Tabular, so a row of champions keeps its badge column aligned. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* No slot to fit on a profile, where the crown is drawn at 26px. */
+.wrap[data-size='large'] { margin-left: 2px; }
+.wrap[data-size='large'] .count { font-size: 12px; }
+
+/* ---------- the panel ---------- */
+
+/*
+ * Hidden by default and revealed on hover or focus.
+ *
+ * `visibility` rather than `display`, so the panel has a size to be
+ * positioned against before it is shown and does not jump on first open.
+ *
+ * **Downwards, not up.** The only surface that opens one of these is a
+ * profile, where the crown sits in the header of a card that scrolls: a panel
+ * opening upward from there has the top of the card immediately above it and
+ * is clipped by it. Everything below the header is room.
+ */
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  /*
+   * Anchored to the mark's left edge rather than centred on it. Centred, the
+   * panel reaches 67px to the left of a mark that on a phone sits about that
+   * far from the edge of the screen — so the half carrying "Weekly champion"
+   * would be the half cut off. Growing rightwards, it cannot.
+   */
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  min-width: 148px;
+  background: var(--panel);
+  border: 2px solid var(--gold-deep);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease, visibility 120ms;
+  /* The panel is a label, not a target: clicks belong to whatever is behind
+     it, and a hover trap over the name column would be its own bug. */
+  pointer-events: none;
+  text-align: center;
+}
+
+.wrap:hover .panel,
+.wrap:focus-visible .panel {
+  visibility: visible;
+  opacity: 1;
+}
+
+.panelTitle {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+/*
+ * One chip per week, which is the whole point.
+ *
+ * A comma-separated sentence would say the same thing and read as a
+ * footnote. Separate marks read as a collection, and a collection is what
+ * four wins across a year actually is.
+ */
+.chip {
+  min-width: 20px;
+  padding: 3px 5px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+}
+
+.panelNote {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { transition: none; }
+}

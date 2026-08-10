@@ -26,6 +26,16 @@ export interface PublicCosmetics {
    * nothing.
    */
   badgeNumber?: number;
+  /**
+   * The weeks this player has won, when the crown is what they are wearing.
+   *
+   * The list rather than a count, and the server sends one field rather than
+   * two, because the length *is* the count: a row that wants "×3" takes
+   * `.length` and a profile that wants to say which three reads the array.
+   * Numbered as a player experiences them, so week one is the first week the
+   * mode ever ran.
+   */
+  crownWeeks?: number[];
 }
 
 /**
@@ -51,8 +61,54 @@ export interface EarnedCosmetic {
  * mark is and whose — and every other badge answers with its name, because a
  * mark that cannot say what it is only speaks to people who already know.
  */
-export const badgeTooltip = (worn: PublicCosmetics | undefined): string | undefined =>
-  (worn?.badgeNumber !== undefined ? `Founder #${worn.badgeNumber}` : worn?.badgeLabel);
+export const badgeTooltip = (worn: PublicCosmetics | undefined): string | undefined => {
+  if (worn?.badgeNumber !== undefined) return `Founder #${worn.badgeNumber}`;
+  return championTooltip(worn?.crownWeeks) ?? worn?.badgeLabel;
+};
+
+/**
+ * The same record, cut to the size a tooltip actually is.
+ *
+ * Every tip in the app is one nowrap line centred on a mark that is often
+ * 18px wide near the left edge of a rail or a duel plate, and it stays legible
+ * only because every tip so far has been about as long as "Founder #47" — 129
+ * pixels, measured. The full sentence broke that on its first outing: centred
+ * on a board row's badge, "Champion of weeks 1, 4, 9 and 12" ran off the left
+ * of the screen, and even "Champion of week 3" measures 198.
+ *
+ * So the tip says what the mark is and how many, never which. "Champion ×4"
+ * is 129 pixels to the character, the same ceiling the founder's tip has
+ * always sat at, and the count on it matches the one drawn beside the mark.
+ *
+ * Which weeks is the profile's job. That is the surface with room for a panel
+ * and the one somebody asking that question is heading to anyway.
+ */
+export function championTooltip(weeks: number[] | undefined): string | undefined {
+  if (!weeks || weeks.length === 0) return undefined;
+  /* No "×1": a first win is a win, not a tally of one. */
+  return weeks.length === 1 ? 'Champion' : `Champion ×${weeks.length}`;
+}
+
+/**
+ * A champion's record, in words.
+ *
+ * The long form: what the popover announces to a screen reader, and what a
+ * single win says on hover. Pure, so the list formatting can be tested rather
+ * than eyeballed. English needs three shapes here and the middle one is the
+ * one that gets forgotten: "1", "1 and 4", "1, 4 and 9".
+ *
+ * Undefined when there is nothing to say, so a caller can fall back to the
+ * badge's plain name without checking a length itself.
+ */
+export function championSummary(weeks: number[] | undefined): string | undefined {
+  if (!weeks || weeks.length === 0) return undefined;
+
+  const list = weeks.length === 1
+    ? `week ${weeks[0]}`
+    : `weeks ${weeks.slice(0, -1).join(', ')} and ${weeks[weeks.length - 1]}`;
+
+  return `Champion of ${list}`;
+}
 
 /** One catalogue entry, as the customisation panel needs it. */
 export interface Cosmetic {
@@ -80,6 +136,16 @@ export const badgeSrc = (file: string) => `/badges/${file}`;
 export const FOUNDER_BADGE = 'badge.founder';
 
 /**
+ * The other badge this file knows by name, for the same reason.
+ *
+ * The appearance panel previews an unsaved selection, so the server has not
+ * been told and cannot decide whether a crown should carry a count. Mirrored
+ * from the API's lib/cosmetics.ts; every rendered surface still takes a
+ * resolved `PublicCosmetics` and never sees this.
+ */
+export const CROWN_BADGE = 'badge.crown';
+
+/**
  * Turn a set of chosen catalogue ids into what every rendering surface expects.
  *
  * The boards, the duel plates and the public card all take *values* — a
@@ -97,6 +163,14 @@ export function resolveWorn(
   catalogue: Cosmetic[],
   chosen: { title?: string | null; badge?: string | null; nameColour?: string | null },
   founderNumber?: number,
+  /**
+   * The weeks this player has won, for previewing the crown.
+   *
+   * Passed in for the same reason `founderNumber` is: the panel is rendering
+   * a selection nobody has saved, so it has to resolve what the server would
+   * have sent. The caller derives it from the earned list.
+   */
+  crownWeeks?: number[],
 ): PublicCosmetics {
   const byId = (id: string | null | undefined) =>
     (id ? catalogue.find((c) => c.id === id) : undefined);
@@ -111,6 +185,8 @@ export function resolveWorn(
      * somebody nobody asked for, and beside any other badge it means nothing.
      */
     badgeNumber: chosen.badge === FOUNDER_BADGE ? founderNumber : undefined,
+    /* Same rule, the other badge that carries a history. */
+    ...(chosen.badge === CROWN_BADGE && crownWeeks?.length ? { crownWeeks } : {}),
   };
 }
 

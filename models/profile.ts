@@ -133,6 +133,15 @@ export interface ServerProfile {
      * before anything is saved and before the server has been told.
      */
     founderNumber?: number;
+    /**
+     * The weekly challenges this account has won, as season week numbers.
+     *
+     * Sent for the same reason as the founder number and read the same way:
+     * the preview has to be able to draw the crown's count before the crown
+     * has been put on. Absent from an older server, empty for everybody who
+     * has never won a week.
+     */
+    crownWeeks?: number[];
   };
   /**
    * Time actually playing, in milliseconds. Measured per game by whoever

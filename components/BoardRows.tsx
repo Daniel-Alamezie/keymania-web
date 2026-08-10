@@ -6,6 +6,7 @@ import { BOARD_META, type BoardEntry, type BoardKind } from '@/models/leaderboar
 import { ratingFlame, START_RATING } from '@/models/rating';
 import RankFlame, { Flame, type Podium } from './RankFlame';
 import { badgeSrc, badgeTooltip } from '@/models/cosmetics';
+import CrownWeeks from './CrownWeeks';
 import styles from './SidePanel.module.css';
 
 /**
@@ -242,6 +243,14 @@ export default function BoardRows({ entries, board, asStranger, compact }: {
                     {!compact && entry.cosmetics.badgeNumber !== undefined && (
                       <span className={styles.rankBadgeNo}>{entry.cosmetics.badgeNumber}</span>
                     )}
+                    {/*
+                      * A repeat champion's tally, on the same reasoning and in
+                      * the same slot as the founder's digits: provenance, kept
+                      * off the rail because the width comes out of the name.
+                      * The hover already says which weeks — see badgeTooltip —
+                      * so the row loses nothing by staying quiet.
+                      */}
+                    {!compact && <CrownWeeks weeks={entry.cosmetics.crownWeeks} />}
                   </>
                 )}
               </span>

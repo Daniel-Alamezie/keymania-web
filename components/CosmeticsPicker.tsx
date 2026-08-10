@@ -72,7 +72,9 @@ export default function CosmeticsPicker() {
    * rather than ids, exactly as they do from a real board response, so they
    * cannot tell the difference between this and the genuine article.
    */
-  const preview: PublicCosmetics = resolveWorn(worn.catalogue, chosen, worn.founderNumber);
+  const preview: PublicCosmetics = resolveWorn(
+    worn.catalogue, chosen, worn.founderNumber, worn.crownWeeks,
+  );
 
   function choose(item: Cosmetic) {
     if (!owns(item.id) || saving) return;

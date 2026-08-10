@@ -329,6 +329,22 @@
   .rankFlame { display: none; }
   .rankBadge { width: 18px; }
   .rankSub { display: none; }
+  /*
+   * The fifth saving, which the rail has always made and this block did not.
+   *
+   * Narrowing the slot to 18px leaves no tail, and the two marks that live in
+   * that tail — a founder's number and a champion's count — did not know it:
+   * they went on rendering past the slot and over the first character of the
+   * name. `×12` reached a character and a half in. Both go, exactly as they go
+   * in the rail, and the hover on the badge still names them.
+   *
+   * The count is another module's element, so it is reached by the attribute
+   * it carries rather than by its class. Two classes beat that module's one,
+   * so specificity settles this and stylesheet order never gets a vote —
+   * which matters, because that order differs between dev and production.
+   */
+  .rankBadgeNo,
+  .rankBadge [data-size] { display: none; }
 }
 
 .footnote {

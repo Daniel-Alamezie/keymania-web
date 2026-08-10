@@ -105,7 +105,12 @@ export function useFriendBoard(
        * board full of badges.
        */
       cosmetics: profile.cosmetics
-        ? resolveWorn(profile.cosmetics.catalogue, profile.cosmetics, profile.cosmetics.founderNumber)
+        ? resolveWorn(
+          profile.cosmetics.catalogue,
+          profile.cosmetics,
+          profile.cosmetics.founderNumber,
+          profile.cosmetics.crownWeeks,
+        )
         : undefined,
       you: true,
     });

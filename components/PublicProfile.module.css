@@ -45,6 +45,23 @@
 }
 .badge img { image-rendering: pixelated; }
 
+/*
+ * The crown opens its own record.
+ *
+ * CrownWeeks reveals its panel from the count, which is two characters wide
+ * and not what anybody aims at: the mark is the crown, and the crown is drawn
+ * here. So the whole badge is the target, and the panel is named by the
+ * attribute it carries rather than by a class this stylesheet cannot see.
+ *
+ * The declarations match the ones in that module exactly, which is the point
+ * — the two rules have equal specificity, so whichever stylesheet lands last
+ * wins, and they must not disagree about what winning means.
+ */
+.badge:hover [data-crown-panel] {
+  visibility: visible;
+  opacity: 1;
+}
+
 .badgeNo {
   font-size: 9px;
   line-height: 1;
