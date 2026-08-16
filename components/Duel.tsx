@@ -31,7 +31,7 @@ import ArenaControls from './ArenaControls';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
 import ArenaScene from './ArenaScene';
-import SentenceView from './SentenceView';
+import ScriptView from './ScriptView';
 import ComboMeter from './ComboMeter';
 import PowerBar from './PowerBar';
 import FxSwitcher from './FxSwitcher';
@@ -298,7 +298,9 @@ export default function Duel({
    */
   const stream = (
     <div ref={streamRef} className={styles.stream}>
-      <SentenceView
+      <ScriptView
+        script={state.script}
+        scriptIndex={state.scriptIndex}
         previous={state.previous}
         sentence={state.sentence}
         upcoming={state.upcoming}

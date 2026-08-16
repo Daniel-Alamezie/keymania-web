@@ -6,6 +6,7 @@ import { audio } from '@/game/audio';
 import { burst } from '@/game/burst';
 import { atRest, step, type Glide } from '@/game/glide';
 import { POWER_META } from '@/game/powers';
+import { activeWordIn, tokenise, wordCount, type Token } from '@/game/scriptTokens';
 import type { PowerKind } from '@/models/powers';
 import styles from './SentenceView.module.css';
 
@@ -24,18 +25,6 @@ interface SentenceViewProps {
   wordOffset?: number;
 }
 
-type Phase = 'past' | 'current' | 'next';
-
-interface Token {
-  key: string;
-  phase: Phase;
-  /** Flat word index across the script, for looking up charges. */
-  wordIndex: number;
-  /** Position within the current sentence; -1 for anything outside it. */
-  localIndex: number;
-  chars: { ch: string; index: number }[];
-}
-
 /**
  * Where the cursor sits in the viewport, as a fraction of its width.
  *
@@ -43,48 +32,6 @@ interface Token {
  * the larger share of the screen goes to the words still to be typed.
  */
 const PIN = 0.34;
-
-function tokenise(sentence: string, phase: Phase, firstWord: number): Token[] {
-  const out: Token[] = [];
-  let chars: Token['chars'] = [];
-  let word = 0;
-
-  const push = () => {
-    out.push({
-      /**
-       * The flat script index, not the position within this sentence.
-       *
-       * A phase-relative key like `current-3` names a different word after
-       * every roll, so React reuses that DOM node for whatever word lands in
-       * that slot next. The claimed-power animation fills forwards — it leaves
-       * the icon hidden, because the power has been taken — and a reused node
-       * carries that animation with it, so a later charged word would render
-       * with no icon at all. Keying by flat index gives each word one node for
-       * as long as it is on screen, so effects stay attached to the word that
-       * earned them.
-       */
-      key: String(firstWord + word),
-      phase,
-      wordIndex: firstWord + word,
-      localIndex: phase === 'current' ? word : -1,
-      chars,
-    });
-  };
-
-  for (let i = 0; i < sentence.length; i++) {
-    chars.push({ ch: sentence[i], index: i });
-    if (sentence[i] === ' ') {
-      push();
-      chars = [];
-      word += 1;
-    }
-  }
-  if (chars.length) push();
-  return out;
-}
-
-const wordCount = (sentence: string) =>
-  (sentence.trim() ? sentence.trim().split(' ').length : 0);
 
 /**
  * The text, as a stream rather than a page.
@@ -122,11 +69,7 @@ export default function SentenceView({
   const lastSentence = useRef<string | null>(null);
 
   /** Which word of the current sentence the cursor is in. */
-  const activeWord = useMemo(() => {
-    const current = tokens.filter((t) => t.phase === 'current');
-    const found = current.findIndex((t) => cursor <= t.chars[t.chars.length - 1].index);
-    return found === -1 ? current.length - 1 : found;
-  }, [tokens, cursor]);
+  const activeWord = useMemo(() => activeWordIn(tokens, cursor), [tokens, cursor]);
 
   /** The same word as a flat script index — stable across sentence rolls. */
   const activeIndex = wordOffset + activeWord;

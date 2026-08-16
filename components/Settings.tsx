@@ -5,6 +5,10 @@ import { audio, useKeySound, useSoundEnabled, useVolume } from '@/game/audio';
 import { KEY_SOUNDS } from '@/game/keyProfiles';
 import { ARENA_FX, SETTINGS_FX, type FxId } from '@/game/arenaFx';
 import { useArenaFx } from '@/game/useArenaFx';
+import {
+  DEFAULT_VIEW, SCRIPT_VIEW_META, SCRIPT_VIEWS, writeScriptView,
+} from '@/game/scriptViewPref';
+import { usePageAvailable, useScriptViewChoice } from '@/game/useScriptView';
 import styles from './Settings.module.css';
 
 /**
@@ -30,6 +34,8 @@ export default function Settings({ onClose }: { onClose: () => void }) {
   const soundOn = useSoundEnabled();
   const volume = useVolume();
   const { fx, set } = useArenaFx();
+  const chosenView = useScriptViewChoice();
+  const pageFits = usePageAvailable();
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -185,6 +191,55 @@ export default function Settings({ onClose }: { onClose: () => void }) {
                 </li>
               ))}
             </ul>
+          </section>
+
+          {/* ---------------- Script ---------------- */}
+          <section className={styles.section}>
+            <h3 className={`${styles.sectionHeading} pixel-font`}>Script</h3>
+            <p className={styles.note}>
+              How the words are laid out while you type them. It changes nothing
+              about what is typed or scored, so switch whenever you like.
+            </p>
+
+            <ul className={styles.list}>
+              {SCRIPT_VIEWS.map((id) => (
+                <li key={id}>
+                  <button
+                    type="button"
+                    className={styles.option}
+                    /*
+                     * The stored choice, not the one currently rendering.
+                     *
+                     * A narrow window falls back to the tape without changing
+                     * what is saved — so showing Tape as selected here would
+                     * tell somebody their choice had been forgotten, and the
+                     * next thing they would do is set it again. The note below
+                     * explains the gap instead.
+                     */
+                    data-chosen={id === (chosenView ?? DEFAULT_VIEW) || undefined}
+                    aria-pressed={id === (chosenView ?? DEFAULT_VIEW)}
+                    aria-label={`${SCRIPT_VIEW_META[id].label} — ${SCRIPT_VIEW_META[id].blurb}`}
+                    onClick={() => writeScriptView(id)}
+                  >
+                    <span className={styles.optionName}>
+                      {SCRIPT_VIEW_META[id].label}
+                      {id === DEFAULT_VIEW && <span className={styles.tag}>default</span>}
+                    </span>
+                    <span className={styles.optionBlurb}>{SCRIPT_VIEW_META[id].blurb}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {/* Said only when it applies, and as a fact about the window
+                rather than a refusal: nobody on a phone has done anything
+                wrong, and the choice is theirs again at a wider size. */}
+            {!pageFits && chosenView === 'paragraph' && (
+              <p className={styles.note}>
+                This window is too narrow for the page, so the tape is showing
+                for now. Your choice is kept.
+              </p>
+            )}
           </section>
         </div>
 

@@ -11,7 +11,7 @@ import { keyFor } from '@/game/typing';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
-import SentenceView from './SentenceView';
+import ScriptView from './ScriptView';
 import ArenaScene from './ArenaScene';
 import ArenaControls from './ArenaControls';
 import RunPause from './RunPause';
@@ -252,7 +252,9 @@ export default function Weekly({
 
       <ArenaScene bare className={styles.arena}>
         <div className={styles.stream}>
-          <SentenceView
+          <ScriptView
+            script={state.script}
+            scriptIndex={state.scriptIndex}
             previous={state.previous}
             sentence={state.sentence}
             upcoming={state.upcoming}

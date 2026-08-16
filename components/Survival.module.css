@@ -35,6 +35,21 @@
   padding: 0 18px;
   /* Larger than a duel's. There is nothing else on the screen to share with. */
   --stream-size: clamp(28px, 4.8vw, 60px);
+  /*
+   * The page sets its own scale, and this screen does not override it.
+   *
+   * It did briefly, smaller, to keep the arena's rows from shifting — and that
+   * was the wrong trade twice over. A page is a page on every screen, so a
+   * per-screen size is a second number to keep in step for no reader's
+   * benefit; and the tape is only larger here because it is a single line with
+   * nothing to share the screen with, which is an argument about the tape
+   * rather than about type.
+   *
+   * The slot is taller than the tape's and that cost is real — the arena
+   * centres its rows, so every pixel pushes the clock below down by half of
+   * one. It is paid once, in ParagraphView, at a fixed height rather than one
+   * that drifts with the passage.
+   */
 }
 
 .gauge {

@@ -1,0 +1,222 @@
+/**
+ * The page.
+ *
+ * Deliberately the same character and word vocabulary as the stream — same
+ * caret, same greens, same charged-word treatment — because a player switching
+ * between the two is changing the layout, not the game. Only the axis and the
+ * scale differ: a page is read at a smaller size than a stream is raced at.
+ */
+.viewport {
+  position: relative;
+  overflow: hidden;
+  /*
+   * A column, not the full width.
+   *
+   * Left to span the screen the block sat hard against the left edge with a
+   * thousand pixels of nothing beside it, because the lines are short and the
+   * container was not. A measure the text actually fills, centred, is what
+   * makes it read as a page rather than as text that failed to lay out.
+   *
+   * Centred here rather than on the stack, which owns a transform for the
+   * vertical glide and cannot spare one for horizontal centring.
+   */
+  width: 100%;
+  /*
+   * Wide enough for a written line, capped so it never reaches the edges.
+   *
+   * Two kinds of line come through here and they are not the same length: a
+   * generated duel line is six or seven words, a passage from the weekly bank
+   * runs to a full sentence. At 30em the written ones wrapped to two rows,
+   * which is not wrong for a page but does mean a single script line arrives
+   * looking like two.
+   *
+   * The `vw` half is the cap that matters. Left as `em` alone the measure
+   * grows with the font and would push past a 1280 screen at full size; this
+   * way the column is as wide as the type wants or as wide as there is room
+   * for, whichever is smaller. The very longest lines still wrap, and should.
+   */
+  max-width: var(--page-measure, min(34em, 88vw));
+  margin-inline: auto;
+  /*
+   * Held open at a fixed height, like the stream's single line and for the
+   * same reason: a block that grew and shrank as lines came and went would
+   * move everything below it on the screen mid-run.
+   */
+  height: var(--page-height, 7.6em);
+  /*
+   * Sized against the tape rather than against a paragraph of prose.
+   *
+   * A page of body text would be smaller than this; the thing being read here
+   * is a line somebody is racing, at arm's length, with a caret to track. It
+   * started at 23px, which was legible and looked like a footnote next to the
+   * tape's 60.
+   *
+   * The measure and the slot are both in `em`, so this is the only number to
+   * change: the column and the four-line window scale with it and the layout
+   * keeps its proportions.
+   */
+  font-size: var(--page-size, clamp(22px, 2.5vw, 37px));
+  line-height: 1.9;
+  user-select: none;
+
+  /* ---------- Edges ----------
+   *
+   * **Masked, not painted**, which is the whole lesson from the stream's own
+   * edges: a gradient that fades text by painting a colour over it only
+   * disappears on a background already that colour, and everywhere else it is
+   * a slab with hard edges sitting under the words. The first version of this
+   * file painted `--bg-deep` top and bottom and did exactly that over the
+   * duel's backdrop.
+   *
+   * A mask takes the content's own opacity down, so it works over anything.
+   * Gentle bands, and asymmetric: more of the page below the cursor than
+   * above it, so what is coming stays legible longest.
+   */
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 82%, transparent);
+}
+
+.stack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* Eased frame by frame in ParagraphView, never by a CSS transition — see the
+     note in SentenceView.module.css for why a transition times the motion by
+     the player's fingers instead of by the clock. */
+  will-change: transform;
+}
+
+.line {
+  margin: 0;
+  /*
+   * Centred, which for this content is the readable choice rather than the
+   * decorative one.
+   *
+   * Ranged left, the block sat against one side of its column with a stripe of
+   * nothing beside it — the lines are short and of similar length, so nothing
+   * ever filled the measure. The usual argument for ranging prose left is that
+   * the eye needs a fixed place to start each line, and it does not apply here:
+   * what the eye tracks is the caret, which is somewhere inside the line, and
+   * the line it is on is the brightest thing on screen.
+   *
+   * The tokens stay nowrap, so a word never breaks across rows and a caret
+   * never lands on a fragment.
+   */
+  text-align: center;
+  text-wrap: balance;
+}
+
+/*
+ * A line's distance is carried by the line, not only by its words.
+ *
+ * The stream fades word by word because only three lines exist and they are
+ * all near the cursor. Here a line five rows down is a long way from being
+ * typed, and dimming it per word left the whole block reading as equally
+ * present — the page had no depth and the eye had nowhere to rest.
+ */
+.line[data-line='next'] { opacity: 0.75; }
+.line[data-line='past'] { opacity: 0.3; }
+
+.token {
+  white-space: nowrap;
+  transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
+  transform-origin: center bottom;
+}
+
+.token[data-word='ahead'] { opacity: 0.5; }
+.token[data-word='done'] { opacity: 0.28; }
+.token[data-word='active'] {
+  opacity: 1;
+  /*
+   * Lifted less than the stream lifts it. At this size a 6% scale nudges the
+   * words after it along the line and the whole row twitches on every commit —
+   * the stream gets away with it because its line is nowrap and slides anyway.
+   */
+  transform: scale(1.03);
+  filter: drop-shadow(0 0 12px rgba(255, 214, 110, 0.26));
+}
+
+.char {
+  display: inline-block;
+  transition: color 90ms linear;
+  min-width: 0.38em;
+  text-align: center;
+}
+
+.char[data-state='pending'] { color: var(--muted); }
+.char[data-state='done'] { color: var(--good); }
+
+.char[data-state='current'] {
+  color: var(--bg-deep);
+  background: var(--gold);
+  box-shadow: 0 0 0 2px rgba(255, 214, 110, 0.3), 0 0 14px rgba(255, 214, 110, 0.5);
+  animation: caret 900ms steps(2) infinite;
+}
+
+@keyframes caret {
+  50% { box-shadow: 0 0 0 5px rgba(255, 214, 110, 0.16), 0 0 18px rgba(255, 214, 110, 0.35); }
+}
+
+.space { min-width: 0.42em; }
+
+.token[data-charge] {
+  position: relative;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--pw) 14%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--pw) 50%, transparent);
+  animation: charged 1.5s ease-in-out infinite;
+}
+.token[data-charge] .char[data-state='pending'] { color: var(--pw); }
+
+@keyframes charged {
+  50% {
+    background: color-mix(in srgb, var(--pw) 26%, transparent);
+    box-shadow:
+      inset 0 0 0 2px var(--pw),
+      0 0 22px color-mix(in srgb, var(--pw) 45%, transparent);
+  }
+}
+
+/*
+ * The painted version, for the one surface a mask cannot serve.
+ *
+ * Over the arena's repeating flagstone a mask leaves the floor showing through
+ * at full strength exactly where the text disappears, so the edge of the page
+ * competes with the stone instead of receding into it. There — and only there,
+ * because it is the one place the scrim colour *is* the background colour —
+ * painting is right. Same arrangement as the stream: the version that works
+ * everywhere is the default, and the one with a prerequisite has to ask.
+ */
+[data-layout='arena'] .viewport { mask-image: none; }
+
+.fadeTop,
+.fadeBottom {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+[data-layout='arena'] .fadeTop,
+[data-layout='arena'] .fadeBottom { display: block; }
+
+.fadeTop {
+  top: 0;
+  height: 1.6em;
+  background: linear-gradient(to bottom, var(--panel), transparent);
+}
+
+.fadeBottom {
+  bottom: 0;
+  height: 2.4em;
+  background: linear-gradient(to top, var(--panel), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .token { transition: none; }
+  .char { transition: none; }
+  .char[data-state='current'] { animation: none; }
+  .token[data-charge] { animation: none; }
+}
