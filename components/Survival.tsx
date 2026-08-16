@@ -18,6 +18,7 @@ import ScriptView from './ScriptView';
 import HeatBar from './HeatBar';
 import ArenaScene from './ArenaScene';
 import ArenaControls from './ArenaControls';
+import ScriptSwitch from './ScriptSwitch';
 import RunPause from './RunPause';
 import styles from './Survival.module.css';
 import { useVisualViewport } from '@/game/useVisualViewport';
@@ -453,6 +454,8 @@ export default function Survival({
       data-layout="plain"
       data-keyboard={keyboardUp || undefined}
     >
+      <ScriptSwitch className={styles.scriptSwitch} />
+
       <ArenaControls
         className={styles.controls}
         onLeave={() => setPaused(true)}

@@ -73,51 +73,6 @@
 }
 
 /*
- * Present, but not asking for attention.
- *
- * Only the script toggle wears this, and only because of what it is: sound and
- * the way out are things a player goes looking for mid-run, while this one is
- * a preference they set once and then want out of the way. At full weight it
- * was a third lit box in the corner of a screen whose whole job is to be
- * nothing but words.
- *
- * **Faded, never invisible.** A control nobody can see is a control nobody
- * knows exists, and the point of putting it here at all was that a setting
- * reachable only from another screen is one you have to already know about.
- * The border stays drawn at rest for the same reason the cluster is boxed at
- * all — what recedes is the weight, not the fact that something is there.
- *
- * Safe here and nowhere else in this file: see the note in ArenaControls about
- * why hover is a fair thing to depend on for this button and not for the two
- * beside it.
- */
-.quiet {
-  opacity: 0.4;
-  transition:
-    opacity 160ms ease,
-    border-color 140ms ease,
-    background 140ms ease,
-    color 140ms ease;
-}
-
-.quiet:hover,
-.quiet:focus-visible { opacity: 1; }
-
-/*
- * Reaching for the cluster reveals all of it.
- *
- * Without this the toggle only lights when the pointer is exactly on it, so
- * somebody going for the speaker sees a faint third box appear beside their
- * cursor and has to go back for it. Hovering the group is the moment the
- * player is looking at these controls, which is the moment to show them.
- */
-.controls:hover .quiet { opacity: 1; }
-
-@media (prefers-reduced-motion: reduce) {
-  .quiet { transition: none; }
-}
-
-/*
  * A real tap target on a phone, without making the box bigger.
  *
  * Thirty pixels is the size that looks right beside the arena and is under

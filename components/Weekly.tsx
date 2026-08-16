@@ -14,6 +14,7 @@ import type { MessageHandler } from '@/game/useDuelSocket';
 import ScriptView from './ScriptView';
 import ArenaScene from './ArenaScene';
 import ArenaControls from './ArenaControls';
+import ScriptSwitch from './ScriptSwitch';
 import RunPause from './RunPause';
 import styles from './Survival.module.css';
 import weekly from './Weekly.module.css';
@@ -244,6 +245,8 @@ export default function Weekly({
       data-layout="plain"
       data-keyboard={keyboardUp || undefined}
     >
+      <ScriptSwitch className={styles.scriptSwitch} />
+
       <ArenaControls
         className={styles.controls}
         onLeave={() => setPaused(true)}

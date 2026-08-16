@@ -1,0 +1,110 @@
+/*
+ * The script switch: a track, a knob that carries the mark, and the word.
+ *
+ * Built to the game's own vocabulary rather than to the platform's. A stock
+ * toggle is a rounded pill with a circular knob and a colour that means "on" —
+ * three things this interface does not say anywhere else. Everything here is
+ * squared, bordered at 2px and drawn in the panel palette, so it reads as part
+ * of the same machine as the health plates and the deck.
+ *
+ * No `position` in this file. Each arena decides where it goes and this decides
+ * how it looks — the same split ArenaControls documents, and for the same
+ * reason: two single-class rules fighting over one property is a coin flip that
+ * lands differently in production, because CSS modules are ordered by import in
+ * dev and by chunk in the build.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px 5px 6px;
+  background: var(--panel);
+  border: 2px solid var(--edge-soft);
+  color: var(--faint);
+  font: inherit;
+  cursor: pointer;
+
+  /*
+   * Quiet until reached for.
+   *
+   * The two controls it used to sit beside are things a player goes looking
+   * for mid-run; this is a preference set once and then wanted out of the way.
+   * At full weight it was another lit box on a screen whose whole job is to be
+   * nothing but words.
+   *
+   * **Faded, never invisible.** ArenaControls bans this for the speaker and
+   * the way out, and is right to: on a phone there is no hover, so a control
+   * that only appears on one is a control that never appears. That reasoning
+   * cannot reach this button, because the page needs a screen wide enough to
+   * read a paragraph on and is not offered below it — every screen that
+   * renders this has a pointer. The border stays drawn at rest regardless:
+   * what recedes is the weight, not the evidence that something is there.
+   */
+  opacity: 0.45;
+  transition:
+    opacity 160ms ease,
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.chip:hover,
+.chip:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+/* ---------- the track ---------- */
+
+.track {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 34px;
+  height: 18px;
+  background: var(--bg-deep);
+  border: 1px solid var(--edge);
+}
+
+/*
+ * The knob, and the only thing that moves.
+ *
+ * Left for the tape, right for the page — a position rather than a colour,
+ * because a coloured track would say one of the two is "on" and neither is.
+ * They are both scripts; one of them is simply where you are.
+ */
+.knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: var(--gold);
+  color: var(--bg-deep);
+  transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.chip[data-view='paragraph'] .knob { transform: translateX(16px); }
+
+.label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  /* Two words of different length would shuffle the track sideways as it
+     switched. Held to the wider of them so only the knob ever moves. */
+  min-width: 4.4em;
+  text-align: left;
+}
+
+.chip:hover .label,
+.chip:focus-visible .label { color: var(--gold); }
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .knob { transition: none; }
+}

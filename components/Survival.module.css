@@ -98,6 +98,22 @@
   z-index: 6;
 }
 
+/*
+ * The script switch, opposite the pair rather than among it.
+ *
+ * It was in that cluster and did not belong there. Sound and the way out are
+ * both things you reach for *about the run* — one of them ends it — and a
+ * preference about how the words are laid out is a different kind of thing
+ * sitting in the same box. Across the top edge it is plainly its own control,
+ * and the corner it takes is one nothing else uses in either of these modes.
+ */
+.scriptSwitch {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 6;
+}
+
 .overlay {
   position: fixed;
   inset: 0;

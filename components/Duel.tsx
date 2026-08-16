@@ -28,6 +28,7 @@ import type { CharacterId } from '@/models/character';
 import type { Side } from '@/models/duel';
 import type { BladeTier } from '@/models/scoring';
 import ArenaControls from './ArenaControls';
+import ScriptSwitch from './ScriptSwitch';
 import HealthBar from './HealthBar';
 import Fighter from './Fighter';
 import ArenaScene from './ArenaScene';
@@ -1167,6 +1168,8 @@ export default function Duel({
       {/* Only when a treatment was asked for by URL, so no normal player meets
           it. Outside .screen's shake by virtue of being fixed-position. */}
       {fxControl.testing && <FxSwitcher {...fxControl} />}
+
+      <ScriptSwitch className={styles.scriptSwitch} />
 
       {/* Hidden once decided: there is nothing left to forfeit, and offering
           to quit over the top of the collapse undercuts it. */}
