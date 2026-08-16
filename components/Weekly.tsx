@@ -7,6 +7,7 @@ import { initialWeekly, weeklyReducer, type WeeklyState } from '@/game/weeklyRed
 import { WEEKLY_MS } from '@/game/weeklyClock';
 import { useConfirmKey } from '@/game/useConfirmKey';
 import { audio } from '@/game/audio';
+import { keyFor } from '@/game/typing';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
@@ -110,13 +111,18 @@ export default function Weekly({
   }, [state.phase, state.countdown, countdownMs]);
 
   const typeChar = useCallback((raw: string) => {
-    const key = raw.toLowerCase();
     const snapshot = stateRef.current;
     if (snapshot.phase !== 'running') return;
     // The run carries on underneath, but the keyboard belongs to the dialog.
     if (pausedRef.current) return;
 
     const expected = snapshot.sentence[snapshot.cursor];
+    /* The script decides about case, and this screen was the last one folding
+       it unconditionally. A capitalised passage would have been unplayable
+       here: shift+C arrives as "C", folds to "c", and never matches the "C"
+       the script is asking for — the player is stuck on it with no way past.
+       The same bug walled module 8 once. See game/typing.ts. */
+    const key = keyFor(expected, raw);
 
     if (key !== expected) {
       // A flinch, not a funeral. The referee never hears about it — nothing

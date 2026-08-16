@@ -9,6 +9,7 @@ import {
 import { coolingFor, secondsLeft } from '@/game/heat';
 import { useConfirmKey } from '@/game/useConfirmKey';
 import { audio } from '@/game/audio';
+import { keyFor } from '@/game/typing';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
@@ -196,7 +197,6 @@ export default function Survival({
    * quietly diverge.
    */
   const typeChar = useCallback((raw: string) => {
-    const key = raw.toLowerCase();
     const snapshot = stateRef.current;
     if (snapshot.phase !== 'running') return;
     // The forge carries on cooling, but the keyboard belongs to the dialog.
@@ -218,6 +218,11 @@ export default function Survival({
     }
 
     const expected = snapshot.sentence[snapshot.cursor];
+    /* The script decides about case. Survival's script is generated rather
+       than written, so it has no capitals today — but it is about to, and a
+       fold here would make them unhittable exactly as it would in the weekly.
+       See game/typing.ts. */
+    const key = keyFor(expected, raw);
     const correct = key === expected;
 
     if (!correct) {
