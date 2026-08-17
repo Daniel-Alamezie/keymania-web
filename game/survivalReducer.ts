@@ -47,6 +47,15 @@ export interface SurvivalState {
   /* The run itself. */
   /** Words survived, which in sudden death is also the score. */
   words: number;
+  /**
+   * The last count the referee actually acknowledged.
+   *
+   * `words` runs ahead of this by design — the screen predicts and is
+   * corrected. The distance between them is the only way this client can tell
+   * a fast connection from a dead one, because nothing else about a dropped
+   * socket is visible from here. See `MAX_UNCONFIRMED`.
+   */
+  confirmed: number;
   heat: number;
   cooling: number;
   charsTyped: number;
@@ -87,6 +96,7 @@ export function initialSurvival(): SurvivalState {
     script: [],
     scriptIndex: 0,
     words: 0,
+    confirmed: 0,
     heat: CAPACITY_MS,
     cooling: 1,
     charsTyped: 0,
@@ -110,6 +120,44 @@ export function initialSurvival(): SurvivalState {
  */
 export const isStarving = (state: SurvivalState): boolean =>
   state.phase === 'running' && state.sentence.trim() === '';
+
+/**
+ * How far ahead of the referee this client will get before it stops.
+ *
+ * There was no limit, and that is the whole of the bug three players reported.
+ * The screen advances on every keystroke and the server confirms behind it,
+ * which is right — a run that waited for a round trip per word would feel
+ * broken at any real speed. What was missing is a ceiling on the *gap*.
+ *
+ * With none, a socket that drops mid-run is invisible: the client keeps
+ * accepting words against the script it already holds, sixty of them if it has
+ * that many, and only discovers the referee stopped answering when it runs off
+ * the end. By then the correction is enormous, and a correction that large
+ * does not read as a correction. It reads as being thrown back to the start of
+ * the run, because that is what it looks like.
+ *
+ * Twelve is chosen from both sides. Above: a player at 150 wpm sends about two
+ * and a half words a second, so twelve unanswered words is nearly five seconds
+ * of silence, far past any ordinary burst of jitter or a slow round trip.
+ * Below: the server keeps forty words of script ahead of where it thinks the
+ * player is, so stopping at twelve means the stall always happens with script
+ * to spare rather than at the end of it. The old failure needed both of those
+ * to be true at once and neither was.
+ *
+ * Derived, not stored, for the reason `isStarving` is: a flag set beside the
+ * two counts is a third thing that can disagree with them.
+ */
+export const MAX_UNCONFIRMED = 12;
+
+/**
+ * Waiting for the referee to catch up.
+ *
+ * The run is not over and nothing is wrong with what the player typed. The
+ * screen simply refuses to get any further ahead until it hears back, so the
+ * correction when it comes is a nudge rather than a different run.
+ */
+export const isStalled = (state: SurvivalState): boolean =>
+  state.phase === 'running' && state.words - state.confirmed >= MAX_UNCONFIRMED;
 
 /** Sentences carry a trailing space, so the committing key is always a space. */
 const withSpace = (sentence: string) => `${sentence} `;
@@ -220,7 +268,19 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
        * The count goes up here optimistically. The server decides whether the
        * forge survived it and will say so, which is the same arrangement the
        * arena uses for damage: predict, then be corrected.
+       *
+       * **Unless the referee has gone quiet.** Prediction is only worth having
+       * while there is something correcting it; past `MAX_UNCONFIRMED` this is
+       * not predicting any more, it is inventing a run nobody is refereeing.
+       * The word is held here rather than committed, so the screen waits at a
+       * word boundary the server can still be talked to about — and the
+       * keystroke is not a mistake, so nothing flinches and nothing is scored.
+       *
+       * Checked before the count moves, so the ceiling is a ceiling: the gap
+       * can reach twelve and stop, never thirteen.
        */
+      if (isStalled(state)) return state;
+
       const sentenceDone = advanced >= state.sentence.length;
       const wordsInSentence = state.sentence.trim().split(' ').length;
 
@@ -268,6 +328,16 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
         heat: orKeep(action.heat, state.heat),
         cooling: orKeep(action.cooling, state.cooling),
         words: orKeep(action.words, state.words),
+        /**
+         * The referee has spoken, so the gap closes by exactly this much.
+         *
+         * Taken from the same number `words` adopts, never incremented
+         * locally: the point of this field is that it is the server's opinion
+         * and nothing else. A locally bumped copy would drift into agreeing
+         * with the optimistic count, and a ceiling measured against a number
+         * that follows the thing it is limiting is not a ceiling.
+         */
+        confirmed: orKeep(action.words, state.confirmed),
         script: grown,
         /**
          * Adopt a sentence that arrived while the stream was waiting on it.
@@ -316,6 +386,10 @@ export function survivalReducer(state: SurvivalState, action: SurvivalAction): S
         upcoming: seek.upcoming,
         cursor: seek.cursor,
         words: action.wordIndex,
+        /* A resync is the referee's position by definition, so the gap is
+           zero the moment it lands. Left stale, the run would resume already
+           at its ceiling and stall on the next word. */
+        confirmed: action.wordIndex,
         // Words before the sentence now on screen, recomputed rather than
         // carried: it is what SentenceView measures its highlighting from,
         // and a stale one after a seek points at the wrong words.

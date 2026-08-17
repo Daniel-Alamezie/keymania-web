@@ -59,7 +59,24 @@ function running(script: string[]): SurvivalState {
  * given a combination the reducer would never produce, and then the test is
  * about a situation that cannot happen. Typing is the only honest way in.
  */
-function typeWords(state: SurvivalState, count: number): SurvivalState {
+function typeWords(
+  state: SurvivalState,
+  count: number,
+  /**
+   * Whether the referee is answering as the player types.
+   *
+   * On by default, because that is what a working run is, and because the
+   * client can no longer walk arbitrarily far without it: it stops once it is
+   * `MAX_UNCONFIRMED` words ahead. This helper used to type with the referee
+   * silent throughout, which quietly made every long walk below a simulation
+   * of a dead socket — fine while nothing stopped it, and now the very thing
+   * that would.
+   *
+   * Turned off deliberately to build the `ahead` shape, where a few words are
+   * genuinely in flight.
+   */
+  { confirmed = true }: { confirmed?: boolean } = {},
+): SurvivalState {
   let now = 1_000;
   for (let i = 0; i < count; i += 1) {
     const word = currentWord(state);
@@ -69,6 +86,11 @@ function typeWords(state: SurvivalState, count: number): SurvivalState {
     for (const char of `${word} `) {
       now += 10;
       state = survivalReducer(state, { type: 'typed', char, now });
+    }
+    if (confirmed) {
+      state = survivalReducer(state, {
+        type: 'confirm', heat: 5_000, cooling: 1, words: state.words,
+      });
     }
   }
   return state;
@@ -102,8 +124,16 @@ describe('a healed run always agrees with the referee', () => {
             ? serverScript
             : scriptOf(shape === 'starved' ? Math.max(2, sentences - 3) : 2);
 
-          const walked = shape === 'ahead' ? at + 3 : Math.max(0, at - 2);
-          const diverged = typeWords(running(clientScript), walked);
+          /**
+           * `ahead` is built as words genuinely in flight: walked level with
+           * the referee, then three more it has not answered yet. It used to
+           * be built by typing past it in silence, which is no longer a state
+           * a client can reach — it stops itself at `MAX_UNCONFIRMED`, and a
+           * fixture the reducer would refuse to produce tests nothing.
+           */
+          const diverged = shape === 'ahead'
+            ? typeWords(typeWords(running(clientScript), at), 3, { confirmed: false })
+            : typeWords(running(clientScript), Math.max(0, at - 2));
 
           // The heal: the referee's script and its position, together.
           const healed = survivalReducer(diverged, {

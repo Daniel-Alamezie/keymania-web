@@ -13,7 +13,7 @@ import { keyFor } from '@/game/typing';
 import { FALLBACK_COUNTDOWN_MS, tickDelay } from '@/game/countdown';
 import { track as trackEvent } from '@/game/analytics';
 import type { MessageHandler } from '@/game/useDuelSocket';
-import { isStarving } from '@/game/survivalReducer';
+import { isStalled, isStarving } from '@/game/survivalReducer';
 import ScriptView from './ScriptView';
 import HeatBar from './HeatBar';
 import ArenaScene from './ArenaScene';
@@ -379,6 +379,20 @@ export default function Survival({
     return () => clearInterval(id);
   }, [starving, onWord]);
 
+  /**
+   * Say why the run has stopped moving, when it has.
+   *
+   * The reducer holds the screen at a word boundary once it is too far ahead
+   * of the referee — see `MAX_UNCONFIRMED` — and without this the player is
+   * pressing a correct key that does nothing, which is indistinguishable from
+   * the game having broken. It is the same complaint as the old bug in a
+   * milder form, and a stall nobody explains earns the same report.
+   *
+   * The forge keeps cooling behind it, so this is not free time. Saying so is
+   * the difference between waiting and being cheated.
+   */
+  const stalled = isStalled(state);
+
   /** The referee's word on every word, and on when the run ended. */
   useEffect(() => subscribe((message) => {
     /**
@@ -477,6 +491,15 @@ export default function Survival({
             powers={{}}
             wordOffset={state.wordOffset}
           />
+
+          {/* Under the words, where the eye already is, and only while it is
+              true. A banner elsewhere on the screen would be read after the
+              player had already decided the game was broken. */}
+          {(stalled || starving) && (
+            <p className={styles.waiting} role="status">
+              Waiting for the referee to catch up
+            </p>
+          )}
         </div>
 
         <div className={styles.gauge}>
